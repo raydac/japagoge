@@ -1,0 +1,328 @@
+package com.igormaznitsa.japagoge;
+
+import javax.imageio.ImageIO;
+import javax.swing.*;
+import javax.swing.filechooser.FileFilter;
+import java.awt.*;
+import java.awt.event.*;
+import java.awt.geom.Area;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
+import java.text.SimpleDateFormat;
+import java.time.Duration;
+import java.util.Date;
+import java.util.Locale;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import static java.util.Objects.requireNonNull;
+
+public class JapagogeFrame extends JFrame {
+
+  private static final Logger LOGGER = Logger.getLogger("JapagogeFrame");
+
+  private static final int BORDER_SIZE = 5;
+  private static final int TITLE_HEIGHT = 26;
+
+  private static final Dimension INITIAL_SIZE = new Dimension(256, 256);
+  private static final Color COLOR_SELECT_POSITION = Color.GREEN;
+  private static final Color COLOR_RECORDING = Color.RED;
+  private static final Color COLOR_SAVING_RESULT = Color.YELLOW;
+  private final ComponentResizer resizer;
+  private final AtomicReference<ScreenCapturer> currentScreenCapturer = new AtomicReference<>();
+  private final BufferedImage imageClose;
+  private final BufferedImage imagePreferences;
+  private final Rectangle buttonClose = new Rectangle();
+  private final Rectangle buttonPreferences = new Rectangle();
+  private Point lastMousePressedTitleScreenPoint = null;
+  private State state = State.SELECT_POSITION;
+
+  public JapagogeFrame(final GraphicsConfiguration gc) throws AWTException {
+    super("Japagoge", gc);
+
+    try {
+      this.setIconImage(ImageIO.read(requireNonNull(JapagogeFrame.class.getResourceAsStream("/icons/appico.png"))));
+      this.imageClose = ImageIO.read(requireNonNull(JapagogeFrame.class.getResourceAsStream("/icons/btn_close.png")));
+      this.imagePreferences = ImageIO.read(requireNonNull(JapagogeFrame.class.getResourceAsStream("/icons/btn_prefs.png")));
+    } catch (Exception ex) {
+      throw new Error(ex);
+    }
+
+    this.setUndecorated(true);
+    this.setBackground(Color.ORANGE);
+    this.setAlwaysOnTop(true);
+
+    this.setFocusableWindowState(false);
+    this.setFocusable(false);
+
+    this.resizer = new ComponentResizer(new Insets(0, BORDER_SIZE, BORDER_SIZE, BORDER_SIZE));
+    this.resizer.registerComponent(this);
+    this.resizer.setMinimumSize(new Dimension(64, 64));
+    this.resizer.setMaximumSize(new Dimension(2048, 2048));
+    this.resizer.setSnapSize(new Dimension(1, 1));
+
+    this.addComponentListener(new ComponentAdapter() {
+      @Override
+      public void componentResized(final ComponentEvent e) {
+        updateLook();
+      }
+    });
+
+    this.setPreferredSize(INITIAL_SIZE);
+    this.setSize(INITIAL_SIZE);
+
+    this.addMouseListener(new MouseAdapter() {
+
+      @Override
+      public void mouseClicked(final MouseEvent e) {
+        if (!e.isConsumed()) {
+          var componentPoint = e.getPoint();
+          if (buttonClose.contains(componentPoint)) {
+            onButtonClose();
+          } else if (buttonPreferences.contains(componentPoint)) {
+            onButtonPrefs();
+          } else if (componentPoint.y < TITLE_HEIGHT && e.getClickCount() > 1) {
+            lastMousePressedTitleScreenPoint = null;
+            e.consume();
+            onDoubleClickTitle();
+          }
+        }
+      }
+
+      @Override
+      public void mousePressed(final MouseEvent e) {
+        if (!e.isConsumed()) {
+          var componentPoint = e.getPoint();
+          var screenPoint = new Point(componentPoint);
+          SwingUtilities.convertPointToScreen(screenPoint, JapagogeFrame.this);
+          lastMousePressedTitleScreenPoint = screenPoint;
+          if (componentPoint.y > TITLE_HEIGHT) {
+            lastMousePressedTitleScreenPoint = null;
+          }
+        }
+      }
+
+      @Override
+      public void mouseReleased(final MouseEvent e) {
+        lastMousePressedTitleScreenPoint = null;
+      }
+    });
+
+    this.addMouseMotionListener(new MouseMotionAdapter() {
+      @Override
+      public void mouseDragged(final MouseEvent e) {
+        if (!e.isConsumed() && lastMousePressedTitleScreenPoint != null && resizer.isEnabled()) {
+          var newMouseScreenPoint = new Point(e.getPoint());
+          SwingUtilities.convertPointToScreen(newMouseScreenPoint, JapagogeFrame.this);
+
+          var dx = newMouseScreenPoint.x - lastMousePressedTitleScreenPoint.x;
+          var dy = newMouseScreenPoint.y - lastMousePressedTitleScreenPoint.y;
+
+          var windowLocation = JapagogeFrame.this.getLocation();
+          windowLocation.move(windowLocation.x + dx, windowLocation.y + dy);
+          JapagogeFrame.this.setLocation(windowLocation);
+
+          lastMousePressedTitleScreenPoint = newMouseScreenPoint;
+
+          e.consume();
+        }
+      }
+    });
+
+    this.updateLook();
+  }
+
+  private void updateLook() {
+    var bounds = this.getBounds();
+    switch (this.state) {
+      case RECORD: {
+        this.setBackground(COLOR_RECORDING);
+        this.setShape(this.makeArea(bounds.width, bounds.height, false));
+      }
+      break;
+      case SELECT_POSITION: {
+        this.setBackground(COLOR_SELECT_POSITION);
+        this.setShape(this.makeArea(bounds.width, bounds.height, true));
+      }
+      break;
+      case SAVING_RESULT: {
+        this.setBackground(COLOR_SAVING_RESULT);
+        this.setShape(this.makeArea(bounds.width, bounds.height, true));
+      }
+      break;
+    }
+    JapagogeFrame.this.revalidate();
+    JapagogeFrame.this.repaint();
+  }
+
+  private void onDoubleClickTitle() {
+    switch ((this.state)) {
+      case SELECT_POSITION: {
+        final File tempFile;
+        try {
+          tempFile = makeTempRecordFile();
+          LOGGER.info("Temp file: " + tempFile);
+        } catch (IOException ex) {
+          LOGGER.log(Level.SEVERE, "Can't make temp file", ex);
+          JOptionPane.showMessageDialog(this, "Can't create temp file", "Error", JOptionPane.ERROR_MESSAGE);
+          return;
+        }
+
+        this.resizer.setEnable(false);
+        this.state = State.RECORD;
+        this.updateLook();
+
+        try {
+          final ScreenCapturer newScreenCapturer = new ScreenCapturer(
+                  this.getGraphicsConfiguration().getDevice(),
+                  this.findScreeCaptureArea(),
+                  tempFile,
+                  JapagogeConfig.getInstance().isPointer(),
+                  Duration.ofMillis(JapagogeConfig.getInstance().getFrameDelay())
+          );
+          if (this.currentScreenCapturer.compareAndSet(null, newScreenCapturer)) {
+            SwingUtilities.invokeLater(newScreenCapturer::start);
+          }
+        } catch (AWTException ex) {
+          JOptionPane.showMessageDialog(this, "Looks like it is impossible capture screen in your OS!", "Error", JOptionPane.ERROR_MESSAGE);
+          System.exit(1);
+        }
+      }
+      break;
+      case RECORD: {
+        try {
+          var currentCapturer = this.currentScreenCapturer.getAndSet(null);
+          if (currentCapturer != null) {
+            currentCapturer.stop(JapagogeConfig.getInstance().getLoops());
+            this.state = State.SAVING_RESULT;
+
+            SwingUtilities.invokeLater(() -> {
+              var targetFile = this.makeTargetFile();
+              var tempFile = currentCapturer.getTargetFile();
+              try {
+                var fileChooser = new JFileChooser(JapagogeConfig.getInstance().getTargetFolder());
+                fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+                fileChooser.setSelectedFile(targetFile);
+
+                var apngFilter = new FileFilter() {
+                  @Override
+                  public boolean accept(final File f) {
+                    return f.isDirectory() || f.getName().toLowerCase(Locale.ENGLISH).endsWith(".png");
+                  }
+
+                  @Override
+                  public String getDescription() {
+                    return "APNG files (*.png)";
+                  }
+                };
+
+                fileChooser.addChoosableFileFilter(apngFilter);
+                fileChooser.setFileFilter(apngFilter);
+
+                fileChooser.setDialogTitle("Save APNG file");
+                if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
+                  var selectedFile = fileChooser.getSelectedFile();
+                  JapagogeConfig.getInstance().setTargetFolder(selectedFile.getParentFile());
+                  try {
+                    Files.move(tempFile.toPath(), selectedFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                    LOGGER.info("Saved result file " + selectedFile.getName() + " size " + selectedFile.length() + " bytes");
+                  } catch (Exception ex) {
+                    LOGGER.log(Level.SEVERE, "Can't move result file", ex);
+                    JOptionPane.showMessageDialog(this, "Can't move result file!", "Error", JOptionPane.ERROR_MESSAGE);
+                  }
+                }
+              } finally {
+                try {
+                  Files.deleteIfExists(tempFile.toPath());
+                } catch (IOException ex) {
+                  LOGGER.log(Level.SEVERE, "Can't delete temp file: " + tempFile, ex);
+                }
+                this.state = State.SELECT_POSITION;
+                this.updateLook();
+              }
+            });
+          } else {
+            this.state = State.SELECT_POSITION;
+          }
+          this.updateLook();
+        } finally {
+          this.resizer.setEnable(true);
+        }
+      }
+      break;
+      case SAVING_RESULT: {
+        // DO NOTHING BECAUSE ALL BUSINESS IN SAVE DIALOG
+      }
+      break;
+    }
+  }
+
+  private File makeTargetFile() {
+    var dateFormat = new SimpleDateFormat("yyyyMMdd_HHmmss");
+    return new File(JapagogeConfig.getInstance().getTargetFolder(), "apng-" + dateFormat.format(new Date()) + ".png");
+  }
+
+  private File makeTempRecordFile() throws IOException {
+    return File.createTempFile(".japagoge-record", ".png");
+  }
+
+  private Area makeArea(final int width, final int height, final boolean cross) {
+    var result = new Area(new Rectangle(0, 0, width, height));
+    result.subtract(new Area(new Rectangle(BORDER_SIZE, BORDER_SIZE, width - (BORDER_SIZE * 2), height - (BORDER_SIZE * 2))));
+
+    final int titleHeight = TITLE_HEIGHT;
+
+    result.add(new Area(new Rectangle(0, 0, width, titleHeight)));
+
+    if (cross) {
+      result.add(new Area(new Polygon(new int[]{0, width, width - 1, 0}, new int[]{titleHeight, height - 1, height, titleHeight + 1}, 4)));
+      result.add(new Area(new Polygon(new int[]{0, width - 1, width, 1}, new int[]{height - 1, titleHeight, titleHeight + 1, height}, 4)));
+    }
+
+    int buttonStartX = width - 52;
+    this.buttonPreferences.setBounds(buttonStartX, (TITLE_HEIGHT - this.imagePreferences.getHeight()) / 2, this.imagePreferences.getWidth(), this.imagePreferences.getHeight());
+    buttonStartX += this.buttonPreferences.width + 4;
+    this.buttonClose.setBounds(buttonStartX, (TITLE_HEIGHT - this.imageClose.getHeight()) / 2, this.imageClose.getWidth(), this.imageClose.getHeight());
+
+    return result;
+  }
+
+  private Rectangle findScreeCaptureArea() {
+    final Rectangle bounds = this.getBounds();
+    bounds.setBounds(bounds.x + BORDER_SIZE, bounds.y + TITLE_HEIGHT, bounds.width - BORDER_SIZE * 2, bounds.height - BORDER_SIZE - TITLE_HEIGHT);
+    return bounds;
+  }
+
+  private void onButtonClose() {
+    this.dispose();
+  }
+
+  private void onButtonPrefs() {
+    var data = new JapagogeConfig.JapagogeConfigData();
+    var panel = new PreferencesPanel(data);
+    if (JOptionPane.showConfirmDialog(this, panel, "Options", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE) == JOptionPane.OK_OPTION) {
+      panel.fillData();
+      data.save();
+    }
+  }
+
+  @Override
+  public void paint(final Graphics g) {
+    final Graphics2D gfx = (Graphics2D) g;
+    if (this.state == State.SELECT_POSITION) {
+      gfx.drawImage(this.imagePreferences, this.buttonPreferences.x, this.buttonPreferences.y, null);
+      gfx.drawImage(this.imageClose, this.buttonClose.x, this.buttonClose.y, null);
+    }
+  }
+
+  private enum State {
+    SELECT_POSITION,
+    RECORD,
+    SAVING_RESULT
+  }
+
+}
