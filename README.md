@@ -29,7 +29,7 @@ closes the application. Keep in mind that click the close buttons is the only wa
 
 __Recording activation started only through mouse double-click on the window title area__. In recording mode all buttons
 will be removed and the window changes its color.   
-![Positioning state](assets/screens/state_recording.png)
+![Positioning state](assets/screens/state_recording.png)   
 To stop recording, you should again make mouse double-click on the window title area. After stop of recording you will
 see the dialog to save the record, if you press cancel button then the record will be ignored and just deleted.
 
