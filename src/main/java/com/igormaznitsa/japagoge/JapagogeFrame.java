@@ -30,7 +30,7 @@ public class JapagogeFrame extends JFrame {
 
   private static final Dimension INITIAL_SIZE = new Dimension(256, 256);
   private static final Color COLOR_SELECT_POSITION = Color.GREEN;
-  private static final Color COLOR_RECORDING = Color.RED;
+  private static final Color COLOR_RECORDING = Color.CYAN;
   private static final Color COLOR_SAVING_RESULT = Color.YELLOW;
   private final ComponentResizer resizer;
   private final AtomicReference<ScreenCapturer> currentScreenCapturer = new AtomicReference<>();
@@ -43,6 +43,8 @@ public class JapagogeFrame extends JFrame {
 
   public JapagogeFrame(final GraphicsConfiguration gc) throws AWTException {
     super("Japagoge", gc);
+
+    this.getRootPane().putClientProperty("Window.shadow", Boolean.FALSE);
 
     try {
       this.setIconImage(ImageIO.read(requireNonNull(JapagogeFrame.class.getResourceAsStream("/icons/appico.png"))));
@@ -149,6 +151,7 @@ public class JapagogeFrame extends JFrame {
     var bounds = this.getBounds();
     switch (this.state.get()) {
       case RECORD: {
+        this.setOpacity(0.3f);
         this.setBackground(COLOR_RECORDING);
         this.setForeground(COLOR_RECORDING);
         this.getContentPane().setBackground(COLOR_RECORDING);
@@ -156,6 +159,7 @@ public class JapagogeFrame extends JFrame {
       }
       break;
       case SELECT_POSITION: {
+        this.setOpacity(1.0f);
         this.setBackground(COLOR_SELECT_POSITION);
         this.setForeground(COLOR_SELECT_POSITION);
         this.getContentPane().setBackground(COLOR_SELECT_POSITION);
@@ -163,6 +167,7 @@ public class JapagogeFrame extends JFrame {
       }
       break;
       case SAVING_RESULT: {
+        this.setOpacity(1.0f);
         this.setBackground(COLOR_SAVING_RESULT);
         this.setForeground(COLOR_SAVING_RESULT);
         this.getContentPane().setBackground(COLOR_SAVING_RESULT);
@@ -333,6 +338,9 @@ public class JapagogeFrame extends JFrame {
     if (this.state.get() == State.SELECT_POSITION) {
       gfx.drawImage(this.imagePreferences, this.buttonPreferences.x, this.buttonPreferences.y, null);
       gfx.drawImage(this.imageClose, this.buttonClose.x, this.buttonClose.y, null);
+    } else {
+      gfx.setColor(Color.BLACK);
+      gfx.drawRect(0, 0, bounds.width - 1, bounds.height - 1);
     }
   }
 
