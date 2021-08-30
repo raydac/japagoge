@@ -307,7 +307,7 @@
             <artifactId>launch4j-maven-plugin</artifactId>
             <version>2.1.1</version>
             <configuration>
-              <downloadUrl>http://www.oracle.com/technetwork/java/javase/downloads</downloadUrl>
+              <downloadUrl>https://bell-sw.com/pages/downloads/#/java-11-lts</downloadUrl>
               <classPath>
                 <mainClass>com.igormaznitsa.japagoge.Starter</mainClass>
                 <preCp>anything</preCp>
