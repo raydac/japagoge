@@ -5,6 +5,12 @@
 [![PayPal donation](https://img.shields.io/badge/donation-PayPal-cyan.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=AHWJHJFBAWGL2)
 [![YooMoney donation](https://img.shields.io/badge/donation-Yoo.money-blue.svg)](https://yoomoney.ru/to/41001158080699)
 
+## Changelog
+
+__1.0.0 (30-aug-2021)__
+
+- initial release
+
 ## Preword
 
 During writing an article for some online resource, I wanted to make small GIF animations and expected to use Peek
@@ -32,7 +38,7 @@ will be removed and the window changes its color.
 ![Positioning state](assets/screens/state_recording.png)   
 __To stop recording, you should again make mouse double-click on the window title area.__ After stop of recording you
 will see the save file dialog to save your recorded file, if you press cancel button then the record will be ignored and
-just deleted.
+just deleted. I have not implemented any optimization for saved data so that result files can be big.
 
 ### Options
 
@@ -40,3 +46,9 @@ You can tune recording options. For instance disable show of mouse pointer or li
 show. For that you should click the preferences button during positioning mode and you will see the preferences
 dialog.   
 ![Positioning state](assets/screens/state_preferences.png)
+
+### F.A.Q.
+
+#### How to convert APNG into GIF?
+
+If you work under Ubuntu then you can use `apng2gif` utility to convert file format.
