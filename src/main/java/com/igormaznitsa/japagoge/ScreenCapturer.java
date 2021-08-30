@@ -100,10 +100,12 @@ public final class ScreenCapturer {
       }
 
       final APngWriter writer = this.apngWriter.get();
-      if (writer.getState() == APngWriter.State.CREATED) {
-        writer.start(image.getWidth(), image.getHeight());
+      if (writer != null) {
+        if (writer.getState() == APngWriter.State.CREATED) {
+          writer.start(image.getWidth(), image.getHeight());
+        }
+        writer.addFrame(image, this.durationBetweenFrames);
       }
-      writer.addFrame(image, this.durationBetweenFrames);
     } catch (Exception ex) {
       LOGGER.log(Level.SEVERE, "Error during capturing", ex);
     }

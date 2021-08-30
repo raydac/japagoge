@@ -6,6 +6,12 @@ import java.awt.*;
 public class Starter {
   public static void main(final String... args) {
     SwingUtilities.invokeLater(() -> {
+      try {
+        UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+      } catch (Exception ex) {
+        // do nothing
+      }
+
       var screen = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice().getDefaultConfiguration();
       try {
         var window = new JapagogeFrame(screen);

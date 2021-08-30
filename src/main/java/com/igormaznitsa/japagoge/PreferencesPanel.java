@@ -2,9 +2,17 @@ package com.igormaznitsa.japagoge;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.net.URI;
 import java.util.Objects;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class PreferencesPanel extends JPanel {
+
+  private static final Logger LOGGER = Logger.getLogger("PreferencesPanel");
+
   private final JapagogeConfig.JapagogeConfigData data;
 
   private final JCheckBox checkBoxPointer;
@@ -30,6 +38,32 @@ public class PreferencesPanel extends JPanel {
 
     this.add(new JLabel("Show pointer: "), gblLeft);
     this.add(this.checkBoxPointer, gblRight);
+
+    gblLeft.gridwidth = 2;
+    gblLeft.anchor = GridBagConstraints.CENTER;
+
+    var linkLabel = new JLabel("<html><a href=\"#\">https://github.com/raydac/japagoge</a></html>");
+    linkLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+    linkLabel.setToolTipText("The project home page where you can find some help and new versions");
+    linkLabel.addMouseListener(new MouseAdapter() {
+      @Override
+      public void mouseClicked(final MouseEvent e) {
+        openWebpage(URI.create("https://github.com/raydac/japagoge"));
+      }
+    });
+
+    this.add(linkLabel, gblLeft);
+  }
+
+  private static void openWebpage(final URI uri) {
+    var desktop = Desktop.isDesktopSupported() ? Desktop.getDesktop() : null;
+    if (desktop != null && desktop.isSupported(Desktop.Action.BROWSE)) {
+      try {
+        desktop.browse(uri);
+      } catch (Exception e) {
+        LOGGER.log(Level.SEVERE, "Error during link browsing activation", e);
+      }
+    }
   }
 
   public void fillData() {

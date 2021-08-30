@@ -2,7 +2,7 @@ set "JAPAGOGE_HOME=%cd%"
 set "LOG_FILE=%JAPAGOGE_HOME%/console.log"
 
 set JAVA_FLAGS="--add-opens=java.base/java.lang=ALL-UNNAMED"
-set JAVA_RUN="java.exe"
+set JAVA_RUN="%JAPAGOGE_HOME%\jre\bin\java.exe"
 
 echo %%JAVA_RUN%%=%JAVA_RUN% > %LOG_FILE%
 

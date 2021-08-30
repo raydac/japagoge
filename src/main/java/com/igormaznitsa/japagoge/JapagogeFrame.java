@@ -39,7 +39,7 @@ public class JapagogeFrame extends JFrame {
   private final Rectangle buttonClose = new Rectangle();
   private final Rectangle buttonPreferences = new Rectangle();
   private Point lastMousePressedTitleScreenPoint = null;
-  private State state = State.SELECT_POSITION;
+  private final AtomicReference<State> state = new AtomicReference<>(State.SELECT_POSITION);
 
   public JapagogeFrame(final GraphicsConfiguration gc) throws AWTException {
     super("Japagoge", gc);
@@ -80,15 +80,16 @@ public class JapagogeFrame extends JFrame {
       @Override
       public void mouseClicked(final MouseEvent e) {
         if (!e.isConsumed()) {
+          final State currentState = state.get();
           var componentPoint = e.getPoint();
-          if (buttonClose.contains(componentPoint)) {
+          if (currentState == State.SELECT_POSITION && buttonClose.contains(componentPoint)) {
             onButtonClose();
-          } else if (buttonPreferences.contains(componentPoint)) {
+          } else if (currentState == State.SELECT_POSITION && buttonPreferences.contains(componentPoint)) {
             onButtonPrefs();
           } else if (componentPoint.y < TITLE_HEIGHT && e.getClickCount() > 1) {
             lastMousePressedTitleScreenPoint = null;
             e.consume();
-            onDoubleClickTitle();
+            onTitleDoubleClick();
           }
         }
       }
@@ -133,35 +134,51 @@ public class JapagogeFrame extends JFrame {
       }
     });
 
+    this.setState(State.SELECT_POSITION);
+  }
+
+  private void setState(final State newState) {
+    if (this.state.get() != newState) {
+      LOGGER.info("Change state to: " + newState);
+      this.state.set(newState);
+    }
     this.updateLook();
   }
 
   private void updateLook() {
     var bounds = this.getBounds();
-    switch (this.state) {
+    switch (this.state.get()) {
       case RECORD: {
         this.setBackground(COLOR_RECORDING);
+        this.setForeground(COLOR_RECORDING);
+        this.getContentPane().setBackground(COLOR_RECORDING);
         this.setShape(this.makeArea(bounds.width, bounds.height, false));
       }
       break;
       case SELECT_POSITION: {
         this.setBackground(COLOR_SELECT_POSITION);
+        this.setForeground(COLOR_SELECT_POSITION);
+        this.getContentPane().setBackground(COLOR_SELECT_POSITION);
         this.setShape(this.makeArea(bounds.width, bounds.height, true));
       }
       break;
       case SAVING_RESULT: {
         this.setBackground(COLOR_SAVING_RESULT);
+        this.setForeground(COLOR_SAVING_RESULT);
+        this.getContentPane().setBackground(COLOR_SAVING_RESULT);
         this.setShape(this.makeArea(bounds.width, bounds.height, true));
       }
       break;
     }
-    JapagogeFrame.this.revalidate();
-    JapagogeFrame.this.repaint();
+    this.setBounds(bounds);
+    this.revalidate();
+    this.repaint();
   }
 
-  private void onDoubleClickTitle() {
-    switch ((this.state)) {
+  private void onTitleDoubleClick() {
+    switch ((this.state.get())) {
       case SELECT_POSITION: {
+        this.setState(State.RECORD);
         final File tempFile;
         try {
           tempFile = makeTempRecordFile();
@@ -169,12 +186,11 @@ public class JapagogeFrame extends JFrame {
         } catch (IOException ex) {
           LOGGER.log(Level.SEVERE, "Can't make temp file", ex);
           JOptionPane.showMessageDialog(this, "Can't create temp file", "Error", JOptionPane.ERROR_MESSAGE);
+          this.setState(State.SELECT_POSITION);
           return;
         }
 
         this.resizer.setEnable(false);
-        this.state = State.RECORD;
-        this.updateLook();
 
         try {
           final ScreenCapturer newScreenCapturer = new ScreenCapturer(
@@ -198,7 +214,7 @@ public class JapagogeFrame extends JFrame {
           var currentCapturer = this.currentScreenCapturer.getAndSet(null);
           if (currentCapturer != null) {
             currentCapturer.stop(JapagogeConfig.getInstance().getLoops());
-            this.state = State.SAVING_RESULT;
+            this.setState(State.SAVING_RESULT);
 
             SwingUtilities.invokeLater(() -> {
               var targetFile = this.makeTargetFile();
@@ -223,7 +239,7 @@ public class JapagogeFrame extends JFrame {
                 fileChooser.addChoosableFileFilter(apngFilter);
                 fileChooser.setFileFilter(apngFilter);
 
-                fileChooser.setDialogTitle("Save APNG file");
+                fileChooser.setDialogTitle("Save APNG record");
                 if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
                   var selectedFile = fileChooser.getSelectedFile();
                   JapagogeConfig.getInstance().setTargetFolder(selectedFile.getParentFile());
@@ -241,14 +257,12 @@ public class JapagogeFrame extends JFrame {
                 } catch (IOException ex) {
                   LOGGER.log(Level.SEVERE, "Can't delete temp file: " + tempFile, ex);
                 }
-                this.state = State.SELECT_POSITION;
-                this.updateLook();
+                this.setState(State.SELECT_POSITION);
               }
             });
           } else {
-            this.state = State.SELECT_POSITION;
+            this.setState(State.SELECT_POSITION);
           }
-          this.updateLook();
         } finally {
           this.resizer.setEnable(true);
         }
@@ -313,7 +327,10 @@ public class JapagogeFrame extends JFrame {
   @Override
   public void paint(final Graphics g) {
     final Graphics2D gfx = (Graphics2D) g;
-    if (this.state == State.SELECT_POSITION) {
+    var bounds = this.getBounds();
+    gfx.setColor(this.getBackground());
+    gfx.fillRect(0, 0, bounds.width, bounds.height);
+    if (this.state.get() == State.SELECT_POSITION) {
       gfx.drawImage(this.imagePreferences, this.buttonPreferences.x, this.buttonPreferences.y, null);
       gfx.drawImage(this.imageClose, this.buttonClose.x, this.buttonClose.y, null);
     }
