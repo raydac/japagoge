@@ -3,7 +3,7 @@
 # Script just generates free desktop descriptor to start application
 
 JAPAGOGE_HOME="$(realpath $(dirname ${BASH_SOURCE[0]}))"
-TARGET=$JAPAGOGE_HOME/ravikoodi.desktop
+TARGET=$JAPAGOGE_HOME/japagoge.desktop
 
 echo [Desktop Entry] > $TARGET
 echo Encoding=UTF-8 >> $TARGET
