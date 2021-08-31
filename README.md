@@ -7,9 +7,12 @@
 
 ## Changelog
 
-__1.0.0 (30-aug-2021)__
+- __1.0.1 (SNAPSHOT)__
+    - internal optimizations to decrease result file size
 
-- initial release
+
+- __1.0.0 (30-aug-2021)__
+    - initial release
 
 ## Preword
 
