@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.zip.CRC32;
 import java.util.zip.Deflater;
 import java.util.zip.DeflaterOutputStream;
@@ -27,8 +28,9 @@ public final class APngWriter {
   private int sequenceCounter = 0;
   private int width = -1;
   private int height = -1;
-  private byte[] imageRgbBuffer;
-  private Duration lastFrameDuration;
+  private byte[] imageRgbBufferLast;
+  private byte[] imageRgbBufferTemp;
+  private Duration accumulatedFrameDuration = null;
   private volatile State state = State.CREATED;
 
   public APngWriter(final FileChannel file) {
@@ -69,10 +71,6 @@ public final class APngWriter {
     return new short[]{(short) pFound, (short) qFound};
   }
 
-  public State getState() {
-    return this.state;
-  }
-
   private static byte[] toRgd(final BufferedImage image, final byte[] buffer) {
     final int imageWidth = image.getWidth();
     final int imageHeight = image.getHeight();
@@ -98,6 +96,10 @@ public final class APngWriter {
       resultBuffer[imgPos++] = (byte) argb;
     }
     return resultBuffer;
+  }
+
+  public State getState() {
+    return this.state;
   }
 
   private void saveSingleFrame(final byte[] data, final int width, final int height, final Duration frameDelay) throws IOException {
@@ -141,12 +143,24 @@ public final class APngWriter {
         throw new IllegalArgumentException("Unexpected image size");
       }
 
-      if (this.imageRgbBuffer == null) {
-        this.imageRgbBuffer = new byte[(this.width * this.height * 3) + this.height];
+      if (this.imageRgbBufferLast == null) {
+        final int bufferSize = (this.width * this.height * 3) + this.height;
+        this.imageRgbBufferLast = new byte[bufferSize];
+        this.imageRgbBufferTemp = new byte[bufferSize];
       }
 
-      this.imageRgbBuffer = toRgd(image, this.imageRgbBuffer);
-      this.saveSingleFrame(this.imageRgbBuffer, this.width, this.height, delay);
+      this.imageRgbBufferTemp = toRgd(image, this.imageRgbBufferTemp);
+
+      if (this.accumulatedFrameDuration == null) {
+        System.arraycopy(this.imageRgbBufferTemp, 0, this.imageRgbBufferLast, 0, this.imageRgbBufferTemp.length);
+        this.accumulatedFrameDuration = delay;
+      } else if (Arrays.compare(this.imageRgbBufferLast, this.imageRgbBufferTemp) == 0) {
+        this.accumulatedFrameDuration = this.accumulatedFrameDuration.plus(delay);
+      } else {
+        this.saveSingleFrame(this.imageRgbBufferLast, this.width, this.height, this.accumulatedFrameDuration);
+        System.arraycopy(this.imageRgbBufferTemp, 0, this.imageRgbBufferLast, 0, this.imageRgbBufferTemp.length);
+        this.accumulatedFrameDuration = delay;
+      }
     }
   }
 
@@ -169,6 +183,11 @@ public final class APngWriter {
   public synchronized void close(final int loopCount) throws IOException {
     if (this.state != State.STARTED) throw new IllegalStateException("State: " + this.state);
     this.state = State.CLOSED;
+
+    if (this.accumulatedFrameDuration != null) {
+      this.saveSingleFrame(this.imageRgbBufferLast, this.width, this.height, this.accumulatedFrameDuration);
+    }
+
     try {
       this.putInt(0);
       this.putInt(SIG_IEND);
@@ -180,7 +199,7 @@ public final class APngWriter {
       try {
         this.fileChannel.close();
       } finally {
-        this.imageRgbBuffer = null;
+        this.imageRgbBufferLast = null;
         this.buffer = null;
       }
     }
