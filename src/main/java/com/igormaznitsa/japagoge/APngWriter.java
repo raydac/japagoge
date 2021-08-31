@@ -28,6 +28,7 @@ public final class APngWriter {
   private int width = -1;
   private int height = -1;
   private byte[] imageRgbBuffer;
+  private Duration lastFrameDuration;
   private volatile State state = State.CREATED;
 
   public APngWriter(final FileChannel file) {
@@ -72,61 +73,80 @@ public final class APngWriter {
     return this.state;
   }
 
+  private static byte[] toRgd(final BufferedImage image, final byte[] buffer) {
+    final int imageWidth = image.getWidth();
+    final int imageHeight = image.getHeight();
+
+    final int requiredBufferSize = (imageWidth + 3) * imageHeight + imageHeight;
+    final int[] data = ((DataBufferInt) image.getData().getDataBuffer()).getData();
+
+    final byte[] resultBuffer;
+    if (buffer == null || buffer.length < requiredBufferSize) {
+      resultBuffer = new byte[requiredBufferSize];
+    } else {
+      resultBuffer = buffer;
+    }
+    final int scanLineBytes = (imageWidth * 3) + 1;
+
+    int imgPos = 0;
+    for (final int argb : data) {
+      if (imgPos % scanLineBytes == 0) {
+        resultBuffer[imgPos++] = 0;
+      }
+      resultBuffer[imgPos++] = (byte) (argb >> 16);
+      resultBuffer[imgPos++] = (byte) (argb >> 8);
+      resultBuffer[imgPos++] = (byte) argb;
+    }
+    return resultBuffer;
+  }
+
+  private void saveSingleFrame(final byte[] data, final int width, final int height, final Duration frameDelay) throws IOException {
+    this.frameCounter++;
+
+    final short[] delayFractions = getTimeFraction(frameDelay);
+    // fcTL
+    this.putInt(26);
+    this.putInt(SIG_fcTL);
+    this.putInt(this.sequenceCounter++);
+    this.putInt(width);
+    this.putInt(height);
+    this.putInt(0);               // x position
+    this.putInt(0);               // y position
+    this.putShort(delayFractions[0]);     // fps num
+    this.putShort(delayFractions[1]);     // fps den
+    this.put(1);           //dispose 1:clear, 0: do nothing, 2: revert
+    this.put(0);               //blend   1:blend, 0: overwrite
+    this.putInt(this.calcCrcForBufferedChunk());
+    this.flushAndClearBuffer();
+
+    var compressedData = compress(data);
+
+    if (this.frameCounter == 1) {
+      this.putInt(compressedData.length);
+      this.putInt(SIG_IDAT);
+    } else {
+      this.putInt(compressedData.length + 4);
+      this.putInt(SIG_fdAT);
+      this.putInt(this.sequenceCounter++);
+    }
+
+    this.put(compressedData);
+    this.putInt(this.calcCrcForBufferedChunk());
+    this.flushAndClearBuffer();
+  }
+
   public synchronized void addFrame(final BufferedImage image, final Duration delay) throws IOException {
     if (this.state == State.STARTED) {
       if (image.getWidth() != this.width || image.getHeight() != this.height) {
         throw new IllegalArgumentException("Unexpected image size");
       }
 
-      this.frameCounter++;
-
-      final short[] delayFractions = getTimeFraction(delay);
-
-      // fcTL
-      this.putInt(26);
-      this.putInt(SIG_fcTL);
-      this.putInt(this.sequenceCounter++);
-      this.putInt(this.width);
-      this.putInt(this.height);
-      this.putInt(0);               // x position
-      this.putInt(0);               // y position
-      this.putShort(delayFractions[0]);     // fps num
-      this.putShort(delayFractions[1]);     // fps den
-      this.put(1);           //dispose 1:clear, 0: do nothing, 2: revert
-      this.put(0);               //blend   1:blend, 0: overwrite
-      this.putInt(this.calcCrcForBufferedChunk());
-
-      this.flushAndClearBuffer();
-
-      final int[] data = ((DataBufferInt) image.getData().getDataBuffer()).getData();
-
       if (this.imageRgbBuffer == null) {
         this.imageRgbBuffer = new byte[(this.width * this.height * 3) + this.height];
       }
 
-      final int scanLineBytes = (this.width * 3) + 1;
-
-      int imgPos = 0;
-      for (final int argb : data) {
-        if (imgPos % scanLineBytes == 0) imgPos++; // offset for scanline filter byte
-        this.imageRgbBuffer[imgPos++] = (byte) (argb >> 16);
-        this.imageRgbBuffer[imgPos++] = (byte) (argb >> 8);
-        this.imageRgbBuffer[imgPos++] = (byte) argb;
-      }
-
-      var compressedData = compress(this.imageRgbBuffer);
-
-      if (this.frameCounter == 1) {
-        this.putInt(compressedData.length);
-        this.putInt(SIG_IDAT);
-      } else {
-        this.putInt(compressedData.length + 4);
-        this.putInt(SIG_fdAT);
-        this.putInt(this.sequenceCounter++);
-      }
-      this.put(compressedData);
-      this.putInt(this.calcCrcForBufferedChunk());
-      this.flushAndClearBuffer();
+      this.imageRgbBuffer = toRgd(image, this.imageRgbBuffer);
+      this.saveSingleFrame(this.imageRgbBuffer, this.width, this.height, delay);
     }
   }
 
