@@ -22,8 +22,8 @@ public final class APngWriter {
   private static final int SIG_IEND = 0x49454e44;
   private static final int OFFSET_ACTL = 8 + 25;
   private final FileChannel fileChannel;
-  private byte[] buffer;
-  private int bufferPosition = 0;
+  private byte[] chunkBuffer;
+  private int nextChunkBufferPosition = 0;
   private int frameCounter = 0;
   private int sequenceCounter = 0;
   private int width = -1;
@@ -165,19 +165,19 @@ public final class APngWriter {
   }
 
   private void flushAndClearBuffer() throws IOException {
-    this.fileChannel.write(ByteBuffer.wrap(this.buffer, 0, this.bufferPosition));
+    this.fileChannel.write(ByteBuffer.wrap(this.chunkBuffer, 0, this.nextChunkBufferPosition));
     this.resetPosition();
   }
 
   private void resetPosition() {
-    this.bufferPosition = 0;
+    this.nextChunkBufferPosition = 0;
   }
 
   private void putInt(final int value) {
-    this.buffer[this.bufferPosition++] = (byte) (value >>> 24);
-    this.buffer[this.bufferPosition++] = (byte) (value >>> 16);
-    this.buffer[this.bufferPosition++] = (byte) (value >>> 8);
-    this.buffer[this.bufferPosition++] = (byte) value;
+    this.put(value >>> 24);
+    this.put(value >>> 16);
+    this.put(value >>> 8);
+    this.put(value);
   }
 
   public synchronized void close(final int loopCount) throws IOException {
@@ -200,7 +200,8 @@ public final class APngWriter {
         this.fileChannel.close();
       } finally {
         this.imageRgbBufferLast = null;
-        this.buffer = null;
+        this.imageRgbBufferTemp = null;
+        this.chunkBuffer = null;
       }
     }
   }
@@ -211,8 +212,6 @@ public final class APngWriter {
 
     this.width = width;
     this.height = height;
-
-    this.buffer = new byte[Math.max(128 * 1024, this.width * this.height * 3)];
 
     // signature
     this.put(new byte[]{(byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A});
@@ -244,23 +243,30 @@ public final class APngWriter {
   }
 
   private void putShort(final int value) {
-    this.buffer[this.bufferPosition++] = (byte) (value >> 8);
-    this.buffer[this.bufferPosition++] = (byte) value;
+    this.put(value >> 8);
+    this.put(value);
   }
 
   private void put(final byte[] array) {
     for (final byte b : array) {
-      this.buffer[this.bufferPosition++] = b;
+      this.put(b);
     }
   }
 
   private void put(final int value) {
-    this.buffer[this.bufferPosition++] = (byte) value;
+    if (this.chunkBuffer == null) {
+      this.chunkBuffer = new byte[64 * 1024];
+    } else if (this.nextChunkBufferPosition == this.chunkBuffer.length) {
+      final byte[] newBuffer = new byte[this.chunkBuffer.length * 2];
+      System.arraycopy(this.chunkBuffer, 0, newBuffer, 0, this.chunkBuffer.length);
+      this.chunkBuffer = newBuffer;
+    }
+    this.chunkBuffer[this.nextChunkBufferPosition++] = (byte) value;
   }
 
   private int calcCrcForBufferedChunk() {
     CRC32 crc = new CRC32();
-    crc.update(this.buffer, 4, this.bufferPosition - 4);
+    crc.update(this.chunkBuffer, 4, this.nextChunkBufferPosition - 4);
     return (int) crc.getValue();
   }
 
