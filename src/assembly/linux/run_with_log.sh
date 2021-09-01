@@ -26,7 +26,7 @@ $JAVA_RUN -version &>>$LOG_FILE
 
 echo ------------------------ &>>$LOG_FILE
 
-$JAVA_RUN $JAVA_FLAGS -jar "$JAPAGOGE_HOME"/japagoge.jar $@
+$JAVA_RUN $JAVA_FLAGS -jar "$JAPAGOGE_HOME"/japagoge.jar $@ &>>$LOG_FILE&
 THE_PID=$!
 echo $THE_PID>$JAPAGOGE_HOME/.pid
 wait $THE_PID
