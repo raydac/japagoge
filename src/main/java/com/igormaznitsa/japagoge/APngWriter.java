@@ -133,32 +133,38 @@ public final class APngWriter {
       final int pixelHeight = (endByteY - startByteY) + 1;
 
       final int portionLineWidth = pixelWidth * 3 + 1;
-      final byte[] portionArray = new byte[portionLineWidth * pixelHeight];
+      final int fragmentDataLength = portionLineWidth * pixelHeight;
 
-      if (startByteX == 0) {
-        int srcOffset = startByteY * scanLineWidth;
-        int dstOffset = 0;
-        for (int i = 0; i < pixelHeight; i++) {
-          System.arraycopy(newPngData, srcOffset, portionArray, dstOffset, portionLineWidth);
-          srcOffset += scanLineWidth;
-          dstOffset += portionLineWidth;
-        }
+      if (fragmentDataLength > (newPngData.length * 3) / 4) {
+        imageRect.data = newPngData;
       } else {
-        int srcOffset = startByteY * scanLineWidth + (pixelX * 3) + 1;
-        int dstOffset = 1;
-        final int copyLineLength = pixelWidth * 3;
-        for (int i = 0; i < pixelHeight; i++) {
-          System.arraycopy(newPngData, srcOffset, portionArray, dstOffset, copyLineLength);
-          srcOffset += scanLineWidth;
-          dstOffset += portionLineWidth;
-        }
-      }
+        final byte[] portionArray = new byte[fragmentDataLength];
 
-      imageRect.x = pixelX;
-      imageRect.y = startByteY;
-      imageRect.width = pixelWidth;
-      imageRect.heigh = pixelHeight;
-      imageRect.data = portionArray;
+        if (startByteX == 0) {
+          int srcOffset = startByteY * scanLineWidth;
+          int dstOffset = 0;
+          for (int i = 0; i < pixelHeight; i++) {
+            System.arraycopy(newPngData, srcOffset, portionArray, dstOffset, portionLineWidth);
+            srcOffset += scanLineWidth;
+            dstOffset += portionLineWidth;
+          }
+        } else {
+          int srcOffset = startByteY * scanLineWidth + (pixelX * 3) + 1;
+          int dstOffset = 1;
+          final int copyLineLength = pixelWidth * 3;
+          for (int i = 0; i < pixelHeight; i++) {
+            System.arraycopy(newPngData, srcOffset, portionArray, dstOffset, copyLineLength);
+            srcOffset += scanLineWidth;
+            dstOffset += portionLineWidth;
+          }
+        }
+
+        imageRect.x = pixelX;
+        imageRect.y = startByteY;
+        imageRect.width = pixelWidth;
+        imageRect.heigh = pixelHeight;
+        imageRect.data = portionArray;
+      }
     }
 
     return imageRect;
