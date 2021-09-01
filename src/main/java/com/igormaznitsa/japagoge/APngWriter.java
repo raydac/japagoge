@@ -244,7 +244,7 @@ public final class APngWriter {
     }
   }
 
-  public synchronized void close(final int loopCount) throws IOException {
+  public synchronized Statistics close(final int loopCount) throws IOException {
     if (this.state != State.STARTED) throw new IllegalStateException("State: " + this.state);
     this.state = State.CLOSED;
 
@@ -259,6 +259,7 @@ public final class APngWriter {
       this.flushAndClearBuffer();
       this.fileChannel.position(OFFSET_ACTL);
       this.writeAcTLChunk(this.frameCounter, loopCount);
+      return new Statistics(this.chunkBuffer.length, this.frameCounter, this.width, this.height, this.fileChannel.size());
     } finally {
       try {
         this.fileChannel.close();
@@ -267,6 +268,22 @@ public final class APngWriter {
         this.imageRgbBufferTemp = null;
         this.chunkBuffer = null;
       }
+    }
+  }
+
+  public final class Statistics {
+    public final int bufferSize;
+    public final int frames;
+    public final int width;
+    public final int height;
+    public final long size;
+
+    private Statistics(final int bufferSize, final int frames, final int width, final int height, final long size) {
+      this.bufferSize = bufferSize;
+      this.frames = frames;
+      this.width = width;
+      this.height = height;
+      this.size = size;
     }
   }
 

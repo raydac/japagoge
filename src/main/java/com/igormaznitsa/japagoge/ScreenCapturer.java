@@ -123,7 +123,14 @@ public final class ScreenCapturer {
     var apngWriter = this.apngWriter.getAndSet(null);
     if (apngWriter != null) {
       try {
-        apngWriter.close(loops);
+        final APngWriter.Statistics statistics = apngWriter.close(loops);
+        LOGGER.info(String.format("Image %dx%d, buffer %d bytes, %d frames, length %d bytes",
+                statistics.width,
+                statistics.height,
+                statistics.bufferSize,
+                statistics.frames,
+                statistics.size
+        ));
       } catch (Exception ex) {
         LOGGER.log(Level.SEVERE, "Error during close writer", ex);
       }

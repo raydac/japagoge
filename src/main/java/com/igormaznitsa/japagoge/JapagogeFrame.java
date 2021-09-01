@@ -270,6 +270,8 @@ public class JapagogeFrame extends JFrame {
                     LOGGER.log(Level.SEVERE, "Can't move result file", ex);
                     JOptionPane.showMessageDialog(this, "Can't move result file!", "Error", JOptionPane.ERROR_MESSAGE);
                   }
+                } else {
+                  LOGGER.info("Canceling file save");
                 }
               } finally {
                 try {
