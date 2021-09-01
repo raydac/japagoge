@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.time.Duration;
-import java.util.Arrays;
 import java.util.zip.CRC32;
 import java.util.zip.Deflater;
 import java.util.zip.DeflaterOutputStream;
@@ -32,6 +31,7 @@ public final class APngWriter {
   private byte[] imageRgbBufferTemp;
   private Duration accumulatedFrameDuration = null;
   private volatile State state = State.CREATED;
+  private ImagePortion lastFoundDifference;
 
   public APngWriter(final FileChannel file) {
     this.fileChannel = file;
@@ -102,7 +102,69 @@ public final class APngWriter {
     return this.state;
   }
 
-  private void saveSingleFrame(final byte[] data, final int width, final int height, final Duration frameDelay) throws IOException {
+  private static ImagePortion extractChangedImagePortion(final byte[] oldPngData, final byte[] newPngData, final ImagePortion imageRect) {
+    int startByteX = Integer.MAX_VALUE;
+    int startByteY = Integer.MAX_VALUE;
+    int endByteX = Integer.MIN_VALUE;
+    int endByteY = Integer.MIN_VALUE;
+
+    final int scanLineWidth = imageRect.width * 3 + 1;
+
+    final int dataLength = oldPngData.length;
+
+    for (int i = 0; i < dataLength; i++) {
+      if (oldPngData[i] != newPngData[i]) {
+        final int px = i % scanLineWidth;
+        final int py = i / scanLineWidth;
+        startByteX = Math.min(startByteX, px);
+        startByteY = Math.min(startByteY, py);
+        endByteX = Math.max(endByteX, px);
+        endByteY = Math.max(endByteY, py);
+      }
+    }
+
+    if (startByteX == Integer.MAX_VALUE) return null;
+
+    if (startByteX == 0 && startByteY == 0 && endByteX == scanLineWidth - 1 && endByteY == imageRect.heigh - 1) {
+      imageRect.data = newPngData;
+    } else {
+      final int pixelX = (startByteX - 1) / 3;
+      final int pixelWidth = ((endByteX - 1) - (startByteX - 1)) / 3 + 1;
+      final int pixelHeight = (endByteY - startByteY) + 1;
+
+      final int portionLineWidth = pixelWidth * 3 + 1;
+      final byte[] portionArray = new byte[portionLineWidth * pixelHeight];
+
+      if (startByteX == 0) {
+        int srcOffset = startByteY * scanLineWidth;
+        int dstOffset = 0;
+        for (int i = 0; i < pixelHeight; i++) {
+          System.arraycopy(newPngData, srcOffset, portionArray, dstOffset, portionLineWidth);
+          srcOffset += scanLineWidth;
+          dstOffset += portionLineWidth;
+        }
+      } else {
+        int srcOffset = startByteY * scanLineWidth + (pixelX * 3) + 1;
+        int dstOffset = 1;
+        final int copyLineLength = pixelWidth * 3;
+        for (int i = 0; i < pixelHeight; i++) {
+          System.arraycopy(newPngData, srcOffset, portionArray, dstOffset, copyLineLength);
+          srcOffset += scanLineWidth;
+          dstOffset += portionLineWidth;
+        }
+      }
+
+      imageRect.x = pixelX;
+      imageRect.y = startByteY;
+      imageRect.width = pixelWidth;
+      imageRect.heigh = pixelHeight;
+      imageRect.data = portionArray;
+    }
+
+    return imageRect;
+  }
+
+  private void saveSingleFrame(final ImagePortion portion, final Duration frameDelay) throws IOException {
     this.frameCounter++;
 
     final short[] delayFractions = getTimeFraction(frameDelay);
@@ -110,18 +172,18 @@ public final class APngWriter {
     this.putInt(26);
     this.putInt(SIG_fcTL);
     this.putInt(this.sequenceCounter++);
-    this.putInt(width);
-    this.putInt(height);
-    this.putInt(0);               // x position
-    this.putInt(0);               // y position
+    this.putInt(portion.width);
+    this.putInt(portion.heigh);
+    this.putInt(portion.x);               // x position
+    this.putInt(portion.y);               // y position
     this.putShort(delayFractions[0]);     // fps num
     this.putShort(delayFractions[1]);     // fps den
-    this.put(1);           //dispose 1:clear, 0: do nothing, 2: revert
+    this.put(0);           //dispose 1:clear, 0: do nothing, 2: revert
     this.put(0);               //blend   1:blend, 0: overwrite
     this.putInt(this.calcCrcForBufferedChunk());
     this.flushAndClearBuffer();
 
-    var compressedData = compress(data);
+    var compressedData = compress(portion.data);
 
     if (this.frameCounter == 1) {
       this.putInt(compressedData.length);
@@ -153,39 +215,35 @@ public final class APngWriter {
 
       if (this.accumulatedFrameDuration == null) {
         System.arraycopy(this.imageRgbBufferTemp, 0, this.imageRgbBufferLast, 0, this.imageRgbBufferTemp.length);
+        this.lastFoundDifference = new ImagePortion(0, 0, this.width, this.height, this.imageRgbBufferLast);
         this.accumulatedFrameDuration = delay;
-      } else if (Arrays.compare(this.imageRgbBufferLast, this.imageRgbBufferTemp) == 0) {
-        this.accumulatedFrameDuration = this.accumulatedFrameDuration.plus(delay);
       } else {
-        this.saveSingleFrame(this.imageRgbBufferLast, this.width, this.height, this.accumulatedFrameDuration);
-        System.arraycopy(this.imageRgbBufferTemp, 0, this.imageRgbBufferLast, 0, this.imageRgbBufferTemp.length);
-        this.accumulatedFrameDuration = delay;
+        final ImagePortion foundDifference = extractChangedImagePortion(this.imageRgbBufferLast, this.imageRgbBufferTemp, new ImagePortion(0, 0, this.width, this.height, null));
+
+        if (foundDifference == null) {
+          this.accumulatedFrameDuration = this.accumulatedFrameDuration.plus(delay);
+        } else {
+          this.saveSingleFrame(this.lastFoundDifference, this.accumulatedFrameDuration);
+
+          System.arraycopy(this.imageRgbBufferTemp, 0, this.imageRgbBufferLast, 0, this.imageRgbBufferTemp.length);
+          if (foundDifference.data == this.imageRgbBufferTemp) {
+            foundDifference.data = this.imageRgbBufferLast;
+          }
+
+          this.lastFoundDifference = foundDifference;
+
+          this.accumulatedFrameDuration = delay;
+        }
       }
     }
-  }
-
-  private void flushAndClearBuffer() throws IOException {
-    this.fileChannel.write(ByteBuffer.wrap(this.chunkBuffer, 0, this.nextChunkBufferPosition));
-    this.resetPosition();
-  }
-
-  private void resetPosition() {
-    this.nextChunkBufferPosition = 0;
-  }
-
-  private void putInt(final int value) {
-    this.put(value >>> 24);
-    this.put(value >>> 16);
-    this.put(value >>> 8);
-    this.put(value);
   }
 
   public synchronized void close(final int loopCount) throws IOException {
     if (this.state != State.STARTED) throw new IllegalStateException("State: " + this.state);
     this.state = State.CLOSED;
 
-    if (this.accumulatedFrameDuration != null) {
-      this.saveSingleFrame(this.imageRgbBufferLast, this.width, this.height, this.accumulatedFrameDuration);
+    if (this.lastFoundDifference != null) {
+      this.saveSingleFrame(this.lastFoundDifference, this.accumulatedFrameDuration);
     }
 
     try {
@@ -203,6 +261,39 @@ public final class APngWriter {
         this.imageRgbBufferTemp = null;
         this.chunkBuffer = null;
       }
+    }
+  }
+
+
+  private void flushAndClearBuffer() throws IOException {
+    this.fileChannel.write(ByteBuffer.wrap(this.chunkBuffer, 0, this.nextChunkBufferPosition));
+    this.resetPosition();
+  }
+
+  private void resetPosition() {
+    this.nextChunkBufferPosition = 0;
+  }
+
+  private void putInt(final int value) {
+    this.put(value >>> 24);
+    this.put(value >>> 16);
+    this.put(value >>> 8);
+    this.put(value);
+  }
+
+  private static final class ImagePortion {
+    int x;
+    int y;
+    int width;
+    int heigh;
+    byte[] data;
+
+    ImagePortion(final int x, final int y, final int width, final int height, final byte[] data) {
+      this.x = x;
+      this.y = y;
+      this.width = width;
+      this.heigh = height;
+      this.data = data;
     }
   }
 
