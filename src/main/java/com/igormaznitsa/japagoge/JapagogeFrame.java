@@ -117,6 +117,21 @@ public class JapagogeFrame extends JFrame {
 
     this.addMouseMotionListener(new MouseMotionAdapter() {
       @Override
+      public void mouseMoved(final MouseEvent e) {
+        if (!e.isConsumed() && resizer.isEnabled()) {
+          var newMouseScreenPoint = new Point(e.getPoint());
+          if (newMouseScreenPoint.getY() < TITLE_HEIGHT) {
+            if (buttonClose.contains(newMouseScreenPoint) || buttonPreferences.contains(newMouseScreenPoint)) {
+              setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            } else {
+              setCursor(Cursor.getDefaultCursor());
+            }
+          }
+          e.consume();
+        }
+      }
+
+      @Override
       public void mouseDragged(final MouseEvent e) {
         if (!e.isConsumed() && lastMousePressedTitleScreenPoint != null && resizer.isEnabled()) {
           var newMouseScreenPoint = new Point(e.getPoint());

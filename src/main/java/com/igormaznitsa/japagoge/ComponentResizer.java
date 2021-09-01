@@ -128,7 +128,7 @@ public final class ComponentResizer extends MouseAdapter {
 
   @Override
   public void mouseMoved(final MouseEvent event) {
-    if (this.enabled) {
+    if (this.enabled && !event.isConsumed()) {
       final Component source = event.getComponent();
       Point location = event.getPoint();
       direction = 0;
@@ -158,7 +158,7 @@ public final class ComponentResizer extends MouseAdapter {
 
   @Override
   public void mouseEntered(final MouseEvent event) {
-    if (this.enabled && !resizing) {
+    if (this.enabled && !event.isConsumed() && !resizing) {
       Component source = event.getComponent();
       sourceCursor = source.getCursor();
     }
@@ -166,7 +166,7 @@ public final class ComponentResizer extends MouseAdapter {
 
   @Override
   public void mouseExited(final MouseEvent event) {
-    if (this.enabled && !resizing) {
+    if (this.enabled && !event.isConsumed() && !resizing) {
       Component source = event.getComponent();
       source.setCursor(sourceCursor);
     }
@@ -174,7 +174,7 @@ public final class ComponentResizer extends MouseAdapter {
 
   @Override
   public void mousePressed(final MouseEvent event) {
-    if (this.enabled) {
+    if (this.enabled && !event.isConsumed()) {
       //	The mouseMoved event continually updates this variable
 
       if (direction == 0) return;
@@ -199,7 +199,7 @@ public final class ComponentResizer extends MouseAdapter {
 
   @Override
   public void mouseReleased(final MouseEvent event) {
-    if (this.enabled) {
+    if (this.enabled && !event.isConsumed()) {
       this.resizing = false;
 
       Component source = event.getComponent();
@@ -213,7 +213,7 @@ public final class ComponentResizer extends MouseAdapter {
 
   @Override
   public void mouseDragged(final MouseEvent event) {
-    if (this.enabled && this.resizing) {
+    if (this.enabled && !event.isConsumed() && this.resizing) {
       Component source = event.getComponent();
       Point dragged = event.getPoint();
       SwingUtilities.convertPointToScreen(dragged, source);
