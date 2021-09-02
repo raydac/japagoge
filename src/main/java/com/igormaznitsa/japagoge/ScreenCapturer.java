@@ -36,6 +36,7 @@ public final class ScreenCapturer {
   private final File targetFile;
   private final Duration durationBetweenFrames;
   private final boolean capturePointer;
+  private final boolean grayscale;
   private final AtomicReference<TimerTask> timerTask = new AtomicReference<>();
   private final AtomicReference<APngWriter> apngWriter = new AtomicReference<>();
 
@@ -44,9 +45,11 @@ public final class ScreenCapturer {
           final Rectangle screenArea,
           final File targetFile,
           final boolean capturePointer,
+          final boolean grayscale,
           final Duration delayBetweenFrames
   ) throws AWTException {
     this.robot = new Robot(device);
+    this.grayscale = grayscale;
     this.capturePointer = capturePointer;
     this.screenArea = Objects.requireNonNull(screenArea);
     this.targetFile = targetFile;
@@ -73,7 +76,7 @@ public final class ScreenCapturer {
         LOGGER.log(Level.SEVERE, "Can't gen file channel", ex);
         throw new Error(ex);
       }
-      var newWriter = new APngWriter(fileChannel);
+      var newWriter = new APngWriter(fileChannel, this.grayscale);
 
       if (!this.apngWriter.compareAndSet(null, newWriter)) {
         throw new Error("Unexpected state");
@@ -124,7 +127,8 @@ public final class ScreenCapturer {
     if (apngWriter != null) {
       try {
         final APngWriter.Statistics statistics = apngWriter.close(loops);
-        LOGGER.info(String.format("Image %dx%d, buffer %d bytes, %d frames, length %d bytes",
+        LOGGER.info(String.format("Image%s %dx%d, buffer %d bytes, %d frames, length %d bytes",
+                this.grayscale ? "(GRAYSCALE)" : "",
                 statistics.width,
                 statistics.height,
                 statistics.bufferSize,

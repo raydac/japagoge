@@ -16,6 +16,14 @@ public class JapagogeConfig {
     return INSTANCE;
   }
 
+  public boolean isGrayscale() {
+    return this.preferences.getBoolean(Key.GRAYSCALE.name(), false);
+  }
+
+  public void setGrayscale(final boolean flag) {
+    this.preferences.putBoolean(Key.GRAYSCALE.name(), flag);
+  }
+
   public boolean isPointer() {
     return this.preferences.getBoolean(Key.POINTER.name(), true);
   }
@@ -41,7 +49,7 @@ public class JapagogeConfig {
   }
 
   public File getTargetFolder() {
-    var path = this.preferences.get(Key.FORLDER_PATH.name(), null);
+    var path = this.preferences.get(Key.FOLDER_PATH.name(), null);
     try {
       return new File(path);
     } catch (Exception ex) {
@@ -51,13 +59,13 @@ public class JapagogeConfig {
 
   public void setTargetFolder(final File folder) {
     if (folder == null) {
-      this.preferences.remove(Key.FORLDER_PATH.name());
+      this.preferences.remove(Key.FOLDER_PATH.name());
     } else {
       var path = folder.isFile() ? folder.getParentFile() : folder;
       if (path == null) {
-        this.preferences.remove(Key.FORLDER_PATH.name());
+        this.preferences.remove(Key.FOLDER_PATH.name());
       } else {
-        this.preferences.put(Key.FORLDER_PATH.name(), path.getAbsolutePath());
+        this.preferences.put(Key.FOLDER_PATH.name(), path.getAbsolutePath());
       }
     }
   }
@@ -74,20 +82,31 @@ public class JapagogeConfig {
     FRAME_DELAY,
     LOOPS,
     POINTER,
-    FORLDER_PATH
+    FOLDER_PATH,
+    GRAYSCALE
   }
 
   public static class JapagogeConfigData {
     private boolean pointer;
+    private boolean grayscale;
     private long frameDelay;
     private File targetFolder;
     private int loops;
 
     public JapagogeConfigData() {
       this.pointer = getInstance().isPointer();
+      this.grayscale = getInstance().isGrayscale();
       this.frameDelay = getInstance().getFrameDelay();
       this.targetFolder = getInstance().getTargetFolder();
       this.loops = getInstance().getLoops();
+    }
+
+    public boolean isGrayscale() {
+      return this.grayscale;
+    }
+
+    public void setGrayscale(final boolean flag) {
+      this.grayscale = flag;
     }
 
     public boolean isPointer() {
@@ -124,6 +143,7 @@ public class JapagogeConfig {
 
     public void save() {
       getInstance().setPointer(this.pointer);
+      getInstance().setGrayscale(this.grayscale);
       getInstance().setLoops(this.loops);
       getInstance().setTargetFolder(this.targetFolder);
       getInstance().setFrameDelay(this.frameDelay);

@@ -27,14 +27,16 @@ public final class APngWriter {
   private int sequenceCounter = 0;
   private int width = -1;
   private int height = -1;
-  private byte[] imageRgbBufferLast;
-  private byte[] imageRgbBufferTemp;
+  private byte[] imageDataBufferLast;
+  private byte[] imageDataBufferTemp;
   private Duration accumulatedFrameDuration = null;
   private volatile State state = State.CREATED;
   private ImagePortion lastFoundDifference;
+  private boolean grayscale;
 
-  public APngWriter(final FileChannel file) {
+  public APngWriter(final FileChannel file, final boolean grayscale) {
     this.fileChannel = file;
+    this.grayscale = grayscale;
   }
 
   private static byte[] compress(final byte[] data) throws IOException {
@@ -71,6 +73,37 @@ public final class APngWriter {
     return new short[]{(short) pFound, (short) qFound};
   }
 
+  private static byte[] toGrayscale(final BufferedImage image, final byte[] buffer) {
+    final int imageWidth = image.getWidth();
+    final int imageHeight = image.getHeight();
+
+    final int requiredBufferSize = (imageWidth + 1) * imageHeight + imageHeight;
+    final int[] data = ((DataBufferInt) image.getData().getDataBuffer()).getData();
+
+    final byte[] resultBuffer;
+    if (buffer == null || buffer.length < requiredBufferSize) {
+      resultBuffer = new byte[requiredBufferSize];
+    } else {
+      resultBuffer = buffer;
+    }
+    final int scanLineBytes = imageWidth + 1;
+
+    int imgPos = 0;
+    for (final int argb : data) {
+      if (imgPos % scanLineBytes == 0) {
+        resultBuffer[imgPos++] = 0;
+      }
+
+      final int r = (argb >> 16) & 0xFF;
+      final int g = (argb >> 8) & 0xFF;
+      final int b = argb & 0xFF;
+      final int y = Math.min(255, Math.round(r * 0.299f + g * 0.587f + b * 0.114f));
+
+      resultBuffer[imgPos++] = (byte) y;
+    }
+    return resultBuffer;
+  }
+
   private static byte[] toRgd(final BufferedImage image, final byte[] buffer) {
     final int imageWidth = image.getWidth();
     final int imageHeight = image.getHeight();
@@ -91,9 +124,14 @@ public final class APngWriter {
       if (imgPos % scanLineBytes == 0) {
         resultBuffer[imgPos++] = 0;
       }
-      resultBuffer[imgPos++] = (byte) (argb >> 16);
-      resultBuffer[imgPos++] = (byte) (argb >> 8);
-      resultBuffer[imgPos++] = (byte) argb;
+
+      final int r = (argb >> 16) & 0xFF;
+      final int g = (argb >> 8) & 0xFF;
+      final int b = argb & 0xFF;
+
+      resultBuffer[imgPos++] = (byte) r;
+      resultBuffer[imgPos++] = (byte) g;
+      resultBuffer[imgPos++] = (byte) b;
     }
     return resultBuffer;
   }
@@ -102,7 +140,7 @@ public final class APngWriter {
     return this.state;
   }
 
-  private static ImagePortion extractChangedImagePortion(final byte[] oldPngData, final byte[] newPngData, final ImagePortion imageRect) {
+  private static ImagePortion extractChangedImagePortionRgb(final byte[] oldPngData, final byte[] newPngData, final ImagePortion imageRect) {
     int startByteX = Integer.MAX_VALUE;
     int startByteY = Integer.MAX_VALUE;
     int endByteX = Integer.MIN_VALUE;
@@ -170,6 +208,73 @@ public final class APngWriter {
     return imageRect;
   }
 
+  private static ImagePortion extractChangedImagePortionGrayscale(final byte[] oldPngData, final byte[] newPngData, final ImagePortion imageRect) {
+    int startByteX = Integer.MAX_VALUE;
+    int startByteY = Integer.MAX_VALUE;
+    int endByteX = Integer.MIN_VALUE;
+    int endByteY = Integer.MIN_VALUE;
+
+    final int scanLineWidth = imageRect.width + 1;
+
+    final int dataLength = oldPngData.length;
+
+    for (int i = 0; i < dataLength; i++) {
+      if (oldPngData[i] != newPngData[i]) {
+        final int px = i % scanLineWidth;
+        final int py = i / scanLineWidth;
+        startByteX = Math.min(startByteX, px);
+        startByteY = Math.min(startByteY, py);
+        endByteX = Math.max(endByteX, px);
+        endByteY = Math.max(endByteY, py);
+      }
+    }
+
+    if (startByteX == Integer.MAX_VALUE) return null;
+
+    if (startByteX == 0 && startByteY == 0 && endByteX == scanLineWidth - 1 && endByteY == imageRect.heigh - 1) {
+      imageRect.data = newPngData;
+    } else {
+      final int pixelX = (startByteX - 1);
+      final int pixelWidth = ((endByteX - 1) - (startByteX - 1)) + 1;
+      final int pixelHeight = (endByteY - startByteY) + 1;
+
+      final int portionLineWidth = pixelWidth + 1;
+      final int fragmentDataLength = portionLineWidth * pixelHeight;
+
+      if (fragmentDataLength > (newPngData.length * 3) / 4) {
+        imageRect.data = newPngData;
+      } else {
+        final byte[] portionArray = new byte[fragmentDataLength];
+
+        if (startByteX == 0) {
+          int srcOffset = startByteY * scanLineWidth;
+          int dstOffset = 0;
+          for (int i = 0; i < pixelHeight; i++) {
+            System.arraycopy(newPngData, srcOffset, portionArray, dstOffset, portionLineWidth);
+            srcOffset += scanLineWidth;
+            dstOffset += portionLineWidth;
+          }
+        } else {
+          int srcOffset = startByteY * scanLineWidth + pixelX + 1;
+          int dstOffset = 1;
+          for (int i = 0; i < pixelHeight; i++) {
+            System.arraycopy(newPngData, srcOffset, portionArray, dstOffset, pixelWidth);
+            srcOffset += scanLineWidth;
+            dstOffset += portionLineWidth;
+          }
+        }
+
+        imageRect.x = pixelX;
+        imageRect.y = startByteY;
+        imageRect.width = pixelWidth;
+        imageRect.heigh = pixelHeight;
+        imageRect.data = portionArray;
+      }
+    }
+
+    return imageRect;
+  }
+
   private void saveSingleFrame(final ImagePortion portion, final Duration frameDelay) throws IOException {
     this.frameCounter++;
 
@@ -211,29 +316,31 @@ public final class APngWriter {
         throw new IllegalArgumentException("Unexpected image size");
       }
 
-      if (this.imageRgbBufferLast == null) {
+      if (this.imageDataBufferLast == null) {
         final int bufferSize = (this.width * this.height * 3) + this.height;
-        this.imageRgbBufferLast = new byte[bufferSize];
-        this.imageRgbBufferTemp = new byte[bufferSize];
+        this.imageDataBufferLast = new byte[bufferSize];
+        this.imageDataBufferTemp = new byte[bufferSize];
       }
 
-      this.imageRgbBufferTemp = toRgd(image, this.imageRgbBufferTemp);
+      this.imageDataBufferTemp = this.grayscale ? toGrayscale(image, this.imageDataBufferTemp) : toRgd(image, this.imageDataBufferTemp);
 
       if (this.accumulatedFrameDuration == null) {
-        System.arraycopy(this.imageRgbBufferTemp, 0, this.imageRgbBufferLast, 0, this.imageRgbBufferTemp.length);
-        this.lastFoundDifference = new ImagePortion(0, 0, this.width, this.height, this.imageRgbBufferLast);
+        System.arraycopy(this.imageDataBufferTemp, 0, this.imageDataBufferLast, 0, this.imageDataBufferTemp.length);
+        this.lastFoundDifference = new ImagePortion(0, 0, this.width, this.height, this.imageDataBufferLast);
         this.accumulatedFrameDuration = delay;
       } else {
-        final ImagePortion foundDifference = extractChangedImagePortion(this.imageRgbBufferLast, this.imageRgbBufferTemp, new ImagePortion(0, 0, this.width, this.height, null));
+        final ImagePortion foundDifference = this.grayscale ?
+                extractChangedImagePortionGrayscale(this.imageDataBufferLast, this.imageDataBufferTemp, new ImagePortion(0, 0, this.width, this.height, null))
+                : extractChangedImagePortionRgb(this.imageDataBufferLast, this.imageDataBufferTemp, new ImagePortion(0, 0, this.width, this.height, null));
 
         if (foundDifference == null) {
           this.accumulatedFrameDuration = this.accumulatedFrameDuration.plus(delay);
         } else {
           this.saveSingleFrame(this.lastFoundDifference, this.accumulatedFrameDuration);
 
-          System.arraycopy(this.imageRgbBufferTemp, 0, this.imageRgbBufferLast, 0, this.imageRgbBufferTemp.length);
-          if (foundDifference.data == this.imageRgbBufferTemp) {
-            foundDifference.data = this.imageRgbBufferLast;
+          System.arraycopy(this.imageDataBufferTemp, 0, this.imageDataBufferLast, 0, this.imageDataBufferTemp.length);
+          if (foundDifference.data == this.imageDataBufferTemp) {
+            foundDifference.data = this.imageDataBufferLast;
           }
 
           this.lastFoundDifference = foundDifference;
@@ -264,8 +371,8 @@ public final class APngWriter {
       try {
         this.fileChannel.close();
       } finally {
-        this.imageRgbBufferLast = null;
-        this.imageRgbBufferTemp = null;
+        this.imageDataBufferLast = null;
+        this.imageDataBufferTemp = null;
         this.chunkBuffer = null;
       }
     }
@@ -337,7 +444,7 @@ public final class APngWriter {
     this.putInt(width);
     this.putInt(height);
     this.put(8); // bit depth
-    this.put(2); // color type
+    this.put(this.grayscale ? 0 : 2); // color type
     this.put(0); // compression method
     this.put(0); // filter method
     this.put(0); // interlace method

@@ -218,6 +218,7 @@ public class JapagogeFrame extends JFrame {
                   this.findScreeCaptureArea(),
                   tempFile,
                   JapagogeConfig.getInstance().isPointer(),
+                  JapagogeConfig.getInstance().isGrayscale(),
                   Duration.ofMillis(JapagogeConfig.getInstance().getFrameDelay())
           );
           if (this.currentScreenCapturer.compareAndSet(null, newScreenCapturer)) {
