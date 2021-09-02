@@ -238,7 +238,7 @@ public class JapagogeFrame extends JFrame {
             this.setState(State.SAVING_RESULT);
 
             SwingUtilities.invokeLater(() -> {
-              var targetFile = this.makeTargetFile();
+              var targetFile = this.makeTargetFile(currentCapturer.isGrayscale());
               var tempFile = currentCapturer.getTargetFile();
               try {
                 var fileChooser = new JFileChooser(JapagogeConfig.getInstance().getTargetFolder());
@@ -298,9 +298,9 @@ public class JapagogeFrame extends JFrame {
     }
   }
 
-  private File makeTargetFile() {
+  private File makeTargetFile(final boolean gray) {
     var dateFormat = new SimpleDateFormat("yyyyMMdd_HHmmss");
-    return new File(JapagogeConfig.getInstance().getTargetFolder(), "apng-" + dateFormat.format(new Date()) + ".png");
+    return new File(JapagogeConfig.getInstance().getTargetFolder(), "apng-" + (gray ? "gray-" : "rgb-") + dateFormat.format(new Date()) + ".png");
   }
 
   private File makeTempRecordFile() throws IOException {

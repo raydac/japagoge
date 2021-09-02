@@ -56,6 +56,10 @@ public final class ScreenCapturer {
     this.durationBetweenFrames = Objects.requireNonNull(delayBetweenFrames);
   }
 
+  public boolean isGrayscale() {
+    return this.grayscale;
+  }
+
   public File getTargetFile() {
     return this.targetFile;
   }
