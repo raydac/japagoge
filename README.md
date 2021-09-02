@@ -7,9 +7,11 @@
 
 ## Changelog
 
+- 1.0.2 (SNAPSHOT)
+  - added support of grayscale recording
+
 - __1.0.1 (01-sep-2021)__
   - internal optimizations to decrease result file size
-
 
 - __1.0.0 (30-aug-2021)__
   - initial release

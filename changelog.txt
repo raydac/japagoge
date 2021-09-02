@@ -1,3 +1,6 @@
+1.0.2 (SNAPSHOT)
+ - added support of grayscale recording
+
 1.0.1 (01-sep-2021)
  - internal optimizations to decrease result file size
 
