@@ -1,5 +1,8 @@
 package com.igormaznitsa.japagoge;
 
+import com.igormaznitsa.japagoge.filters.ColorFilter;
+import com.igormaznitsa.japagoge.filters.RgbPixelFilter;
+
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
 import java.io.ByteArrayOutputStream;
@@ -32,11 +35,11 @@ public final class APngWriter {
   private Duration accumulatedFrameDuration = null;
   private volatile State state = State.CREATED;
   private ImagePortion lastFoundDifference;
-  private boolean grayscale;
+  private final ColorFilter filter;
 
-  public APngWriter(final FileChannel file, final boolean grayscale) {
+  public APngWriter(final FileChannel file, final RgbPixelFilter filter) {
     this.fileChannel = file;
-    this.grayscale = grayscale;
+    this.filter = filter.get();
   }
 
   private static byte[] compress(final byte[] data) throws IOException {
@@ -73,7 +76,7 @@ public final class APngWriter {
     return new short[]{(short) pFound, (short) qFound};
   }
 
-  private static byte[] toGrayscale(final BufferedImage image, final byte[] buffer) {
+  private static byte[] toMonochrome(final BufferedImage image, final byte[] buffer, final ColorFilter filter) {
     final int imageWidth = image.getWidth();
     final int imageHeight = image.getHeight();
 
@@ -93,18 +96,12 @@ public final class APngWriter {
       if (imgPos % scanLineBytes == 0) {
         resultBuffer[imgPos++] = 0;
       }
-
-      final int r = (argb >> 16) & 0xFF;
-      final int g = (argb >> 8) & 0xFF;
-      final int b = argb & 0xFF;
-      final int y = Math.min(255, Math.round(r * 0.299f + g * 0.587f + b * 0.114f));
-
-      resultBuffer[imgPos++] = (byte) y;
+      resultBuffer[imgPos++] = (byte) filter.doFiltering(argb);
     }
     return resultBuffer;
   }
 
-  private static byte[] toRgd(final BufferedImage image, final byte[] buffer) {
+  private static byte[] toRgb(final BufferedImage image, final byte[] buffer, final ColorFilter filter) {
     final int imageWidth = image.getWidth();
     final int imageHeight = image.getHeight();
 
@@ -120,10 +117,12 @@ public final class APngWriter {
     final int scanLineBytes = (imageWidth * 3) + 1;
 
     int imgPos = 0;
-    for (final int argb : data) {
+    for (int argb : data) {
       if (imgPos % scanLineBytes == 0) {
         resultBuffer[imgPos++] = 0;
       }
+
+      argb = filter.doFiltering(argb);
 
       final int r = (argb >> 16) & 0xFF;
       final int g = (argb >> 8) & 0xFF;
@@ -208,7 +207,7 @@ public final class APngWriter {
     return imageRect;
   }
 
-  private static ImagePortion extractChangedImagePortionGrayscale(final byte[] oldPngData, final byte[] newPngData, final ImagePortion imageRect) {
+  private static ImagePortion extractChangedImagePortionMonochrome(final byte[] oldPngData, final byte[] newPngData, final ImagePortion imageRect) {
     int startByteX = Integer.MAX_VALUE;
     int startByteY = Integer.MAX_VALUE;
     int endByteX = Integer.MIN_VALUE;
@@ -322,15 +321,16 @@ public final class APngWriter {
         this.imageDataBufferTemp = new byte[bufferSize];
       }
 
-      this.imageDataBufferTemp = this.grayscale ? toGrayscale(image, this.imageDataBufferTemp) : toRgd(image, this.imageDataBufferTemp);
+      this.imageDataBufferTemp = this.filter.isMonochrome() ? toMonochrome(image, this.imageDataBufferTemp, this.filter)
+              : toRgb(image, this.imageDataBufferTemp, this.filter);
 
       if (this.accumulatedFrameDuration == null) {
         System.arraycopy(this.imageDataBufferTemp, 0, this.imageDataBufferLast, 0, this.imageDataBufferTemp.length);
         this.lastFoundDifference = new ImagePortion(0, 0, this.width, this.height, this.imageDataBufferLast);
         this.accumulatedFrameDuration = delay;
       } else {
-        final ImagePortion foundDifference = this.grayscale ?
-                extractChangedImagePortionGrayscale(this.imageDataBufferLast, this.imageDataBufferTemp, new ImagePortion(0, 0, this.width, this.height, null))
+        final ImagePortion foundDifference = this.filter.isMonochrome() ?
+                extractChangedImagePortionMonochrome(this.imageDataBufferLast, this.imageDataBufferTemp, new ImagePortion(0, 0, this.width, this.height, null))
                 : extractChangedImagePortionRgb(this.imageDataBufferLast, this.imageDataBufferTemp, new ImagePortion(0, 0, this.width, this.height, null));
 
         if (foundDifference == null) {
@@ -378,20 +378,31 @@ public final class APngWriter {
     }
   }
 
-  public final class Statistics {
-    public final int bufferSize;
-    public final int frames;
-    public final int width;
-    public final int height;
-    public final long size;
+  public synchronized void start(final int width, final int height) throws IOException {
+    if (this.state != State.CREATED) throw new IllegalStateException("State: " + this.state);
+    this.state = State.STARTED;
 
-    private Statistics(final int bufferSize, final int frames, final int width, final int height, final long size) {
-      this.bufferSize = bufferSize;
-      this.frames = frames;
-      this.width = width;
-      this.height = height;
-      this.size = size;
-    }
+    this.width = width;
+    this.height = height;
+
+    // signature
+    this.put(new byte[]{(byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A});
+    this.flushAndClearBuffer();
+
+    // header
+    this.putInt(13);
+    this.putInt(SIG_IHDR);
+    this.putInt(width);
+    this.putInt(height);
+    this.put(8); // bit depth
+    this.put(this.filter.isMonochrome() ? 0 : 2); // color type
+    this.put(0); // compression method
+    this.put(0); // filter method
+    this.put(0); // interlace method
+    this.putInt(this.calcCrcForBufferedChunk());
+    this.flushAndClearBuffer();
+
+    this.writeAcTLChunk(0, 0);
   }
 
 
@@ -427,31 +438,20 @@ public final class APngWriter {
     }
   }
 
-  public synchronized void start(final int width, final int height) throws IOException {
-    if (this.state != State.CREATED) throw new IllegalStateException("State: " + this.state);
-    this.state = State.STARTED;
+  public static final class Statistics {
+    public final int bufferSize;
+    public final int frames;
+    public final int width;
+    public final int height;
+    public final long size;
 
-    this.width = width;
-    this.height = height;
-
-    // signature
-    this.put(new byte[]{(byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A});
-    this.flushAndClearBuffer();
-
-    // header
-    this.putInt(13);
-    this.putInt(SIG_IHDR);
-    this.putInt(width);
-    this.putInt(height);
-    this.put(8); // bit depth
-    this.put(this.grayscale ? 0 : 2); // color type
-    this.put(0); // compression method
-    this.put(0); // filter method
-    this.put(0); // interlace method
-    this.putInt(this.calcCrcForBufferedChunk());
-    this.flushAndClearBuffer();
-
-    this.writeAcTLChunk(0, 0);
+    private Statistics(final int bufferSize, final int frames, final int width, final int height, final long size) {
+      this.bufferSize = bufferSize;
+      this.frames = frames;
+      this.width = width;
+      this.height = height;
+      this.size = size;
+    }
   }
 
   private void writeAcTLChunk(final int frameCount, final int loopCount) throws IOException {

@@ -218,7 +218,7 @@ public class JapagogeFrame extends JFrame {
                   this.findScreeCaptureArea(),
                   tempFile,
                   JapagogeConfig.getInstance().isPointer(),
-                  JapagogeConfig.getInstance().isGrayscale(),
+                  JapagogeConfig.getInstance().getFilter(),
                   Duration.ofMillis(JapagogeConfig.getInstance().getFrameDelay())
           );
           if (this.currentScreenCapturer.compareAndSet(null, newScreenCapturer)) {
@@ -238,7 +238,7 @@ public class JapagogeFrame extends JFrame {
             this.setState(State.SAVING_RESULT);
 
             SwingUtilities.invokeLater(() -> {
-              var targetFile = this.makeTargetFile(currentCapturer.isGrayscale());
+              var targetFile = this.makeTargetFile(currentCapturer.getFilter().name());
               var tempFile = currentCapturer.getTargetFile();
               try {
                 var fileChooser = new JFileChooser(JapagogeConfig.getInstance().getTargetFolder());
@@ -298,9 +298,9 @@ public class JapagogeFrame extends JFrame {
     }
   }
 
-  private File makeTargetFile(final boolean gray) {
+  private File makeTargetFile(final String filter) {
     var dateFormat = new SimpleDateFormat("yyyyMMdd_HHmmss");
-    return new File(JapagogeConfig.getInstance().getTargetFolder(), "apng-" + (gray ? "gray-" : "rgb-") + dateFormat.format(new Date()) + ".png");
+    return new File(JapagogeConfig.getInstance().getTargetFolder(), "apng-" + filter.toLowerCase(Locale.ENGLISH) + '-' + dateFormat.format(new Date()) + ".png");
   }
 
   private File makeTempRecordFile() throws IOException {

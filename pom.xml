@@ -5,7 +5,7 @@
 
   <groupId>com.igormaznitsa</groupId>
   <artifactId>japagoge</artifactId>
-  <version>1.0.2=SNAPSHOT</version>
+  <version>1.0.2-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <description>Screen grabber to grab animation into APNG</description>
@@ -38,10 +38,6 @@
     <connection>scm:git:git://github.com/raydac/japagoge.git</connection>
     <developerConnection>scm:git:git@github.com:raydac/japagoge.git</developerConnection>
   </scm>
-
-  <prerequisites>
-    <maven>3.0</maven>
-  </prerequisites>
 
   <organization>
     <name>Igor Maznitsa</name>
@@ -517,8 +513,13 @@
     </profile>
   </profiles>
 
-  <dependencies>
-  </dependencies>
+  <!--  <dependencies>-->
+  <!--    <dependency>-->
+  <!--      <groupId>net.java.dev.jna</groupId>-->
+  <!--      <artifactId>jna-platform</artifactId>-->
+  <!--      <version>5.9.0</version>-->
+  <!--    </dependency>-->
+  <!--  </dependencies>-->
 
   <build>
     <pluginManagement>

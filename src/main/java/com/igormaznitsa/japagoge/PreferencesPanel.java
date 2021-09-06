@@ -1,5 +1,7 @@
 package com.igormaznitsa.japagoge;
 
+import com.igormaznitsa.japagoge.filters.RgbPixelFilter;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
@@ -16,7 +18,7 @@ public class PreferencesPanel extends JPanel {
   private final JapagogeConfig.JapagogeConfigData data;
 
   private final JCheckBox checkBoxPointer;
-  private final JCheckBox checkBoxGrayscale;
+  private final JComboBox<RgbPixelFilter> comboBoxFilter;
   private final JSpinner spinnerFrameDelay;
   private final JSpinner spinnerLoops;
 
@@ -25,7 +27,9 @@ public class PreferencesPanel extends JPanel {
     this.data = Objects.requireNonNull(data);
 
     this.checkBoxPointer = new JCheckBox(null, null, data.isPointer());
-    this.checkBoxGrayscale = new JCheckBox(null, null, data.isGrayscale());
+    this.comboBoxFilter = new JComboBox<>(RgbPixelFilter.values());
+    this.comboBoxFilter.setSelectedItem(data.getFilter());
+
     this.spinnerFrameDelay = new JSpinner(new SpinnerNumberModel(data.getFrameDelay(), 20, 10000, 1));
     this.spinnerLoops = new JSpinner(new SpinnerNumberModel(data.getLoops(), 0, 1000000, 1));
 
@@ -41,8 +45,8 @@ public class PreferencesPanel extends JPanel {
     this.add(new JLabel("Show pointer: "), gblLeft);
     this.add(this.checkBoxPointer, gblRight);
 
-    this.add(new JLabel("Grayscale: "), gblLeft);
-    this.add(this.checkBoxGrayscale, gblRight);
+    this.add(new JLabel("Color filter: "), gblLeft);
+    this.add(this.comboBoxFilter, gblRight);
 
     gblLeft.gridwidth = 2;
     gblLeft.anchor = GridBagConstraints.CENTER;
@@ -73,7 +77,7 @@ public class PreferencesPanel extends JPanel {
 
   public void fillData() {
     this.data.setPointer(this.checkBoxPointer.isSelected());
-    this.data.setGrayscale(this.checkBoxGrayscale.isSelected());
+    this.data.setFilter((RgbPixelFilter) this.comboBoxFilter.getSelectedItem());
     this.data.setLoops(((Number) this.spinnerLoops.getValue()).intValue());
     this.data.setFrameDelay(((Number) this.spinnerFrameDelay.getValue()).intValue());
   }

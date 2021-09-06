@@ -1,5 +1,7 @@
 package com.igormaznitsa.japagoge;
 
+import com.igormaznitsa.japagoge.filters.RgbPixelFilter;
+
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -36,7 +38,7 @@ public final class ScreenCapturer {
   private final File targetFile;
   private final Duration durationBetweenFrames;
   private final boolean capturePointer;
-  private final boolean grayscale;
+  private final RgbPixelFilter filter;
   private final AtomicReference<TimerTask> timerTask = new AtomicReference<>();
   private final AtomicReference<APngWriter> apngWriter = new AtomicReference<>();
 
@@ -45,19 +47,19 @@ public final class ScreenCapturer {
           final Rectangle screenArea,
           final File targetFile,
           final boolean capturePointer,
-          final boolean grayscale,
+          final RgbPixelFilter filter,
           final Duration delayBetweenFrames
   ) throws AWTException {
     this.robot = new Robot(device);
-    this.grayscale = grayscale;
+    this.filter = filter;
     this.capturePointer = capturePointer;
     this.screenArea = Objects.requireNonNull(screenArea);
     this.targetFile = targetFile;
     this.durationBetweenFrames = Objects.requireNonNull(delayBetweenFrames);
   }
 
-  public boolean isGrayscale() {
-    return this.grayscale;
+  public RgbPixelFilter getFilter() {
+    return this.filter;
   }
 
   public File getTargetFile() {
@@ -80,7 +82,7 @@ public final class ScreenCapturer {
         LOGGER.log(Level.SEVERE, "Can't gen file channel", ex);
         throw new Error(ex);
       }
-      var newWriter = new APngWriter(fileChannel, this.grayscale);
+      var newWriter = new APngWriter(fileChannel, this.filter);
 
       if (!this.apngWriter.compareAndSet(null, newWriter)) {
         throw new Error("Unexpected state");
@@ -131,8 +133,8 @@ public final class ScreenCapturer {
     if (apngWriter != null) {
       try {
         final APngWriter.Statistics statistics = apngWriter.close(loops);
-        LOGGER.info(String.format("Image%s %dx%d, buffer %d bytes, %d frames, length %d bytes",
-                this.grayscale ? "(GRAYSCALE)" : "",
+        LOGGER.info(String.format("Image(%s) %dx%d, buffer %d bytes, %d frames, length %d bytes",
+                this.filter.name(),
                 statistics.width,
                 statistics.height,
                 statistics.bufferSize,

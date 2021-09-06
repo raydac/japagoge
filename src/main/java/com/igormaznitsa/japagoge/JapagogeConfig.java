@@ -1,6 +1,9 @@
 package com.igormaznitsa.japagoge;
 
+import com.igormaznitsa.japagoge.filters.RgbPixelFilter;
+
 import java.io.File;
+import java.util.Locale;
 import java.util.prefs.Preferences;
 
 public class JapagogeConfig {
@@ -16,12 +19,16 @@ public class JapagogeConfig {
     return INSTANCE;
   }
 
-  public boolean isGrayscale() {
-    return this.preferences.getBoolean(Key.GRAYSCALE.name(), false);
+  public RgbPixelFilter getFilter() {
+    try {
+      return RgbPixelFilter.valueOf(this.preferences.get(Key.FILTER.name(), RgbPixelFilter.RGB.name()).trim().toUpperCase(Locale.ENGLISH));
+    } catch (Exception ex) {
+      return RgbPixelFilter.RGB;
+    }
   }
 
-  public void setGrayscale(final boolean flag) {
-    this.preferences.putBoolean(Key.GRAYSCALE.name(), flag);
+  public void setFilter(final RgbPixelFilter filter) {
+    this.preferences.put(Key.FILTER.name(), filter.name());
   }
 
   public boolean isPointer() {
@@ -83,30 +90,30 @@ public class JapagogeConfig {
     LOOPS,
     POINTER,
     FOLDER_PATH,
-    GRAYSCALE
+    FILTER
   }
 
   public static class JapagogeConfigData {
     private boolean pointer;
-    private boolean grayscale;
+    private RgbPixelFilter filter;
     private long frameDelay;
     private File targetFolder;
     private int loops;
 
     public JapagogeConfigData() {
       this.pointer = getInstance().isPointer();
-      this.grayscale = getInstance().isGrayscale();
+      this.filter = getInstance().getFilter();
       this.frameDelay = getInstance().getFrameDelay();
       this.targetFolder = getInstance().getTargetFolder();
       this.loops = getInstance().getLoops();
     }
 
-    public boolean isGrayscale() {
-      return this.grayscale;
+    public RgbPixelFilter getFilter() {
+      return this.filter;
     }
 
-    public void setGrayscale(final boolean flag) {
-      this.grayscale = flag;
+    public void setFilter(final RgbPixelFilter filter) {
+      this.filter = filter == null ? RgbPixelFilter.RGB : filter;
     }
 
     public boolean isPointer() {
@@ -143,7 +150,7 @@ public class JapagogeConfig {
 
     public void save() {
       getInstance().setPointer(this.pointer);
-      getInstance().setGrayscale(this.grayscale);
+      getInstance().setFilter(this.filter);
       getInstance().setLoops(this.loops);
       getInstance().setTargetFolder(this.targetFolder);
       getInstance().setFrameDelay(this.frameDelay);

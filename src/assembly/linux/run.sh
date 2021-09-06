@@ -18,13 +18,6 @@ then
     fi
 fi
 
-echo \$JAVA_RUN=$JAVA_RUN &>$LOG_FILE
-
-echo ------JAVA_VERSION------ &>>$LOG_FILE
-
-$JAVA_RUN -version &>>$LOG_FILE
-
-echo ------------------------ &>>$LOG_FILE
 
 $JAVA_RUN $JAVA_FLAGS -jar "$JAPAGOGE_HOME"/japagoge.jar $@
 THE_PID=$!
