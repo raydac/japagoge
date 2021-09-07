@@ -120,6 +120,11 @@ public final class ScreenCapturer {
     }
   }
 
+  public int[] getGlobalPalette() {
+    // todo
+    return RgbPixelFilter.GREEN.get().getPalette().orElseThrow();
+  }
+
   public boolean isStarted() {
     return this.timerTask.get() != null;
   }

@@ -195,10 +195,6 @@ public class JapagogeFrame extends JFrame {
     this.repaint();
   }
 
-  private void convertPng2Gif(final File pngFile, final File gifFile) throws IOException {
-
-  }
-
   private void onTitleDoubleClick() {
     switch ((this.state.get())) {
       case SELECT_POSITION: {
@@ -297,7 +293,7 @@ public class JapagogeFrame extends JFrame {
 
                   if (selectedFilter == gifFilter) {
                     LOGGER.info("Converting APNG file into GIF: " + tempFile);
-                    var converter = new APngToGifConverter(tempFile, selectedFile);
+                    var converter = new APngToGifConverter(currentCapturer, selectedFile);
                     converter.execute();
                     JOptionPane.showOptionDialog(
                             this,
