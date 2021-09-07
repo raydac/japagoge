@@ -195,6 +195,10 @@ public class JapagogeFrame extends JFrame {
     this.repaint();
   }
 
+  private void convertPng2Gif(final File pngFile, final File gifFile) throws IOException {
+
+  }
+
   private void onTitleDoubleClick() {
     switch ((this.state.get())) {
       case SELECT_POSITION: {
@@ -238,7 +242,7 @@ public class JapagogeFrame extends JFrame {
             this.setState(State.SAVING_RESULT);
 
             SwingUtilities.invokeLater(() -> {
-              var targetFile = this.makeTargetFile(currentCapturer.getFilter().name());
+              var targetFile = this.makeTargetFile(JapagogeConfig.getInstance().getTargetFolder(), currentCapturer.getFilter().name(), "png");
               var tempFile = currentCapturer.getTargetFile();
               try {
                 var fileChooser = new JFileChooser(JapagogeConfig.getInstance().getTargetFolder());
@@ -257,19 +261,65 @@ public class JapagogeFrame extends JFrame {
                   }
                 };
 
+                var gifFilter = new FileFilter() {
+                  @Override
+                  public boolean accept(final File f) {
+                    return f.isDirectory() || f.getName().toLowerCase(Locale.ENGLISH).endsWith(".gif");
+                  }
+
+                  @Override
+                  public String getDescription() {
+                    return "GIF files (*.gif)";
+                  }
+                };
+
                 fileChooser.addChoosableFileFilter(apngFilter);
+                fileChooser.addChoosableFileFilter(gifFilter);
                 fileChooser.setFileFilter(apngFilter);
 
-                fileChooser.setDialogTitle("Save APNG record");
+                fileChooser.setDialogTitle("Save record");
+
+                fileChooser.addPropertyChangeListener(JFileChooser.FILE_FILTER_CHANGED_PROPERTY, evt -> {
+                  var selectedFilter = (FileFilter) evt.getNewValue();
+                  final String extension;
+                  if (selectedFilter == gifFilter) {
+                    extension = "gif";
+                  } else {
+                    extension = "png";
+                  }
+                  fileChooser.setSelectedFile(this.makeTargetFile(fileChooser.getCurrentDirectory(), currentCapturer.getFilter().name(), extension));
+                });
                 if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
                   var selectedFile = fileChooser.getSelectedFile();
+
+                  var selectedFilter = fileChooser.getFileFilter();
                   JapagogeConfig.getInstance().setTargetFolder(selectedFile.getParentFile());
-                  try {
-                    Files.move(tempFile.toPath(), selectedFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                    LOGGER.info("Saved result file " + selectedFile.getName() + " size " + selectedFile.length() + " bytes");
-                  } catch (Exception ex) {
-                    LOGGER.log(Level.SEVERE, "Can't move result file", ex);
-                    JOptionPane.showMessageDialog(this, "Can't move result file!", "Error", JOptionPane.ERROR_MESSAGE);
+
+                  if (selectedFilter == gifFilter) {
+                    LOGGER.info("Converting APNG file into GIF: " + tempFile);
+                    var converter = new APngToGifConverter(tempFile, selectedFile);
+                    converter.execute();
+                    JOptionPane.showOptionDialog(
+                            this,
+                            APngToGifConverter.makePanelFor(converter),
+                            "Converting",
+                            JOptionPane.DEFAULT_OPTION,
+                            JOptionPane.PLAIN_MESSAGE,
+                            null,
+                            new Object[]{"Cancel"},
+                            null);
+                    if (!converter.isDone()) {
+                      converter.cancel(true);
+                    }
+                  } else {
+                    LOGGER.info("Just moving APNG file: " + tempFile);
+                    try {
+                      Files.move(tempFile.toPath(), selectedFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                      LOGGER.info("Saved result file " + selectedFile.getName() + " size " + selectedFile.length() + " bytes");
+                    } catch (Exception ex) {
+                      LOGGER.log(Level.SEVERE, "Can't move result file", ex);
+                      JOptionPane.showMessageDialog(this, "Can't move result file!", "Error", JOptionPane.ERROR_MESSAGE);
+                    }
                   }
                 } else {
                   LOGGER.info("Canceling file save");
@@ -298,9 +348,9 @@ public class JapagogeFrame extends JFrame {
     }
   }
 
-  private File makeTargetFile(final String filter) {
+  private File makeTargetFile(final File parentFolder, final String filter, final String extension) {
     var dateFormat = new SimpleDateFormat("yyyyMMdd_HHmmss");
-    return new File(JapagogeConfig.getInstance().getTargetFolder(), "apng-" + filter.toLowerCase(Locale.ENGLISH) + '-' + dateFormat.format(new Date()) + ".png");
+    return new File(parentFolder, "apng-" + filter.toLowerCase(Locale.ENGLISH) + '-' + dateFormat.format(new Date()) + '.' + extension);
   }
 
   private File makeTempRecordFile() throws IOException {
