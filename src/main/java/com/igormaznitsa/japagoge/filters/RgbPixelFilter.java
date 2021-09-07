@@ -2,7 +2,9 @@ package com.igormaznitsa.japagoge.filters;
 
 public enum RgbPixelFilter {
   RGB(new NoneFilter()),
-  GRAYSCALE(new GrayscaleFilter());
+  GRAYSCALE(new GrayscaleFilter()),
+  AMBER(new AmberFilter()),
+  GREEN(new GreenFilter());
   private final ColorFilter filter;
 
   RgbPixelFilter(final ColorFilter filter) {

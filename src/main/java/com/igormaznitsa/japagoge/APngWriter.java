@@ -10,19 +10,14 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.time.Duration;
+import java.util.Optional;
 import java.util.zip.CRC32;
 import java.util.zip.Deflater;
 import java.util.zip.DeflaterOutputStream;
 
 public final class APngWriter {
 
-  private static final int SIG_IHDR = 0x49484452;
-  private static final int SIG_acTL = 0x6163544c;
-  private static final int SIG_IDAT = 0x49444154;
-  private static final int SIG_fdAT = 0x66644154;
-  private static final int SIG_fcTL = 0x6663544c;
-  private static final int SIG_IEND = 0x49454e44;
-  private static final int OFFSET_ACTL = 8 + 25;
+  private static final int OFFSET_ACTL_NO_PALETTE = 8 + 25;
   private final FileChannel fileChannel;
   private byte[] chunkBuffer;
   private int nextChunkBufferPosition = 0;
@@ -280,7 +275,7 @@ public final class APngWriter {
     final short[] delayFractions = getTimeFraction(frameDelay);
     // fcTL
     this.putInt(26);
-    this.putInt(SIG_fcTL);
+    this.putText("fcTL");
     this.putInt(this.sequenceCounter++);
     this.putInt(portion.width);
     this.putInt(portion.heigh);
@@ -297,10 +292,10 @@ public final class APngWriter {
 
     if (this.frameCounter == 1) {
       this.putInt(compressedData.length);
-      this.putInt(SIG_IDAT);
+      this.putText("IDAT");
     } else {
       this.putInt(compressedData.length + 4);
-      this.putInt(SIG_fdAT);
+      this.putText("fdAT");
       this.putInt(this.sequenceCounter++);
     }
 
@@ -360,11 +355,16 @@ public final class APngWriter {
     }
 
     try {
-      this.putInt(0);
-      this.putInt(SIG_IEND);
-      this.putInt(this.calcCrcForBufferedChunk());
-      this.flushAndClearBuffer();
-      this.fileChannel.position(OFFSET_ACTL);
+      this.writeIEND();
+
+      int actlStartOffset = OFFSET_ACTL_NO_PALETTE;
+
+      final Optional<int[]> palette = this.filter.getPalette();
+      if (palette.isPresent()) {
+        actlStartOffset += palette.orElseThrow().length * 3 + 12;
+      }
+
+      this.fileChannel.position(actlStartOffset);
       this.writeAcTLChunk(this.frameCounter, loopCount);
       return new Statistics(this.chunkBuffer.length, this.frameCounter, this.width, this.height, this.fileChannel.size());
     } finally {
@@ -389,22 +389,42 @@ public final class APngWriter {
     this.put(new byte[]{(byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A});
     this.flushAndClearBuffer();
 
+    final Optional<int[]> palette = this.filter.getPalette();
+
     // header
     this.putInt(13);
-    this.putInt(SIG_IHDR);
+    this.putText("IHDR");
     this.putInt(width);
     this.putInt(height);
+
     this.put(8); // bit depth
-    this.put(this.filter.isMonochrome() ? 0 : 2); // color type
+
+    if (palette.isPresent()) {
+      this.put(3);
+    } else {
+      this.put(this.filter.isMonochrome() ? 0 : 2); // color type
+    }
+
     this.put(0); // compression method
     this.put(0); // filter method
     this.put(0); // interlace method
     this.putInt(this.calcCrcForBufferedChunk());
     this.flushAndClearBuffer();
 
+    if (palette.isPresent()) {
+      this.writePtleChunk(palette.orElseThrow());
+    }
+
     this.writeAcTLChunk(0, 0);
   }
 
+
+  private void writeIEND() throws IOException {
+    this.putInt(0);
+    this.putText("IEND");
+    this.putInt(this.calcCrcForBufferedChunk());
+    this.flushAndClearBuffer();
+  }
 
   private void flushAndClearBuffer() throws IOException {
     this.fileChannel.write(ByteBuffer.wrap(this.chunkBuffer, 0, this.nextChunkBufferPosition));
@@ -454,13 +474,31 @@ public final class APngWriter {
     }
   }
 
+  private void writePtleChunk(final int[] rgbPalette) throws IOException {
+    this.putInt(rgbPalette.length * 3);
+    this.putText("PLTE");
+    for (int c : rgbPalette) {
+      this.put(c >> 16);
+      this.put(c >> 8);
+      this.put(c);
+    }
+    this.putInt(this.calcCrcForBufferedChunk());
+    this.flushAndClearBuffer();
+  }
+
   private void writeAcTLChunk(final int frameCount, final int loopCount) throws IOException {
     this.putInt(8);
-    this.putInt(SIG_acTL);
+    this.putText("acTL");
     this.putInt(frameCount);
     this.putInt(loopCount); // 0 : infinite
     this.putInt(this.calcCrcForBufferedChunk());
     this.flushAndClearBuffer();
+  }
+
+  private void putText(final String name) {
+    for (int i = 0; i < name.length(); i++) {
+      this.put(name.charAt(i));
+    }
   }
 
   private void putShort(final int value) {
