@@ -6,7 +6,9 @@ import javax.swing.*;
 import java.awt.*;
 import java.io.*;
 import java.time.Duration;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicLong;
@@ -18,18 +20,24 @@ public class APngToGifConverter extends SwingWorker<File, Integer> {
 
   private static final Logger LOGGER = Logger.getLogger("APNGtoGIF");
 
-  private final ScreenCapturer capturer;
+  private final ScreenCapturer screenCapturer;
   private final File target;
   private final long sourceLength;
   private final AtomicLong readCounter = new AtomicLong();
 
   private final List<ProgressListener> listeners = new CopyOnWriteArrayList<>();
+  private final Map<Integer, Integer> paletteIndexCache = new LinkedHashMap<>(16384) {
+    @Override
+    protected boolean removeEldestEntry(final Map.Entry<Integer, Integer> eldest) {
+      return this.size() > 16384;
+    }
+  };
 
-  public APngToGifConverter(final ScreenCapturer capturer, final File target) {
+  public APngToGifConverter(final ScreenCapturer screenCapturer, final File target) {
     super();
-    this.capturer = capturer;
+    this.screenCapturer = screenCapturer;
     this.target = target;
-    this.sourceLength = capturer.getTargetFile().length();
+    this.sourceLength = screenCapturer.getTargetFile().length();
   }
 
   private static void assertNext(final DataInputStream in, final AtomicLong counter, final int... values) throws IOException {
@@ -76,32 +84,51 @@ public class APngToGifConverter extends SwingWorker<File, Integer> {
     return panel;
   }
 
-  private static byte findCloseIndex(final int rgb, final int[] rgbPalette) {
-    final int r = (rgb >> 16);
-    final int g = (rgb >> 8) & 0xFF;
-    final int b = rgb & 0xFF;
-
-    double dist = Double.MAX_VALUE;
-    int index = 0;
-    for (int i = 0; i < rgbPalette.length; i++) {
-      final int pr = (rgbPalette[i] >> 16);
-      final int pg = (rgbPalette[i] >> 8) & 0xFF;
-      final int pb = rgbPalette[i] & 0xFF;
-
-      final int dr = pr - r;
-      final int dg = pg - g;
-      final int db = pb - b;
-
-      final double calcDist = Math.sqrt(dr * dr + dg * dg + db * db);
-      if (calcDist < dist) {
-        index = i;
-        dist = calcDist;
-      }
+  private static byte[] makeIndexesForIndexed(final int width, final int height, final byte[] pngFrameData, final int[] argbPalette) {
+    final byte[] result = new byte[width * height];
+    Inflater inflater = new Inflater();
+    inflater.setInput(pngFrameData);
+    final byte[] unpacked = new byte[(width * height) + height];
+    try {
+      final int length = inflater.inflate(unpacked);
+      if (length != unpacked.length) throw new IllegalStateException("Unexpected unpacked frame length");
+    } catch (Exception ex) {
+      throw new RuntimeException("Can't decompress frame", ex);
     }
-    return (byte) index;
+    for (int y = 0; y < height; y++) {
+      System.arraycopy(unpacked, y * (width + 1) + 1, result, y * width, width);
+    }
+    return result;
   }
 
-  private static byte[] makeIndexesForRgb(final int width, final int height, final byte[] pngFrameData, final int[] argbPalette) {
+  private int findCloseIndexInPalette(final int rgb, final int[] rgb256Palette) {
+    return this.paletteIndexCache.computeIfAbsent(rgb, colorRgb -> {
+      final int r = (colorRgb >> 16) & 0xFF;
+      final int g = (colorRgb >> 8) & 0xFF;
+      final int b = colorRgb & 0xFF;
+
+      double distance = Double.MAX_VALUE;
+      int foundPaletteIndex = 0;
+      for (int i = 0; i < rgb256Palette.length; i++) {
+        final int pr = (rgb256Palette[i] >> 16) & 0xFF;
+        final int pg = (rgb256Palette[i] >> 8) & 0xFF;
+        final int pb = rgb256Palette[i] & 0xFF;
+
+        final int dr = pr - r;
+        final int dg = pg - g;
+        final int db = pb - b;
+
+        final double calculatedDistance = Math.sqrt(dr * dr + dg * dg + db * db);
+        if (calculatedDistance < distance) {
+          foundPaletteIndex = i;
+          distance = calculatedDistance;
+        }
+      }
+      return foundPaletteIndex;
+    });
+  }
+
+  private byte[] makeIndexesForRgb(final int width, final int height, final byte[] pngFrameData, final int[] argbPalette) {
     final byte[] result = new byte[width * height];
     Inflater inflater = new Inflater();
     inflater.setInput(pngFrameData);
@@ -120,25 +147,8 @@ public class APngToGifConverter extends SwingWorker<File, Integer> {
         final int r = unpacked[lineOffset + x] & 0xFF;
         final int g = unpacked[lineOffset + x + 1] & 0xFF;
         final int b = unpacked[lineOffset + x + 2] & 0xFF;
-        result[ox++] = findCloseIndex((r << 16) | (g << 8) | b, argbPalette);
+        result[ox++] = (byte) findCloseIndexInPalette((r << 16) | (g << 8) | b, argbPalette);
       }
-    }
-    return result;
-  }
-
-  private static byte[] makeIndexesForIndexed(final int width, final int height, final byte[] pngFrameData, final int[] argbPalette) {
-    final byte[] result = new byte[width * height];
-    Inflater inflater = new Inflater();
-    inflater.setInput(pngFrameData);
-    final byte[] unpacked = new byte[(width * height) + height];
-    try {
-      final int length = inflater.inflate(unpacked);
-      if (length != unpacked.length) throw new IllegalStateException("Unexpected unpacked frame length");
-    } catch (Exception ex) {
-      throw new RuntimeException("Can't decompress frame", ex);
-    }
-    for (int y = 0; y < height; y++) {
-      System.arraycopy(unpacked, y * (width + 1) + 1, result, y * width, width);
     }
     return result;
   }
@@ -178,7 +188,7 @@ public class APngToGifConverter extends SwingWorker<File, Integer> {
 
   @Override
   protected File doInBackground() {
-    try (final DataInputStream in = new DataInputStream(new BufferedInputStream(new FileInputStream(this.capturer.getTargetFile())))) {
+    try (final DataInputStream in = new DataInputStream(new BufferedInputStream(new FileInputStream(this.screenCapturer.getTargetFile())))) {
       assertNext(in, this.readCounter, 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A);
 
       int[] workRgbPalette = null;
@@ -207,11 +217,11 @@ public class APngToGifConverter extends SwingWorker<File, Integer> {
                   }
                   break;
                   case 2: { // rgb
-                    rgbPalette = this.capturer.getGlobalPalette();
+                    rgbPalette = this.screenCapturer.getGlobalRgb256Palette();
                   }
                   break;
                   case 3: { // palette
-                    rgbPalette = workRgbPalette == null ? this.capturer.getGlobalPalette() : workRgbPalette;
+                    rgbPalette = workRgbPalette == null ? this.screenCapturer.getGlobalRgb256Palette() : workRgbPalette;
                   }
                   break;
                   default:

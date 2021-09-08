@@ -23,6 +23,8 @@ public final class APngWriter {
 
   private static final int OFFSET_ACTL_NO_PALETTE = 8 + 25;
   private final FileChannel fileChannel;
+  private final ColorFilter filter;
+  private final ColorComponentStatistics colorStatistics;
   private byte[] chunkBuffer;
   private int nextChunkBufferPosition = 0;
   private int frameCounter = 0;
@@ -34,17 +36,14 @@ public final class APngWriter {
   private Duration accumulatedFrameDuration = null;
   private volatile State state = State.CREATED;
   private ImagePortion lastFoundDifference;
-  private final ColorFilter filter;
-
-  private final ColorStatistics colorStatistics;
 
   public APngWriter(final FileChannel file, final RgbPixelFilter filter) {
-    this.colorStatistics = filter.get().getPalette().isPresent() ? null : new ColorStatistics();
+    this.colorStatistics = filter.get().getPalette().isPresent() ? null : new ColorComponentStatistics();
     this.fileChannel = file;
     this.filter = filter.get();
   }
 
-  private static byte[] toRgb(final BufferedImage image, final byte[] buffer, final ColorStatistics colorStatistics, final ColorFilter filter) {
+  private static byte[] toRgb(final BufferedImage image, final byte[] buffer, final ColorComponentStatistics colorStatistics, final ColorFilter filter) {
     final int imageWidth = image.getWidth();
     final int imageHeight = image.getHeight();
 
@@ -80,10 +79,6 @@ public final class APngWriter {
       resultBuffer[imgPos++] = (byte) b;
     }
     return resultBuffer;
-  }
-
-  public Optional<ColorStatistics> getColorStatistics() {
-    return Optional.ofNullable(this.colorStatistics);
   }
 
   private static byte[] compress(final byte[] data) throws IOException {
@@ -143,52 +138,6 @@ public final class APngWriter {
       resultBuffer[imgPos++] = (byte) filter.doFiltering(argb);
     }
     return resultBuffer;
-  }
-
-  public synchronized void addFrame(final BufferedImage image, final Duration delay) throws IOException {
-    if (this.state == State.STARTED) {
-      if (image.getWidth() != this.width || image.getHeight() != this.height) {
-        throw new IllegalArgumentException("Unexpected image size");
-      }
-
-      if (this.imageDataBufferLast == null) {
-        final int bufferSize = (this.width * this.height * 3) + this.height;
-        this.imageDataBufferLast = new byte[bufferSize];
-        this.imageDataBufferTemp = new byte[bufferSize];
-      }
-
-      this.imageDataBufferTemp = this.filter.isMonochrome() ? toMonochrome(image, this.imageDataBufferTemp, this.filter)
-              : toRgb(image, this.imageDataBufferTemp, this.colorStatistics, this.filter);
-
-      if (this.accumulatedFrameDuration == null) {
-        System.arraycopy(this.imageDataBufferTemp, 0, this.imageDataBufferLast, 0, this.imageDataBufferTemp.length);
-        this.lastFoundDifference = new ImagePortion(0, 0, this.width, this.height, this.imageDataBufferLast);
-        this.accumulatedFrameDuration = delay;
-      } else {
-        final ImagePortion foundDifference = this.filter.isMonochrome() ?
-                extractChangedImagePortionMonochrome(this.imageDataBufferLast, this.imageDataBufferTemp, new ImagePortion(0, 0, this.width, this.height, null))
-                : extractChangedImagePortionRgb(this.imageDataBufferLast, this.imageDataBufferTemp, new ImagePortion(0, 0, this.width, this.height, null));
-
-        if (foundDifference == null) {
-          this.accumulatedFrameDuration = this.accumulatedFrameDuration.plus(delay);
-        } else {
-          this.saveSingleFrame(this.lastFoundDifference, this.accumulatedFrameDuration);
-
-          System.arraycopy(this.imageDataBufferTemp, 0, this.imageDataBufferLast, 0, this.imageDataBufferTemp.length);
-          if (foundDifference.data == this.imageDataBufferTemp) {
-            foundDifference.data = this.imageDataBufferLast;
-          }
-
-          this.lastFoundDifference = foundDifference;
-
-          this.accumulatedFrameDuration = delay;
-        }
-      }
-    }
-  }
-
-  public State getState() {
-    return this.state;
   }
 
   private static ImagePortion extractChangedImagePortionRgb(final byte[] oldPngData, final byte[] newPngData, final ImagePortion imageRect) {
@@ -326,6 +275,56 @@ public final class APngWriter {
     return imageRect;
   }
 
+  public Optional<ColorComponentStatistics> getColorStatistics() {
+    return Optional.ofNullable(this.colorStatistics);
+  }
+
+  public synchronized void addFrame(final BufferedImage image, final Duration delay) throws IOException {
+    if (this.state == State.STARTED) {
+      if (image.getWidth() != this.width || image.getHeight() != this.height) {
+        throw new IllegalArgumentException("Unexpected image size");
+      }
+
+      if (this.imageDataBufferLast == null) {
+        final int bufferSize = (this.width * this.height * 3) + this.height;
+        this.imageDataBufferLast = new byte[bufferSize];
+        this.imageDataBufferTemp = new byte[bufferSize];
+      }
+
+      this.imageDataBufferTemp = this.filter.isMonochrome() ? toMonochrome(image, this.imageDataBufferTemp, this.filter)
+              : toRgb(image, this.imageDataBufferTemp, this.colorStatistics, this.filter);
+
+      if (this.accumulatedFrameDuration == null) {
+        System.arraycopy(this.imageDataBufferTemp, 0, this.imageDataBufferLast, 0, this.imageDataBufferTemp.length);
+        this.lastFoundDifference = new ImagePortion(0, 0, this.width, this.height, this.imageDataBufferLast);
+        this.accumulatedFrameDuration = delay;
+      } else {
+        final ImagePortion foundDifference = this.filter.isMonochrome() ?
+                extractChangedImagePortionMonochrome(this.imageDataBufferLast, this.imageDataBufferTemp, new ImagePortion(0, 0, this.width, this.height, null))
+                : extractChangedImagePortionRgb(this.imageDataBufferLast, this.imageDataBufferTemp, new ImagePortion(0, 0, this.width, this.height, null));
+
+        if (foundDifference == null) {
+          this.accumulatedFrameDuration = this.accumulatedFrameDuration.plus(delay);
+        } else {
+          this.saveSingleFrame(this.lastFoundDifference, this.accumulatedFrameDuration);
+
+          System.arraycopy(this.imageDataBufferTemp, 0, this.imageDataBufferLast, 0, this.imageDataBufferTemp.length);
+          if (foundDifference.data == this.imageDataBufferTemp) {
+            foundDifference.data = this.imageDataBufferLast;
+          }
+
+          this.lastFoundDifference = foundDifference;
+
+          this.accumulatedFrameDuration = delay;
+        }
+      }
+    }
+  }
+
+  public State getState() {
+    return this.state;
+  }
+
   private void saveSingleFrame(final ImagePortion portion, final Duration frameDelay) throws IOException {
     this.frameCounter++;
 
@@ -393,94 +392,6 @@ public final class APngWriter {
     }
   }
 
-  public final static class ColorStatistics {
-    private final int[] statisticsR = new int[256];
-    private final int[] statisticsG = new int[256];
-    private final int[] statisticsB = new int[256];
-
-    private static int[] toRgb(final byte[] rgb) {
-      final int[] result = new int[256];
-      for (int i = 0; i < 256; i++) {
-        final int offset = i * 3;
-        final int r = rgb[offset] & 0xFF;
-        final int g = rgb[offset + 1] & 0xFF;
-        final int b = rgb[offset + 2] & 0xFF;
-        result[i] = (r << 16) | (g << 8) | b;
-      }
-      return result;
-    }
-
-    private void update(final int r, final int g, final int b) {
-      if (this.statisticsR[r] < Integer.MAX_VALUE) this.statisticsR[r]++;
-      if (this.statisticsG[g] < Integer.MAX_VALUE) this.statisticsG[g]++;
-      if (this.statisticsB[b] < Integer.MAX_VALUE) this.statisticsB[b]++;
-    }
-
-    public int[] make256palette() {
-      final byte[] rgb = new byte[256 * 3];
-
-      final List<Container> containers = new ArrayList<>();
-      containers.add(new Container(this.statisticsR, 0));
-      containers.add(new Container(this.statisticsG, 1));
-      containers.add(new Container(this.statisticsB, 2));
-      Collections.sort(containers);
-
-      containers.forEach(x -> x.fill(rgb));
-
-      return toRgb(rgb);
-    }
-
-    private static class Container implements Comparable<Container> {
-      final int colors;
-      final int position;
-      final int[] componentStatistics;
-
-      Container(final int[] componentStatistics, final int position) {
-        this.componentStatistics = componentStatistics;
-        this.position = position;
-        this.colors = findNumberOrNonZero(componentStatistics);
-      }
-
-      private static int findNumberOrNonZero(final int[] component) {
-        return (int) IntStream.of(component).filter(c -> c != 0).count();
-      }
-
-      void fill(final byte[] output) {
-        final int[] colorClone = this.componentStatistics.clone();
-
-        int outPos = 0;
-        for (outPos = 0; outPos < 256; outPos++) {
-          int max = 0;
-          int pos = -1;
-          for (int i = 0; i < 256; i++) {
-            if (colorClone[i] == 0) continue;
-            if (max < colorClone[i]) {
-              max = colorClone[i];
-              pos = i;
-            }
-          }
-          if (pos < 0) break;
-          else {
-            output[outPos * 3 + this.position] = (byte) pos;
-            colorClone[pos] = 0;
-          }
-        }
-
-        final int endPos = outPos;
-
-        while (outPos < 256) {
-          output[outPos * 3 + this.position] = output[(outPos % endPos) * 3 + this.position];
-          outPos++;
-        }
-      }
-
-      @Override
-      public int compareTo(final Container cont) {
-        return Integer.compare(cont.colors, this.colors);
-      }
-    }
-  }
-
   public synchronized void start(final int width, final int height) throws IOException {
     if (this.state != State.CREATED) throw new IllegalStateException("State: " + this.state);
     this.state = State.STARTED;
@@ -521,7 +432,6 @@ public final class APngWriter {
     this.writeAcTLChunk(0, 0);
   }
 
-
   private void writeIEND() throws IOException {
     this.putInt(0);
     this.putText("IEND");
@@ -543,40 +453,6 @@ public final class APngWriter {
     this.put(value >>> 16);
     this.put(value >>> 8);
     this.put(value);
-  }
-
-  private static final class ImagePortion {
-    int x;
-    int y;
-    int width;
-    int heigh;
-    byte[] data;
-
-    ImagePortion(final int x, final int y, final int width, final int height, final byte[] data) {
-      this.x = x;
-      this.y = y;
-      this.width = width;
-      this.heigh = height;
-      this.data = data;
-    }
-  }
-
-  public static final class Statistics {
-    public final ColorStatistics colorStatistics;
-    public final int bufferSize;
-    public final int frames;
-    public final int width;
-    public final int height;
-    public final long size;
-
-    private Statistics(final ColorStatistics colorStatistics, final int bufferSize, final int frames, final int width, final int height, final long size) {
-      this.colorStatistics = colorStatistics;
-      this.bufferSize = bufferSize;
-      this.frames = frames;
-      this.width = width;
-      this.height = height;
-      this.size = size;
-    }
   }
 
   private void writePtleChunk(final int[] rgbPalette) throws IOException {
@@ -638,6 +514,138 @@ public final class APngWriter {
     CREATED,
     STARTED,
     CLOSED
+  }
+
+  public final static class ColorComponentStatistics {
+    private final int[] statisticsR = new int[256];
+    private final int[] statisticsG = new int[256];
+    private final int[] statisticsB = new int[256];
+
+    private static int[] toRgb(final byte[] rgb) {
+      final int[] result = new int[256];
+      for (int i = 0; i < 256; i++) {
+        final int offset = i * 3;
+        final int r = rgb[offset] & 0xFF;
+        final int g = rgb[offset + 1] & 0xFF;
+        final int b = rgb[offset + 2] & 0xFF;
+        result[i] = (r << 16) | (g << 8) | b;
+      }
+      return result;
+    }
+
+    public int[] getStatisticsR() {
+      return this.statisticsR.clone();
+    }
+
+    public int[] getStatisticsG() {
+      return this.statisticsG.clone();
+    }
+
+    public int[] getStatisticsB() {
+      return this.statisticsB.clone();
+    }
+
+    private void update(final int r, final int g, final int b) {
+      if (this.statisticsR[r] < Integer.MAX_VALUE) this.statisticsR[r]++;
+      if (this.statisticsG[g] < Integer.MAX_VALUE) this.statisticsG[g]++;
+      if (this.statisticsB[b] < Integer.MAX_VALUE) this.statisticsB[b]++;
+    }
+
+    public int[] makeRgb256palette() {
+      final byte[] rgb = new byte[256 * 3];
+
+      final List<Container> containers = new ArrayList<>();
+      containers.add(new Container(this.statisticsR, 0));
+      containers.add(new Container(this.statisticsG, 1));
+      containers.add(new Container(this.statisticsB, 2));
+      Collections.sort(containers);
+
+      containers.forEach(x -> x.fillColorComponent(rgb));
+
+      return toRgb(rgb);
+    }
+
+    private static class Container implements Comparable<Container> {
+      private final int colors;
+      private final int position;
+      private final int[] componentStatistics;
+
+      private Container(final int[] componentStatistics, final int position) {
+        this.componentStatistics = componentStatistics;
+        this.position = position;
+        this.colors = findNumberOrNonZero(componentStatistics);
+      }
+
+      private static int findNumberOrNonZero(final int[] component) {
+        return (int) IntStream.of(component).filter(c -> c != 0).count();
+      }
+
+      void fillColorComponent(final byte[] output) {
+        final int[] colorClone = this.componentStatistics.clone();
+
+        int outPosition;
+        for (outPosition = 0; outPosition < 256; outPosition++) {
+          int maxCount = 0;
+          int foundPosition = -1;
+          for (int i = 0; i < 256; i++) {
+            if (colorClone[i] != 0 && maxCount < colorClone[i]) {
+              maxCount = colorClone[i];
+              foundPosition = i;
+            }
+          }
+          if (foundPosition < 0) break;
+          else {
+            output[outPosition * 3 + this.position] = (byte) foundPosition;
+            colorClone[foundPosition] = 0;
+          }
+        }
+
+        final int limit = outPosition;
+        while (outPosition < 256) {
+          output[outPosition * 3 + this.position] = output[(outPosition % limit) * 3 + this.position];
+          outPosition++;
+        }
+      }
+
+      @Override
+      public int compareTo(final Container cont) {
+        return Integer.compare(cont.colors, this.colors);
+      }
+    }
+  }
+
+  private static final class ImagePortion {
+    int x;
+    int y;
+    int width;
+    int heigh;
+    byte[] data;
+
+    ImagePortion(final int x, final int y, final int width, final int height, final byte[] data) {
+      this.x = x;
+      this.y = y;
+      this.width = width;
+      this.heigh = height;
+      this.data = data;
+    }
+  }
+
+  public static final class Statistics {
+    public final ColorComponentStatistics colorStatistics;
+    public final int bufferSize;
+    public final int frames;
+    public final int width;
+    public final int height;
+    public final long size;
+
+    private Statistics(final ColorComponentStatistics colorStatistics, final int bufferSize, final int frames, final int width, final int height, final long size) {
+      this.colorStatistics = colorStatistics;
+      this.bufferSize = bufferSize;
+      this.frames = frames;
+      this.width = width;
+      this.height = height;
+      this.size = size;
+    }
   }
 
 }
