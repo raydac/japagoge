@@ -24,6 +24,7 @@ public final class ScreenCapturer {
 
   private static final Timer internalTimer = new Timer("capture-timer", true);
   private static final BufferedImage POINTER_IMAGE;
+  private final AtomicReference<APngWriter.Statistics> statistics = new AtomicReference<>();
 
   static {
     try (InputStream in = ScreenCapturer.class.getResourceAsStream("/icons/pointer.png")) {
@@ -121,8 +122,17 @@ public final class ScreenCapturer {
   }
 
   public int[] getGlobalPalette() {
-    // todo
-    return RgbPixelFilter.GREEN.get().getPalette().orElseThrow();
+    final int[] filterPalette = this.filter.get().getPalette().orElse(null);
+    if (filterPalette == null) {
+      final APngWriter.Statistics statistics = this.statistics.get();
+      if (statistics == null) {
+        return RgbPixelFilter.AMBER.get().getPalette().orElseThrow();
+      } else {
+        return statistics.colorStatistics.make256palette();
+      }
+    } else {
+      return filterPalette;
+    }
   }
 
   public boolean isStarted() {
@@ -138,6 +148,7 @@ public final class ScreenCapturer {
     if (apngWriter != null) {
       try {
         final APngWriter.Statistics statistics = apngWriter.close(loops);
+        this.statistics.set(statistics);
         LOGGER.info(String.format("Image(%s) %dx%d, buffer %d bytes, %d frames, length %d bytes",
                 this.filter.name(),
                 statistics.width,

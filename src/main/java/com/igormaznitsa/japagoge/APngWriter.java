@@ -10,7 +10,11 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.IntStream;
 import java.util.zip.CRC32;
 import java.util.zip.Deflater;
 import java.util.zip.DeflaterOutputStream;
@@ -32,9 +36,54 @@ public final class APngWriter {
   private ImagePortion lastFoundDifference;
   private final ColorFilter filter;
 
+  private final ColorStatistics colorStatistics;
+
   public APngWriter(final FileChannel file, final RgbPixelFilter filter) {
+    this.colorStatistics = filter.get().getPalette().isPresent() ? null : new ColorStatistics();
     this.fileChannel = file;
     this.filter = filter.get();
+  }
+
+  private static byte[] toRgb(final BufferedImage image, final byte[] buffer, final ColorStatistics colorStatistics, final ColorFilter filter) {
+    final int imageWidth = image.getWidth();
+    final int imageHeight = image.getHeight();
+
+    final int requiredBufferSize = (imageWidth + 3) * imageHeight + imageHeight;
+    final int[] data = ((DataBufferInt) image.getData().getDataBuffer()).getData();
+
+    final byte[] resultBuffer;
+    if (buffer == null || buffer.length < requiredBufferSize) {
+      resultBuffer = new byte[requiredBufferSize];
+    } else {
+      resultBuffer = buffer;
+    }
+    final int scanLineBytes = (imageWidth * 3) + 1;
+
+    int imgPos = 0;
+    for (int argb : data) {
+      if (imgPos % scanLineBytes == 0) {
+        resultBuffer[imgPos++] = 0;
+      }
+
+      argb = filter.doFiltering(argb);
+
+      final int r = (argb >> 16) & 0xFF;
+      final int g = (argb >> 8) & 0xFF;
+      final int b = argb & 0xFF;
+
+      if (colorStatistics != null) {
+        colorStatistics.update(r, g, b);
+      }
+
+      resultBuffer[imgPos++] = (byte) r;
+      resultBuffer[imgPos++] = (byte) g;
+      resultBuffer[imgPos++] = (byte) b;
+    }
+    return resultBuffer;
+  }
+
+  public Optional<ColorStatistics> getColorStatistics() {
+    return Optional.ofNullable(this.colorStatistics);
   }
 
   private static byte[] compress(final byte[] data) throws IOException {
@@ -96,38 +145,46 @@ public final class APngWriter {
     return resultBuffer;
   }
 
-  private static byte[] toRgb(final BufferedImage image, final byte[] buffer, final ColorFilter filter) {
-    final int imageWidth = image.getWidth();
-    final int imageHeight = image.getHeight();
-
-    final int requiredBufferSize = (imageWidth + 3) * imageHeight + imageHeight;
-    final int[] data = ((DataBufferInt) image.getData().getDataBuffer()).getData();
-
-    final byte[] resultBuffer;
-    if (buffer == null || buffer.length < requiredBufferSize) {
-      resultBuffer = new byte[requiredBufferSize];
-    } else {
-      resultBuffer = buffer;
-    }
-    final int scanLineBytes = (imageWidth * 3) + 1;
-
-    int imgPos = 0;
-    for (int argb : data) {
-      if (imgPos % scanLineBytes == 0) {
-        resultBuffer[imgPos++] = 0;
+  public synchronized void addFrame(final BufferedImage image, final Duration delay) throws IOException {
+    if (this.state == State.STARTED) {
+      if (image.getWidth() != this.width || image.getHeight() != this.height) {
+        throw new IllegalArgumentException("Unexpected image size");
       }
 
-      argb = filter.doFiltering(argb);
+      if (this.imageDataBufferLast == null) {
+        final int bufferSize = (this.width * this.height * 3) + this.height;
+        this.imageDataBufferLast = new byte[bufferSize];
+        this.imageDataBufferTemp = new byte[bufferSize];
+      }
 
-      final int r = (argb >> 16) & 0xFF;
-      final int g = (argb >> 8) & 0xFF;
-      final int b = argb & 0xFF;
+      this.imageDataBufferTemp = this.filter.isMonochrome() ? toMonochrome(image, this.imageDataBufferTemp, this.filter)
+              : toRgb(image, this.imageDataBufferTemp, this.colorStatistics, this.filter);
 
-      resultBuffer[imgPos++] = (byte) r;
-      resultBuffer[imgPos++] = (byte) g;
-      resultBuffer[imgPos++] = (byte) b;
+      if (this.accumulatedFrameDuration == null) {
+        System.arraycopy(this.imageDataBufferTemp, 0, this.imageDataBufferLast, 0, this.imageDataBufferTemp.length);
+        this.lastFoundDifference = new ImagePortion(0, 0, this.width, this.height, this.imageDataBufferLast);
+        this.accumulatedFrameDuration = delay;
+      } else {
+        final ImagePortion foundDifference = this.filter.isMonochrome() ?
+                extractChangedImagePortionMonochrome(this.imageDataBufferLast, this.imageDataBufferTemp, new ImagePortion(0, 0, this.width, this.height, null))
+                : extractChangedImagePortionRgb(this.imageDataBufferLast, this.imageDataBufferTemp, new ImagePortion(0, 0, this.width, this.height, null));
+
+        if (foundDifference == null) {
+          this.accumulatedFrameDuration = this.accumulatedFrameDuration.plus(delay);
+        } else {
+          this.saveSingleFrame(this.lastFoundDifference, this.accumulatedFrameDuration);
+
+          System.arraycopy(this.imageDataBufferTemp, 0, this.imageDataBufferLast, 0, this.imageDataBufferTemp.length);
+          if (foundDifference.data == this.imageDataBufferTemp) {
+            foundDifference.data = this.imageDataBufferLast;
+          }
+
+          this.lastFoundDifference = foundDifference;
+
+          this.accumulatedFrameDuration = delay;
+        }
+      }
     }
-    return resultBuffer;
   }
 
   public State getState() {
@@ -304,48 +361,6 @@ public final class APngWriter {
     this.flushAndClearBuffer();
   }
 
-  public synchronized void addFrame(final BufferedImage image, final Duration delay) throws IOException {
-    if (this.state == State.STARTED) {
-      if (image.getWidth() != this.width || image.getHeight() != this.height) {
-        throw new IllegalArgumentException("Unexpected image size");
-      }
-
-      if (this.imageDataBufferLast == null) {
-        final int bufferSize = (this.width * this.height * 3) + this.height;
-        this.imageDataBufferLast = new byte[bufferSize];
-        this.imageDataBufferTemp = new byte[bufferSize];
-      }
-
-      this.imageDataBufferTemp = this.filter.isMonochrome() ? toMonochrome(image, this.imageDataBufferTemp, this.filter)
-              : toRgb(image, this.imageDataBufferTemp, this.filter);
-
-      if (this.accumulatedFrameDuration == null) {
-        System.arraycopy(this.imageDataBufferTemp, 0, this.imageDataBufferLast, 0, this.imageDataBufferTemp.length);
-        this.lastFoundDifference = new ImagePortion(0, 0, this.width, this.height, this.imageDataBufferLast);
-        this.accumulatedFrameDuration = delay;
-      } else {
-        final ImagePortion foundDifference = this.filter.isMonochrome() ?
-                extractChangedImagePortionMonochrome(this.imageDataBufferLast, this.imageDataBufferTemp, new ImagePortion(0, 0, this.width, this.height, null))
-                : extractChangedImagePortionRgb(this.imageDataBufferLast, this.imageDataBufferTemp, new ImagePortion(0, 0, this.width, this.height, null));
-
-        if (foundDifference == null) {
-          this.accumulatedFrameDuration = this.accumulatedFrameDuration.plus(delay);
-        } else {
-          this.saveSingleFrame(this.lastFoundDifference, this.accumulatedFrameDuration);
-
-          System.arraycopy(this.imageDataBufferTemp, 0, this.imageDataBufferLast, 0, this.imageDataBufferTemp.length);
-          if (foundDifference.data == this.imageDataBufferTemp) {
-            foundDifference.data = this.imageDataBufferLast;
-          }
-
-          this.lastFoundDifference = foundDifference;
-
-          this.accumulatedFrameDuration = delay;
-        }
-      }
-    }
-  }
-
   public synchronized Statistics close(final int loopCount) throws IOException {
     if (this.state != State.STARTED) throw new IllegalStateException("State: " + this.state);
     this.state = State.CLOSED;
@@ -366,7 +381,7 @@ public final class APngWriter {
 
       this.fileChannel.position(actlStartOffset);
       this.writeAcTLChunk(this.frameCounter, loopCount);
-      return new Statistics(this.chunkBuffer.length, this.frameCounter, this.width, this.height, this.fileChannel.size());
+      return new Statistics(this.colorStatistics, this.chunkBuffer.length, this.frameCounter, this.width, this.height, this.fileChannel.size());
     } finally {
       try {
         this.fileChannel.close();
@@ -374,6 +389,94 @@ public final class APngWriter {
         this.imageDataBufferLast = null;
         this.imageDataBufferTemp = null;
         this.chunkBuffer = null;
+      }
+    }
+  }
+
+  public final static class ColorStatistics {
+    private final int[] statisticsR = new int[256];
+    private final int[] statisticsG = new int[256];
+    private final int[] statisticsB = new int[256];
+
+    private static int[] toRgb(final byte[] rgb) {
+      final int[] result = new int[256];
+      for (int i = 0; i < 256; i++) {
+        final int offset = i * 3;
+        final int r = rgb[offset] & 0xFF;
+        final int g = rgb[offset + 1] & 0xFF;
+        final int b = rgb[offset + 2] & 0xFF;
+        result[i] = (r << 16) | (g << 8) | b;
+      }
+      return result;
+    }
+
+    private void update(final int r, final int g, final int b) {
+      if (this.statisticsR[r] < Integer.MAX_VALUE) this.statisticsR[r]++;
+      if (this.statisticsG[g] < Integer.MAX_VALUE) this.statisticsG[g]++;
+      if (this.statisticsB[b] < Integer.MAX_VALUE) this.statisticsB[b]++;
+    }
+
+    public int[] make256palette() {
+      final byte[] rgb = new byte[256 * 3];
+
+      final List<Container> containers = new ArrayList<>();
+      containers.add(new Container(this.statisticsR, 0));
+      containers.add(new Container(this.statisticsG, 1));
+      containers.add(new Container(this.statisticsB, 2));
+      Collections.sort(containers);
+
+      containers.forEach(x -> x.fill(rgb));
+
+      return toRgb(rgb);
+    }
+
+    private static class Container implements Comparable<Container> {
+      final int colors;
+      final int position;
+      final int[] componentStatistics;
+
+      Container(final int[] componentStatistics, final int position) {
+        this.componentStatistics = componentStatistics;
+        this.position = position;
+        this.colors = findNumberOrNonZero(componentStatistics);
+      }
+
+      private static int findNumberOrNonZero(final int[] component) {
+        return (int) IntStream.of(component).filter(c -> c != 0).count();
+      }
+
+      void fill(final byte[] output) {
+        final int[] colorClone = this.componentStatistics.clone();
+
+        int outPos = 0;
+        for (outPos = 0; outPos < 256; outPos++) {
+          int max = 0;
+          int pos = -1;
+          for (int i = 0; i < 256; i++) {
+            if (colorClone[i] == 0) continue;
+            if (max < colorClone[i]) {
+              max = colorClone[i];
+              pos = i;
+            }
+          }
+          if (pos < 0) break;
+          else {
+            output[outPos * 3 + this.position] = (byte) pos;
+            colorClone[pos] = 0;
+          }
+        }
+
+        final int endPos = outPos;
+
+        while (outPos < 256) {
+          output[outPos * 3 + this.position] = output[(outPos % endPos) * 3 + this.position];
+          outPos++;
+        }
+      }
+
+      @Override
+      public int compareTo(final Container cont) {
+        return Integer.compare(cont.colors, this.colors);
       }
     }
   }
@@ -459,13 +562,15 @@ public final class APngWriter {
   }
 
   public static final class Statistics {
+    public final ColorStatistics colorStatistics;
     public final int bufferSize;
     public final int frames;
     public final int width;
     public final int height;
     public final long size;
 
-    private Statistics(final int bufferSize, final int frames, final int width, final int height, final long size) {
+    private Statistics(final ColorStatistics colorStatistics, final int bufferSize, final int frames, final int width, final int height, final long size) {
+      this.colorStatistics = colorStatistics;
       this.bufferSize = bufferSize;
       this.frames = frames;
       this.width = width;
