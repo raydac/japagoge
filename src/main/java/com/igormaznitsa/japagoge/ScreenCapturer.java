@@ -1,14 +1,12 @@
 package com.igormaznitsa.japagoge;
 
 import com.igormaznitsa.japagoge.filters.RgbPixelFilter;
+import com.igormaznitsa.japagoge.mouse.MouseInfoProvider;
 
-import javax.imageio.ImageIO;
 import java.awt.*;
-import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.channels.FileChannel;
 import java.time.Duration;
 import java.util.Objects;
@@ -23,37 +21,28 @@ public final class ScreenCapturer {
   private static final Logger LOGGER = Logger.getLogger("ScreenCapturer");
 
   private static final Timer internalTimer = new Timer("capture-timer", true);
-  private static final BufferedImage POINTER_IMAGE;
   private APngWriter.Statistics pngStatistics;
-
-  static {
-    try (InputStream in = ScreenCapturer.class.getResourceAsStream("/icons/pointer.png")) {
-      POINTER_IMAGE = ImageIO.read(Objects.requireNonNull(in));
-    } catch (Exception e) {
-      throw new Error("Can't load pointer icon");
-    }
-  }
 
   private final Robot robot;
   private final Rectangle screenArea;
   private final File targetFile;
   private final Duration durationBetweenFrames;
-  private final boolean capturePointer;
   private final RgbPixelFilter filter;
   private final AtomicReference<TimerTask> timerTask = new AtomicReference<>();
   private final AtomicReference<APngWriter> apngWriter = new AtomicReference<>();
+  private final MouseInfoProvider mouseInfoProvider;
 
   public ScreenCapturer(
           final GraphicsDevice device,
           final Rectangle screenArea,
           final File targetFile,
-          final boolean capturePointer,
+          final MouseInfoProvider mouseInfoProvider,
           final RgbPixelFilter filter,
           final Duration delayBetweenFrames
   ) throws AWTException {
     this.robot = new Robot(device);
     this.filter = filter;
-    this.capturePointer = capturePointer;
+    this.mouseInfoProvider = mouseInfoProvider;
     this.screenArea = Objects.requireNonNull(screenArea);
     this.targetFile = targetFile;
     this.durationBetweenFrames = Objects.requireNonNull(delayBetweenFrames);
@@ -96,13 +85,14 @@ public final class ScreenCapturer {
     try {
       var image = this.robot.createScreenCapture(this.screenArea);
 
-      if (this.capturePointer) {
-        var mouseLocation = MouseInfo.getPointerInfo().getLocation();
-        var pointerRectangle = new Rectangle(mouseLocation, new Dimension(POINTER_IMAGE.getWidth(), POINTER_IMAGE.getHeight()));
+      if (this.mouseInfoProvider != null) {
+        var mouseLocation = this.mouseInfoProvider.getMousePointerLocation();
+        var mousePointer = this.mouseInfoProvider.getMousePointerIcon();
+        var pointerRectangle = new Rectangle(mousePointer.toHot(mouseLocation), new Dimension(mousePointer.getWidth(), mousePointer.getHeight()));
         if (this.screenArea.intersects(pointerRectangle)) {
           var gfx = image.createGraphics();
           try {
-            gfx.drawImage(POINTER_IMAGE, mouseLocation.x - this.screenArea.x, mouseLocation.y - this.screenArea.y, null);
+            gfx.drawImage(mousePointer.getImage(), mouseLocation.x - this.screenArea.x, mouseLocation.y - this.screenArea.y, null);
           } finally {
             gfx.dispose();
           }

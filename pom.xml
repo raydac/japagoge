@@ -13,7 +13,6 @@
   <url>https://github.com/raydac/japagoge</url>
 
   <inceptionYear>2021</inceptionYear>
-  <inceptionYear>2021</inceptionYear>
 
   <properties>
     <embedded.jdk.provider>BELLSOFT</embedded.jdk.provider>
@@ -514,13 +513,13 @@
     </profile>
   </profiles>
 
-  <!--  <dependencies>-->
-  <!--    <dependency>-->
-  <!--      <groupId>net.java.dev.jna</groupId>-->
-  <!--      <artifactId>jna-platform</artifactId>-->
-  <!--      <version>5.9.0</version>-->
-  <!--    </dependency>-->
-  <!--  </dependencies>-->
+  <dependencies>
+    <dependency>
+      <groupId>net.java.dev.jna</groupId>
+      <artifactId>jna-platform</artifactId>
+      <version>5.9.0</version>
+    </dependency>
+  </dependencies>
 
   <build>
     <pluginManagement>

@@ -1,5 +1,7 @@
 package com.igormaznitsa.japagoge;
 
+import com.igormaznitsa.japagoge.mouse.MouseInfoProviderFactory;
+
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.filechooser.FileFilter;
@@ -219,7 +221,7 @@ public class JapagogeFrame extends JFrame {
                   this.getGraphicsConfiguration().getDevice(),
                   this.findScreeCaptureArea(),
                   tempFile,
-                  JapagogeConfig.getInstance().isPointer(),
+                  JapagogeConfig.getInstance().isPointer() ? MouseInfoProviderFactory.getInstance().makeProvider() : null,
                   JapagogeConfig.getInstance().getFilter(),
                   Duration.ofMillis(JapagogeConfig.getInstance().getFrameDelay())
           );
@@ -246,7 +248,7 @@ public class JapagogeFrame extends JFrame {
                 var fileChooser = new JFileChooser(JapagogeConfig.getInstance().getTargetFolder());
                 fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
                 fileChooser.setSelectedFile(targetFile);
-                fileChooser.szetAcceptAllFileFilterUsed(false);
+                fileChooser.setAcceptAllFileFilterUsed(false);
 
                 var apngFilter = new FileFilter() {
                   @Override
