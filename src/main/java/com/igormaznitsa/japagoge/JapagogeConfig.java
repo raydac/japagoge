@@ -44,7 +44,7 @@ public class JapagogeConfig {
   }
 
   public void setFrameDelay(final long delayMs) {
-    this.preferences.putLong(Key.FRAME_DELAY.name(), Math.max(20, delayMs));
+    this.preferences.putLong(Key.FRAME_DELAY.name(), Math.max(10, Math.min(delayMs, Short.MAX_VALUE)));
   }
 
   public int getLoops() {

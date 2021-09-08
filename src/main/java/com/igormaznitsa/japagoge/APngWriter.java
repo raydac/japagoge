@@ -92,27 +92,13 @@ public final class APngWriter {
     return outBuffer.toByteArray();
   }
 
-  private static short[] getTimeFraction(Duration delay) {
-    double x = delay.toMillis();
-    x /= 1000;
-    final double eps = 0.000001;
-    int pFound = (int) Math.round(x);
-    int qFound = 1;
-    double errorFound = Math.abs(x - pFound);
-    double error = 1;
-    for (int q = 2; q < 100 && error > eps; ++q) {
-      int p = (int) (x * q);
-      for (int i = 0; i < 2; ++i) {
-        error = Math.abs(x - ((double) p / q));
-        if (error < errorFound) {
-          pFound = p;
-          qFound = q;
-          errorFound = error;
-        }
-        ++p;
-      }
+  private static short[] getTimeFraction(final Duration delay) {
+    final long milliseconds = delay.toMillis();
+    if (milliseconds == 0L) {
+      return new short[]{0, 0};
+    } else {
+      return new short[]{(short) milliseconds, (short) 1000};
     }
-    return new short[]{(short) pFound, (short) qFound};
   }
 
   private static byte[] toMonochrome(final BufferedImage image, final byte[] buffer, final ColorFilter filter) {

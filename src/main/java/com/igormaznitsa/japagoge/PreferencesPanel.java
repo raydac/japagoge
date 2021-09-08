@@ -30,7 +30,7 @@ public class PreferencesPanel extends JPanel {
     this.comboBoxFilter = new JComboBox<>(RgbPixelFilter.values());
     this.comboBoxFilter.setSelectedItem(data.getFilter());
 
-    this.spinnerFrameDelay = new JSpinner(new SpinnerNumberModel(data.getFrameDelay(), 20, 10000, 1));
+    this.spinnerFrameDelay = new JSpinner(new SpinnerNumberModel(data.getFrameDelay(), 20, Short.MAX_VALUE, 1));
     this.spinnerLoops = new JSpinner(new SpinnerNumberModel(data.getLoops(), 0, 1000000, 1));
 
     final GridBagConstraints gblLeft = new GridBagConstraints(0, GridBagConstraints.RELATIVE, 1, 1, 1.0f, 1.0f, GridBagConstraints.EAST, GridBagConstraints.NONE, new Insets(2, 0, 2, 0), 0, 0);

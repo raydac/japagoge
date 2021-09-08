@@ -6,14 +6,15 @@ import javax.swing.*;
 import java.awt.*;
 import java.io.*;
 import java.time.Duration;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.IntStream;
 import java.util.zip.Inflater;
 
 public class APngToGifConverter extends SwingWorker<File, Integer> {
@@ -24,14 +25,7 @@ public class APngToGifConverter extends SwingWorker<File, Integer> {
   private final File target;
   private final long sourceLength;
   private final AtomicLong readCounter = new AtomicLong();
-
   private final List<ProgressListener> listeners = new CopyOnWriteArrayList<>();
-  private final Map<Integer, Integer> paletteIndexCache = new LinkedHashMap<>(16384) {
-    @Override
-    protected boolean removeEldestEntry(final Map.Entry<Integer, Integer> eldest) {
-      return this.size() > 16384;
-    }
-  };
 
   public APngToGifConverter(final ScreenCapturer screenCapturer, final File target) {
     super();
@@ -66,11 +60,21 @@ public class APngToGifConverter extends SwingWorker<File, Integer> {
     counter.addAndGet(in.skipBytes(bytes));
   }
 
+  private final ForkJoinPool forkJoinPool = new ForkJoinPool(Runtime.getRuntime().availableProcessors());
+
   public static JPanel makePanelFor(final APngToGifConverter converter) {
     final JPanel panel = new JPanel(new BorderLayout());
     final JProgressBar progressBar = new JProgressBar(0, 100);
+    final Dimension progressBarPreferredSize = progressBar.getPreferredSize();
+    progressBarPreferredSize.width += progressBarPreferredSize.width;
+    progressBar.setMinimumSize(progressBarPreferredSize);
+    progressBar.setPreferredSize(progressBarPreferredSize);
+    progressBar.setIndeterminate(true);
 
     converter.addProgressListener((g, p) -> {
+      if (p >= 0) {
+        progressBar.setIndeterminate(false);
+      }
       if (p > 100 || p < 0) {
         var window = SwingUtilities.windowForComponent(panel);
         if (window != null) window.setVisible(false);
@@ -84,7 +88,7 @@ public class APngToGifConverter extends SwingWorker<File, Integer> {
     return panel;
   }
 
-  private static byte[] makeIndexesForIndexed(final int width, final int height, final byte[] pngFrameData, final int[] argbPalette) {
+  private static byte[] extractDataFromIndexed(final int width, final int height, final byte[] pngFrameData) {
     final byte[] result = new byte[width * height];
     Inflater inflater = new Inflater();
     inflater.setInput(pngFrameData);
@@ -101,34 +105,72 @@ public class APngToGifConverter extends SwingWorker<File, Integer> {
     return result;
   }
 
-  private int findCloseIndexInPalette(final int rgb, final int[] rgb256Palette) {
-    return this.paletteIndexCache.computeIfAbsent(rgb, colorRgb -> {
-      final int r = (colorRgb >> 16) & 0xFF;
-      final int g = (colorRgb >> 8) & 0xFF;
-      final int b = colorRgb & 0xFF;
+  private byte[] makeTrueColorIndexTableForPalette(final int[] rgb256Palette) {
+    final int paletteLength = rgb256Palette.length;
 
-      double distance = Double.MAX_VALUE;
-      int foundPaletteIndex = 0;
-      for (int i = 0; i < rgb256Palette.length; i++) {
-        final int pr = (rgb256Palette[i] >> 16) & 0xFF;
-        final int pg = (rgb256Palette[i] >> 8) & 0xFF;
-        final int pb = rgb256Palette[i] & 0xFF;
+    final int[] splitRgbPalette = new int[rgb256Palette.length * 3];
+    for (int i = 0; i < paletteLength; i++) {
+      final int r = (rgb256Palette[i] >> 16) & 0xFF;
+      final int g = (rgb256Palette[i] >> 8) & 0xFF;
+      final int b = rgb256Palette[i] & 0xFF;
+      int offset = i * 3;
+      splitRgbPalette[offset++] = r;
+      splitRgbPalette[offset++] = g;
+      splitRgbPalette[offset] = b;
+    }
 
-        final int dr = pr - r;
-        final int dg = pg - g;
-        final int db = pb - b;
+    final byte[] result = new byte[256 * 256 * 256];
 
-        final double calculatedDistance = Math.sqrt(dr * dr + dg * dg + db * db);
-        if (calculatedDistance < distance) {
-          foundPaletteIndex = i;
-          distance = calculatedDistance;
-        }
-      }
-      return foundPaletteIndex;
-    });
+    try {
+      this.forkJoinPool.submit(() -> IntStream.range(0, 256 * 256 * 256)
+              .parallel()
+              .mapToLong(rgb -> {
+                final int r = (rgb >> 16) & 0xFF;
+                final int g = (rgb >> 8) & 0xFF;
+                final int b = rgb & 0xFF;
+                long distance = Long.MAX_VALUE;
+                int foundPaletteIndex = 0;
+                for (int i = 0; i < paletteLength; i++) {
+                  int offset = i * 3;
+
+                  final long dr = splitRgbPalette[offset++] - r;
+                  final long dg = splitRgbPalette[offset++] - g;
+                  final long db = splitRgbPalette[offset] - b;
+
+                  final long calculatedDistance = dr * dr + dg * dg + db * db;
+                  if (calculatedDistance < distance) {
+                    foundPaletteIndex = i;
+                    distance = calculatedDistance;
+                  }
+                }
+                return ((long) rgb << 32) | foundPaletteIndex;
+              }).forEach(rgbIndex -> {
+                if (this.isCancelled()) {
+                  forkJoinPool.shutdownNow();
+                }
+                synchronized (result) {
+                  result[(int) (rgbIndex >> 32)] = (byte) rgbIndex;
+                }
+              })).get();
+    } catch (InterruptedException | CancellationException ex) {
+      LOGGER.severe(" RGB index table stream has been interrupted");
+      return null;
+    } catch (Exception ex) {
+      LOGGER.log(Level.SEVERE, "Exception during RGB table calculation", ex);
+      throw new RuntimeException("Interrupted by exception", ex);
+    }
+    return result;
   }
 
-  private byte[] makeIndexesForRgb(final int width, final int height, final byte[] pngFrameData, final int[] argbPalette) {
+  public void addProgressListener(final ProgressListener listener) {
+    this.listeners.add(listener);
+  }
+
+  public void removeActionListener(final ProgressListener listener) {
+    this.listeners.remove(listener);
+  }
+
+  private byte[] convertRgbToIndexes(final int width, final int height, final byte[] pngFrameData, final byte[] rgb2IndexTable) {
     final byte[] result = new byte[width * height];
     Inflater inflater = new Inflater();
     inflater.setInput(pngFrameData);
@@ -147,42 +189,34 @@ public class APngToGifConverter extends SwingWorker<File, Integer> {
         final int r = unpacked[lineOffset + x] & 0xFF;
         final int g = unpacked[lineOffset + x + 1] & 0xFF;
         final int b = unpacked[lineOffset + x + 2] & 0xFF;
-        result[ox++] = (byte) findCloseIndexInPalette((r << 16) | (g << 8) | b, argbPalette);
+        result[ox++] = rgb2IndexTable[(r << 16) | (g << 8) | b];
       }
     }
     return result;
   }
 
-  public void addProgressListener(final ProgressListener listener) {
-    this.listeners.add(listener);
-  }
-
-  public void removeActionListener(final ProgressListener listener) {
-    this.listeners.remove(listener);
-  }
-
-  private void notifyUpdate() {
+  private void notifyUpdateForSizeChange() {
     final long read = this.readCounter.get();
     this.publish((int) Math.round(((double) read / (double) this.sourceLength) * 100));
   }
 
-  private void writeRgbFrame(final AGifWriter writer, final IhdrChunk ihdrChunk, final int[] rgbPalette, final PngChunk dataChunk, final FctlChunk fctl) throws IOException {
+  private void writeRgbFrame(final AGifWriter writer, final IhdrChunk ihdrChunk, final byte[] rgb2indexTable, final PngChunk dataChunk, final FctlChunk fctl) throws IOException {
     if (dataChunk.name.equals("IDAT")) {
-      writer.addFrame(0, 0, ihdrChunk.width, ihdrChunk.height, fctl.getDuration(), makeIndexesForRgb(ihdrChunk.width, ihdrChunk.height, dataChunk.data, rgbPalette));
+      writer.addFrame(0, 0, ihdrChunk.width, ihdrChunk.height, fctl.getDuration(), convertRgbToIndexes(ihdrChunk.width, ihdrChunk.height, dataChunk.data, rgb2indexTable));
     } else {
       final byte[] rawData = new byte[dataChunk.data.length - 4];
       System.arraycopy(dataChunk.data, 4, rawData, 0, rawData.length);
-      writer.addFrame(fctl.x, fctl.y, fctl.width, fctl.height, fctl.getDuration(), makeIndexesForRgb(fctl.width, fctl.height, rawData, rgbPalette));
+      writer.addFrame(fctl.x, fctl.y, fctl.width, fctl.height, fctl.getDuration(), convertRgbToIndexes(fctl.width, fctl.height, rawData, rgb2indexTable));
     }
   }
 
-  private void writePaletteFrame(final AGifWriter writer, final IhdrChunk ihdrChunk, final int[] rgbPalette, final PngChunk dataChunk, final FctlChunk fctl) throws IOException {
+  private void writeIndexedFrame(final AGifWriter writer, final IhdrChunk ihdrChunk, final PngChunk dataChunk, final FctlChunk fctl) throws IOException {
     if (dataChunk.name.equals("IDAT")) {
-      writer.addFrame(0, 0, ihdrChunk.width, ihdrChunk.height, fctl.getDuration(), makeIndexesForIndexed(ihdrChunk.width, ihdrChunk.height, dataChunk.data, rgbPalette));
+      writer.addFrame(0, 0, ihdrChunk.width, ihdrChunk.height, fctl.getDuration(), extractDataFromIndexed(ihdrChunk.width, ihdrChunk.height, dataChunk.data));
     } else {
       final byte[] rawData = new byte[dataChunk.data.length - 4];
       System.arraycopy(dataChunk.data, 4, rawData, 0, rawData.length);
-      writer.addFrame(fctl.x, fctl.y, fctl.width, fctl.height, fctl.getDuration(), makeIndexesForIndexed(fctl.width, fctl.height, rawData, rgbPalette));
+      writer.addFrame(fctl.x, fctl.y, fctl.width, fctl.height, fctl.getDuration(), extractDataFromIndexed(fctl.width, fctl.height, rawData));
     }
   }
 
@@ -198,6 +232,8 @@ public class APngToGifConverter extends SwingWorker<File, Integer> {
       ActlChunk actlChunk = null;
 
       AGifWriter gifWriter = null;
+
+      byte[] rgb2indexTable = null;
 
       try (final OutputStream output = new BufferedOutputStream(new FileOutputStream(this.target))) {
         mainLoop:
@@ -218,6 +254,14 @@ public class APngToGifConverter extends SwingWorker<File, Integer> {
                   break;
                   case 2: { // rgb
                     rgbPalette = this.screenCapturer.getGlobalRgb256Palette();
+                    LOGGER.info("Starting calculate RGB to index table");
+                    final long startTime = System.currentTimeMillis();
+                    rgb2indexTable = this.makeTrueColorIndexTableForPalette(rgbPalette);
+                    if (rgb2indexTable == null) {
+                      LOGGER.severe("Calculation of RGB index table has been interrupted so that interrupting conversion");
+                      break mainLoop;
+                    }
+                    LOGGER.info("Calculate RGB to index table completed, took " + (System.currentTimeMillis() - startTime) + "ms");
                   }
                   break;
                   case 3: { // palette
@@ -227,24 +271,26 @@ public class APngToGifConverter extends SwingWorker<File, Integer> {
                   default:
                     throw new IOException("Unexpected color type: " + ihdrChunk.colorType);
                 }
+                this.publish(0);
                 workRgbPalette = rgbPalette;
                 gifWriter = new AGifWriter(output, ihdrChunk.width, ihdrChunk.height, 0, workRgbPalette, actlChunk == null ? 0 : actlChunk.numPlays);
               }
               switch (ihdrChunk.colorType) {
                 case 2: {
                   // rgb
-                  this.writeRgbFrame(gifWriter, ihdrChunk, workRgbPalette, nextChunk, fctlChunk);
+                  this.writeRgbFrame(gifWriter, ihdrChunk, rgb2indexTable, nextChunk, fctlChunk);
                 }
                 break;
                 case 0:
                 case 3: {
                   // palette or grayscale
-                  this.writePaletteFrame(gifWriter, ihdrChunk, workRgbPalette, nextChunk, fctlChunk);
+                  this.writeIndexedFrame(gifWriter, ihdrChunk, nextChunk, fctlChunk);
                 }
                 break;
                 default:
                   throw new IllegalArgumentException("Unexpected color mode: " + ihdrChunk.colorType);
               }
+              notifyUpdateForSizeChange();
             }
             break;
             case "PLTE": {
@@ -275,7 +321,6 @@ public class APngToGifConverter extends SwingWorker<File, Integer> {
             }
             break;
           }
-          notifyUpdate();
         } while (!Thread.currentThread().isInterrupted());
       }
       this.publish(Integer.MAX_VALUE);
@@ -309,6 +354,11 @@ public class APngToGifConverter extends SwingWorker<File, Integer> {
       }
     }
 
+  }
+
+  public void dispose() {
+    this.cancel(true);
+    this.forkJoinPool.shutdownNow();
   }
 
   private static class IhdrChunk {

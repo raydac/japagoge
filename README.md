@@ -7,8 +7,9 @@
 
 ## Changelog
 
-- 1.0.2 (SNAPSHOT)
-  - added support of grayscale recording
+- 2.0.0 (SNAPSHOT)
+  - added support of save result as GIF
+  - added support of color filters recording
 
 - __1.0.1 (01-sep-2021)__
   - internal optimizations to decrease result file size

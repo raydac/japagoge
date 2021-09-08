@@ -36,6 +36,7 @@ public class JapagogeFrame extends JFrame {
   private final AtomicReference<ScreenCapturer> currentScreenCapturer = new AtomicReference<>();
   private final BufferedImage imageClose;
   private final BufferedImage imagePreferences;
+  private final BufferedImage imageHourglassIcon;
   private final Rectangle buttonClose = new Rectangle();
   private final Rectangle buttonPreferences = new Rectangle();
   private Point lastMousePressedTitleScreenPoint = null;
@@ -48,6 +49,7 @@ public class JapagogeFrame extends JFrame {
 
     try {
       this.setIconImage(ImageIO.read(requireNonNull(JapagogeFrame.class.getResourceAsStream("/icons/appico.png"))));
+      this.imageHourglassIcon = ImageIO.read(requireNonNull(JapagogeFrame.class.getResourceAsStream("/icons/hourglass48x48.png")));
       this.imageClose = ImageIO.read(requireNonNull(JapagogeFrame.class.getResourceAsStream("/icons/btn_close.png")));
       this.imagePreferences = ImageIO.read(requireNonNull(JapagogeFrame.class.getResourceAsStream("/icons/btn_prefs.png")));
     } catch (Exception ex) {
@@ -244,6 +246,7 @@ public class JapagogeFrame extends JFrame {
                 var fileChooser = new JFileChooser(JapagogeConfig.getInstance().getTargetFolder());
                 fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
                 fileChooser.setSelectedFile(targetFile);
+                fileChooser.szetAcceptAllFileFilterUsed(false);
 
                 var apngFilter = new FileFilter() {
                   @Override
@@ -253,7 +256,7 @@ public class JapagogeFrame extends JFrame {
 
                   @Override
                   public String getDescription() {
-                    return "APNG files (*.png)";
+                    return "PNG animation files (*.png)";
                   }
                 };
 
@@ -265,7 +268,7 @@ public class JapagogeFrame extends JFrame {
 
                   @Override
                   public String getDescription() {
-                    return "GIF files (*.gif)";
+                    return "GIF animation files (*.gif)";
                   }
                 };
 
@@ -295,17 +298,18 @@ public class JapagogeFrame extends JFrame {
                     LOGGER.info("Converting APNG file into GIF: " + tempFile);
                     var converter = new APngToGifConverter(currentCapturer, selectedFile);
                     converter.execute();
-                    JOptionPane.showOptionDialog(
-                            this,
-                            APngToGifConverter.makePanelFor(converter),
-                            "Converting",
-                            JOptionPane.DEFAULT_OPTION,
-                            JOptionPane.PLAIN_MESSAGE,
-                            null,
-                            new Object[]{"Cancel"},
-                            null);
-                    if (!converter.isDone()) {
-                      converter.cancel(true);
+                    try {
+                      JOptionPane.showOptionDialog(
+                              this,
+                              APngToGifConverter.makePanelFor(converter),
+                              "Exporting as GIF (might take a while)",
+                              JOptionPane.DEFAULT_OPTION,
+                              JOptionPane.PLAIN_MESSAGE,
+                              new ImageIcon(this.imageHourglassIcon),
+                              new Object[]{"Cancel"},
+                              null);
+                    } finally {
+                      converter.dispose();
                     }
                   } else {
                     LOGGER.info("Just moving APNG file: " + tempFile);
@@ -321,10 +325,27 @@ public class JapagogeFrame extends JFrame {
                   LOGGER.info("Canceling file save");
                 }
               } finally {
-                try {
-                  Files.deleteIfExists(tempFile.toPath());
-                } catch (IOException ex) {
-                  LOGGER.log(Level.SEVERE, "Can't delete temp file: " + tempFile, ex);
+                if (tempFile.exists()) {
+                  Exception detectedError;
+                  int attempts = 3;
+                  do {
+                    detectedError = null;
+                    try {
+                      Files.deleteIfExists(tempFile.toPath());
+                    } catch (Exception ex) {
+                      try {
+                        Thread.sleep(500);
+                      } catch (InterruptedException ix) {
+                        Thread.currentThread().interrupt();
+                        break;
+                      }
+                      detectedError = ex;
+                    }
+                  } while (detectedError != null && --attempts > 0);
+                  if (detectedError != null) {
+                    LOGGER.log(Level.SEVERE, "Can't delete temp file, marking it delete on exit: " + tempFile, detectedError);
+                    tempFile.deleteOnExit();
+                  }
                 }
                 this.setState(State.SELECT_POSITION);
               }
@@ -346,7 +367,7 @@ public class JapagogeFrame extends JFrame {
 
   private File makeTargetFile(final File parentFolder, final String filter, final String extension) {
     var dateFormat = new SimpleDateFormat("yyyyMMdd_HHmmss");
-    return new File(parentFolder, "apng-" + filter.toLowerCase(Locale.ENGLISH) + '-' + dateFormat.format(new Date()) + '.' + extension);
+    return new File(parentFolder, "record-" + filter.toLowerCase(Locale.ENGLISH) + '-' + dateFormat.format(new Date()) + '.' + extension);
   }
 
   private File makeTempRecordFile() throws IOException {
