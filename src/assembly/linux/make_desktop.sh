@@ -15,7 +15,7 @@ echo Terminal=false >> $TARGET
 echo Type=Application >> $TARGET
 echo Icon=$JAPAGOGE_HOME/icon.svg >> $TARGET
 echo "Categories=Application;" >> $TARGET
-echo "Keywords=apng;grabber;japagoge;peek;" >> $TARGET
+echo "Keywords=apng;grabber;japagoge;gif;png;peek;" >> $TARGET
 echo StartupWMClass=JapagogeGrabber >> $TARGET
 echo StartupNotify=true >> $TARGET
 
