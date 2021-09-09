@@ -7,6 +7,11 @@ import java.util.Scanner;
 
 public enum Palette256 {
   AUTO(null),
+  DUEL("duel"),
+  ATARI("atari"),
+  AURORA("aurora"),
+  RGBM("rgbm"),
+  UZEBOX("uzebox"),
   WIN95("win95");
 
   private final int[] rgbPalette;

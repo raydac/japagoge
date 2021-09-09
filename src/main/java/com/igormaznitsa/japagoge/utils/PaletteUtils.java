@@ -2,6 +2,7 @@ package com.igormaznitsa.japagoge.utils;
 
 import java.util.stream.IntStream;
 
+@SuppressWarnings("unused")
 public final class PaletteUtils {
 
   private PaletteUtils() {
@@ -11,12 +12,35 @@ public final class PaletteUtils {
     return IntStream.range(0, 256).map(y -> (y << 16) | (y << 8) << 8).toArray();
   }
 
-  public static double calcRgbDistance(final int r1, final int g1, final int b1, final int r2, final int g2, final int b2, final boolean withY) {
-    final int dy = withY ? (toY(r1, g1, b1) - toY(r2, g2, b2)) : 0;
+  public static double calcRgbDistance(final int r1, final int g1, final int b1, final int y1, final double h1, final int r2, final int g2, final int b2) {
     final int dr = r1 - r2;
     final int dg = g1 - g2;
     final int db = b1 - b2;
-    return Math.sqrt(dr * dr + dg * dg + db * db + dy * dy);
+    final int dy = y1 - toY(r2, g2, b2);
+    final double dh = h1 - toHue(r2, g2, b2);
+    return Math.sqrt(dr * dr + dg * dg + db * db + dy * dy + dh * dh);
+  }
+
+  public static double toHue(final int r, final int g, final int b) {
+    final double dr = r / 255.0d;
+    final double dg = g / 255.0d;
+    final double db = b / 255.0d;
+
+    final double cMax = Math.max(dr, Math.max(dg, db)); // maximum of r, g, b
+    final double cMin = Math.min(dr, Math.min(dg, db)); // minimum of r, g, b
+    final double diff = cMax - cMin; // diff of cmax and cmin.
+    double h = -1;
+
+    if (cMax == cMin) {
+      h = 0;
+    } else if (cMax == dr) {
+      h = (60 * ((dg - db) / diff) + 360) % 360;
+    } else if (cMax == dg) {
+      h = (60 * ((db - dr) / diff) + 120) % 360;
+    } else if (cMax == db) {
+      h = (60 * ((dr - dg) / diff) + 240) % 360;
+    }
+    return h;
   }
 
   public static int toY(final int r, final int g, final int b) {
@@ -39,7 +63,7 @@ public final class PaletteUtils {
     double cmax = Math.max(dr, Math.max(dg, db)); // maximum of r, g, b
     double cmin = Math.min(dr, Math.min(dg, db)); // minimum of r, g, b
     double diff = cmax - cmin; // diff of cmax and cmin.
-    double h = -1, s = -1;
+    double h = -1, s;
 
     if (cmax == cmin) {
       h = 0;

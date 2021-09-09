@@ -126,6 +126,9 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
                 final int g = (rgb >> 8) & 0xFF;
                 final int b = rgb & 0xFF;
 
+                final int y = PaletteUtils.toY(r, g, b);
+                final double h = PaletteUtils.toHue(r, g, b);
+
                 double distance = Double.MAX_VALUE;
 
                 int foundPaletteIndex = 0;
@@ -136,19 +139,20 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
                   final int tg = splitRgbPalette[offset++];
                   final int tb = splitRgbPalette[offset];
 
-                  final double distanceRgb = PaletteUtils.calcRgbDistance(r, g, b, tr, tg, tb, true);
+                  final double distanceRgb = PaletteUtils.calcRgbDistance(r, g, b, y, h, tr, tg, tb);
 
                   if (distanceRgb < distance) {
                     foundPaletteIndex = i;
                     distance = distanceRgb;
+                    if (distance < 0.00001d) break;
                   }
                 }
                 return ((long) rgb << 32) | foundPaletteIndex;
               }).forEach(rgbIndex -> {
-                if (this.isCancelled()) {
-                  forkJoinPool.shutdownNow();
-                }
                 synchronized (result) {
+                  if (this.isCancelled()) {
+                    forkJoinPool.shutdownNow();
+                  }
                   result[(int) (rgbIndex >> 32)] = (byte) rgbIndex;
                 }
               })).get();
