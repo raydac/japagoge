@@ -1,6 +1,7 @@
 package com.igormaznitsa.japagoge;
 
 import com.igormaznitsa.japagoge.filters.RgbPixelFilter;
+import com.igormaznitsa.japagoge.utils.Palette256;
 
 import java.io.File;
 import java.util.Locale;
@@ -28,7 +29,27 @@ public class JapagogeConfig {
   }
 
   public void setFilter(final RgbPixelFilter filter) {
-    this.preferences.put(Key.FILTER.name(), filter.name());
+    if (filter == null) {
+      this.preferences.remove(Key.FILTER.name());
+    } else {
+      this.preferences.put(Key.FILTER.name(), filter.name());
+    }
+  }
+
+  public Palette256 getGifPaletteForRgb() {
+    try {
+      return Palette256.valueOf(this.preferences.get(Key.GIF_PALETTE_FOR_RGB.name(), Palette256.AUTO.name()).trim().toUpperCase(Locale.ENGLISH));
+    } catch (Exception ex) {
+      return Palette256.AUTO;
+    }
+  }
+
+  public void setGifPaletteForRgb(final Palette256 palette) {
+    if (palette == null) {
+      this.preferences.remove(Key.GIF_PALETTE_FOR_RGB.name());
+    } else {
+      this.preferences.put(Key.GIF_PALETTE_FOR_RGB.name(), palette.name());
+    }
   }
 
   public boolean isPointer() {
@@ -89,6 +110,7 @@ public class JapagogeConfig {
     FRAME_DELAY,
     LOOPS,
     POINTER,
+    GIF_PALETTE_FOR_RGB,
     FOLDER_PATH,
     FILTER
   }
@@ -96,11 +118,13 @@ public class JapagogeConfig {
   public static class JapagogeConfigData {
     private boolean pointer;
     private RgbPixelFilter filter;
+    private Palette256 gifPaletteForRgb;
     private long frameDelay;
     private File targetFolder;
     private int loops;
 
     public JapagogeConfigData() {
+      this.gifPaletteForRgb = getInstance().getGifPaletteForRgb();
       this.pointer = getInstance().isPointer();
       this.filter = getInstance().getFilter();
       this.frameDelay = getInstance().getFrameDelay();
@@ -114,6 +138,14 @@ public class JapagogeConfig {
 
     public void setFilter(final RgbPixelFilter filter) {
       this.filter = filter == null ? RgbPixelFilter.RGB : filter;
+    }
+
+    public Palette256 getGifPaletteForRgb() {
+      return this.gifPaletteForRgb;
+    }
+
+    public void setGifPaletteForRgb(final Palette256 palette) {
+      this.gifPaletteForRgb = palette == null ? Palette256.AUTO : palette;
     }
 
     public boolean isPointer() {
@@ -149,6 +181,7 @@ public class JapagogeConfig {
     }
 
     public void save() {
+      getInstance().setGifPaletteForRgb(this.gifPaletteForRgb);
       getInstance().setPointer(this.pointer);
       getInstance().setFilter(this.filter);
       getInstance().setLoops(this.loops);

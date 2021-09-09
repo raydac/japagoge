@@ -1,5 +1,7 @@
 package com.igormaznitsa.japagoge.filters;
 
+import com.igormaznitsa.japagoge.utils.PaletteUtils;
+
 import java.util.Optional;
 
 public class GrayscaleFilter implements ColorFilter {
@@ -18,6 +20,6 @@ public class GrayscaleFilter implements ColorFilter {
     final int r = (rgb >> 16) & 0xFF;
     final int g = (rgb >> 8) & 0xFF;
     final int b = rgb & 0xFF;
-    return Math.min(255, Math.round(r * 0.299f + g * 0.587f + b * 0.114f));
+    return PaletteUtils.toY(r, g, b);
   }
 }

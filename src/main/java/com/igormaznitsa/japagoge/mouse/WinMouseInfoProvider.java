@@ -8,10 +8,12 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.util.List;
 import java.util.*;
+import java.util.logging.Logger;
 
 // from https://stackoverflow.com/questions/47634213/get-mouse-type-in-java-using-jna
 @SuppressWarnings("unused")
 final class WinMouseInfoProvider extends DefaultMouseInfoProvider {
+  private static final Logger LOGGER = Logger.getLogger(WinMouseInfoProvider.class.getSimpleName());
 
   private final Map<WinNT.HANDLE, Cursor> cursors;
   private final User32Ext user32ext;
@@ -94,7 +96,6 @@ final class WinMouseInfoProvider extends DefaultMouseInfoProvider {
   private Map<WinNT.HANDLE, Cursor> loadCursors() {
     final Map<WinNT.HANDLE, Cursor> cursors = new HashMap<>();
     for (final Cursor cursor : Cursor.values()) {
-
       final Memory memory = new Memory(Native.getNativeSize(Long.class, null));
       memory.setLong(0, cursor.getCode());
       final Pointer resource = memory.getPointer(0);
@@ -102,10 +103,10 @@ final class WinMouseInfoProvider extends DefaultMouseInfoProvider {
               null, resource, WinUser.IMAGE_CURSOR, 0, 0, WinUser.LR_SHARED
       );
       if (cursorHandle == null || Native.getLastError() != 0) {
-        throw new RuntimeException("Cursor could not be loaded: " + Native.getLastError());
+        LOGGER.severe(String.format("Cursor %s could not be loaded: %d", cursor, Native.getLastError()));
+      } else {
+        cursors.put(cursorHandle, cursor);
       }
-
-      cursors.put(cursorHandle, cursor);
     }
     return Collections.unmodifiableMap(cursors);
   }

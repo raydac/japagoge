@@ -1,6 +1,7 @@
 package com.igormaznitsa.japagoge;
 
 import com.igormaznitsa.japagoge.gif.AGifWriter;
+import com.igormaznitsa.japagoge.utils.PaletteUtils;
 
 import javax.swing.*;
 import java.awt.*;
@@ -17,7 +18,7 @@ import java.util.logging.Logger;
 import java.util.stream.IntStream;
 import java.util.zip.Inflater;
 
-public class APngToGifConverter extends SwingWorker<File, Integer> {
+public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
 
   private static final Logger LOGGER = Logger.getLogger("APNGtoGIF");
 
@@ -27,7 +28,7 @@ public class APngToGifConverter extends SwingWorker<File, Integer> {
   private final AtomicLong readCounter = new AtomicLong();
   private final List<ProgressListener> listeners = new CopyOnWriteArrayList<>();
 
-  public APngToGifConverter(final ScreenCapturer screenCapturer, final File target) {
+  public APngToGifConvertingWorker(final ScreenCapturer screenCapturer, final File target) {
     super();
     this.screenCapturer = screenCapturer;
     this.target = target;
@@ -56,13 +57,9 @@ public class APngToGifConverter extends SwingWorker<File, Integer> {
     return result;
   }
 
-  private static void skipBytes(final int bytes, final DataInputStream in, final AtomicLong counter) throws IOException {
-    counter.addAndGet(in.skipBytes(bytes));
-  }
-
   private final ForkJoinPool forkJoinPool = new ForkJoinPool(Runtime.getRuntime().availableProcessors());
 
-  public static JPanel makePanelFor(final APngToGifConverter converter) {
+  public static JPanel makePanelFor(final APngToGifConvertingWorker converter) {
     final JPanel panel = new JPanel(new BorderLayout());
     final JProgressBar progressBar = new JProgressBar(0, 100);
     final Dimension progressBarPreferredSize = progressBar.getPreferredSize();
@@ -128,19 +125,22 @@ public class APngToGifConverter extends SwingWorker<File, Integer> {
                 final int r = (rgb >> 16) & 0xFF;
                 final int g = (rgb >> 8) & 0xFF;
                 final int b = rgb & 0xFF;
-                long distance = Long.MAX_VALUE;
+
+                double distance = Double.MAX_VALUE;
+
                 int foundPaletteIndex = 0;
                 for (int i = 0; i < paletteLength; i++) {
                   int offset = i * 3;
 
-                  final long dr = splitRgbPalette[offset++] - r;
-                  final long dg = splitRgbPalette[offset++] - g;
-                  final long db = splitRgbPalette[offset] - b;
+                  final int tr = splitRgbPalette[offset++];
+                  final int tg = splitRgbPalette[offset++];
+                  final int tb = splitRgbPalette[offset];
 
-                  final long calculatedDistance = dr * dr + dg * dg + db * db;
-                  if (calculatedDistance < distance) {
+                  final double distanceRgb = PaletteUtils.calcRgbDistance(r, g, b, tr, tg, tb, true);
+
+                  if (distanceRgb < distance) {
                     foundPaletteIndex = i;
-                    distance = calculatedDistance;
+                    distance = distanceRgb;
                   }
                 }
                 return ((long) rgb << 32) | foundPaletteIndex;
@@ -253,7 +253,7 @@ public class APngToGifConverter extends SwingWorker<File, Integer> {
                   }
                   break;
                   case 2: { // rgb
-                    rgbPalette = this.screenCapturer.getGlobalRgb256Palette();
+                    rgbPalette = this.screenCapturer.makeGlobalRgb256Palette();
                     LOGGER.info("Starting calculate RGB to index table");
                     final long startTime = System.currentTimeMillis();
                     rgb2indexTable = this.makeTrueColorIndexTableForPalette(rgbPalette);
@@ -265,7 +265,7 @@ public class APngToGifConverter extends SwingWorker<File, Integer> {
                   }
                   break;
                   case 3: { // palette
-                    rgbPalette = workRgbPalette == null ? this.screenCapturer.getGlobalRgb256Palette() : workRgbPalette;
+                    rgbPalette = workRgbPalette == null ? this.screenCapturer.makeGlobalRgb256Palette() : workRgbPalette;
                   }
                   break;
                   default:
@@ -333,14 +333,12 @@ public class APngToGifConverter extends SwingWorker<File, Integer> {
 
   @Override
   protected void process(final List<Integer> chunks) {
-    chunks.forEach(x -> {
-      this.listeners.forEach(a -> a.onProgress(this, x));
-    });
+    chunks.forEach(x -> this.listeners.forEach(a -> a.onProgress(this, x)));
   }
 
   @FunctionalInterface
   public interface ProgressListener {
-    void onProgress(APngToGifConverter converter, int progress);
+    void onProgress(APngToGifConvertingWorker converter, int progress);
   }
 
   private static class ActlChunk {

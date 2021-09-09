@@ -2,6 +2,8 @@ package com.igormaznitsa.japagoge;
 
 import com.igormaznitsa.japagoge.filters.RgbPixelFilter;
 import com.igormaznitsa.japagoge.mouse.MouseInfoProvider;
+import com.igormaznitsa.japagoge.utils.Palette256;
+import com.igormaznitsa.japagoge.utils.PaletteUtils;
 
 import java.awt.*;
 import java.io.File;
@@ -31,6 +33,7 @@ public final class ScreenCapturer {
   private final AtomicReference<TimerTask> timerTask = new AtomicReference<>();
   private final AtomicReference<APngWriter> apngWriter = new AtomicReference<>();
   private final MouseInfoProvider mouseInfoProvider;
+  private final Palette256 palette;
 
   public ScreenCapturer(
           final GraphicsDevice device,
@@ -38,8 +41,10 @@ public final class ScreenCapturer {
           final File targetFile,
           final MouseInfoProvider mouseInfoProvider,
           final RgbPixelFilter filter,
+          final Palette256 palette,
           final Duration delayBetweenFrames
   ) throws AWTException {
+    this.palette = palette;
     this.robot = new Robot(device);
     this.filter = filter;
     this.mouseInfoProvider = mouseInfoProvider;
@@ -111,9 +116,19 @@ public final class ScreenCapturer {
     }
   }
 
-  public synchronized int[] getGlobalRgb256Palette() {
+  public synchronized int[] makeGlobalRgb256Palette() {
+    LOGGER.info("Make global RGB palette: " + this.palette);
     return this.filter.get().getPalette()
-            .orElseGet(() -> this.pngStatistics == null ? RgbPixelFilter.AMBER.get().getPalette().orElseThrow() : this.pngStatistics.colorStatistics.makeRgb256palette());
+            .orElseGet(() -> {
+                      if (this.pngStatistics == null) {
+                        LOGGER.severe("PMG statistics in NULL, making grayscale palette");
+                        return PaletteUtils.makeGrayscaleRgb256();
+                      } else {
+                        LOGGER.info("Using RGB palette: " + palette);
+                        return palette.getPalette().orElseGet(() -> this.pngStatistics.colorStatistics.makeAutoPalette());
+                      }
+                    }
+            );
   }
 
   public boolean isStarted() {

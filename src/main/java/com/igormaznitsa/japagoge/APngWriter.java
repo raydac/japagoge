@@ -149,7 +149,7 @@ public final class APngWriter {
 
     if (startByteX == Integer.MAX_VALUE) return null;
 
-    if (startByteX == 0 && startByteY == 0 && endByteX == scanLineWidth - 1 && endByteY == imageRect.heigh - 1) {
+    if (startByteX == 0 && startByteY == 0 && endByteX == scanLineWidth - 1 && endByteY == imageRect.height - 1) {
       imageRect.data = newPngData;
     } else {
       final int pixelX = (startByteX - 1) / 3;
@@ -186,7 +186,7 @@ public final class APngWriter {
         imageRect.x = pixelX;
         imageRect.y = startByteY;
         imageRect.width = pixelWidth;
-        imageRect.heigh = pixelHeight;
+        imageRect.height = pixelHeight;
         imageRect.data = portionArray;
       }
     }
@@ -217,7 +217,7 @@ public final class APngWriter {
 
     if (startByteX == Integer.MAX_VALUE) return null;
 
-    if (startByteX == 0 && startByteY == 0 && endByteX == scanLineWidth - 1 && endByteY == imageRect.heigh - 1) {
+    if (startByteX == 0 && startByteY == 0 && endByteX == scanLineWidth - 1 && endByteY == imageRect.height - 1) {
       imageRect.data = newPngData;
     } else {
       final int pixelX = (startByteX - 1);
@@ -253,7 +253,7 @@ public final class APngWriter {
         imageRect.x = pixelX;
         imageRect.y = startByteY;
         imageRect.width = pixelWidth;
-        imageRect.heigh = pixelHeight;
+        imageRect.height = pixelHeight;
         imageRect.data = portionArray;
       }
     }
@@ -320,7 +320,7 @@ public final class APngWriter {
     this.putText("fcTL");
     this.putInt(this.sequenceCounter++);
     this.putInt(portion.width);
-    this.putInt(portion.heigh);
+    this.putInt(portion.height);
     this.putInt(portion.x);               // x position
     this.putInt(portion.y);               // y position
     this.putShort(delayFractions[0]);     // fps num
@@ -537,7 +537,7 @@ public final class APngWriter {
       if (this.statisticsB[b] < Integer.MAX_VALUE) this.statisticsB[b]++;
     }
 
-    public int[] makeRgb256palette() {
+    public int[] makeAutoPalette() {
       final byte[] rgb = new byte[256 * 3];
 
       final List<Container> containers = new ArrayList<>();
@@ -546,7 +546,7 @@ public final class APngWriter {
       containers.add(new Container(this.statisticsB, 2));
       Collections.sort(containers);
 
-      containers.forEach(x -> x.fillColorComponent(rgb));
+      containers.forEach(x -> x.fillByColorComponent(rgb));
 
       return toRgb(rgb);
     }
@@ -566,29 +566,29 @@ public final class APngWriter {
         return (int) IntStream.of(component).filter(c -> c != 0).count();
       }
 
-      void fillColorComponent(final byte[] output) {
-        final int[] colorClone = this.componentStatistics.clone();
+      void fillByColorComponent(final byte[] resultRgb) {
+        final int[] statisticsClone = this.componentStatistics.clone();
 
         int outPosition;
         for (outPosition = 0; outPosition < 256; outPosition++) {
           int maxCount = 0;
           int foundPosition = -1;
           for (int i = 0; i < 256; i++) {
-            if (colorClone[i] != 0 && maxCount < colorClone[i]) {
-              maxCount = colorClone[i];
+            if (statisticsClone[i] != 0 && maxCount < statisticsClone[i]) {
+              maxCount = statisticsClone[i];
               foundPosition = i;
             }
           }
           if (foundPosition < 0) break;
           else {
-            output[outPosition * 3 + this.position] = (byte) foundPosition;
-            colorClone[foundPosition] = 0;
+            resultRgb[outPosition * 3 + this.position] = (byte) foundPosition;
+            statisticsClone[foundPosition] = 0;
           }
         }
 
         final int limit = outPosition;
         while (outPosition < 256) {
-          output[outPosition * 3 + this.position] = output[(outPosition % limit) * 3 + this.position];
+          resultRgb[outPosition * 3 + this.position] = resultRgb[(outPosition % limit) * 3 + this.position];
           outPosition++;
         }
       }
@@ -604,14 +604,14 @@ public final class APngWriter {
     int x;
     int y;
     int width;
-    int heigh;
+    int height;
     byte[] data;
 
     ImagePortion(final int x, final int y, final int width, final int height, final byte[] data) {
       this.x = x;
       this.y = y;
       this.width = width;
-      this.heigh = height;
+      this.height = height;
       this.data = data;
     }
   }
