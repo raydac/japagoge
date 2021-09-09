@@ -8,6 +8,7 @@
 ## Changelog
 
 - 2.0.0 (SNAPSHOT)
+  - improved rendering for mouse pointer
   - added support of save result as GIF
   - added support of color filters recording
 
