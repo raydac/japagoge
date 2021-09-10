@@ -27,6 +27,7 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
   private final long sourceLength;
   private final AtomicLong readCounter = new AtomicLong();
   private final List<ProgressListener> listeners = new CopyOnWriteArrayList<>();
+  private final ForkJoinPool forkJoinPool = new ForkJoinPool(Runtime.getRuntime().availableProcessors());
 
   public APngToGifConvertingWorker(final ScreenCapturer screenCapturer, final File target) {
     super();
@@ -56,8 +57,6 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
     counter.incrementAndGet();
     return result;
   }
-
-  private final ForkJoinPool forkJoinPool = new ForkJoinPool(Runtime.getRuntime().availableProcessors());
 
   public static JPanel makePanelFor(final APngToGifConvertingWorker converter) {
     final JPanel panel = new JPanel(new BorderLayout());
@@ -102,7 +101,7 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
     return result;
   }
 
-  private byte[] makeTrueColorIndexTableForPalette(final int[] rgb256Palette) {
+  private byte[] generateIndexTable(final int[] rgb256Palette) {
     final int paletteLength = rgb256Palette.length;
 
     final int[] splitRgbPalette = new int[rgb256Palette.length * 3];
@@ -127,9 +126,9 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
                 final int b = rgb & 0xFF;
 
                 final int y = PaletteUtils.toY(r, g, b);
-                final double h = PaletteUtils.toHue(r, g, b);
+                final float h = PaletteUtils.toHue(r, g, b);
 
-                double distance = Double.MAX_VALUE;
+                float distance = Float.MAX_VALUE;
 
                 int foundPaletteIndex = 0;
                 for (int i = 0; i < paletteLength; i++) {
@@ -139,20 +138,22 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
                   final int tg = splitRgbPalette[offset++];
                   final int tb = splitRgbPalette[offset];
 
-                  final double distanceRgb = PaletteUtils.calcRgbDistance(r, g, b, y, h, tr, tg, tb);
+                  final float distanceRgb = PaletteUtils.calcRgbDistance(r, g, b, y, h, tr, tg, tb);
 
                   if (distanceRgb < distance) {
                     foundPaletteIndex = i;
                     distance = distanceRgb;
-                    if (distance < 0.00001d) break;
                   }
                 }
                 return ((long) rgb << 32) | foundPaletteIndex;
-              }).forEach(rgbIndex -> {
+              })
+              .peek(value -> {
+                if (this.isCancelled()) {
+                  forkJoinPool.shutdownNow();
+                }
+              })
+              .forEach(rgbIndex -> {
                 synchronized (result) {
-                  if (this.isCancelled()) {
-                    forkJoinPool.shutdownNow();
-                  }
                   result[(int) (rgbIndex >> 32)] = (byte) rgbIndex;
                 }
               })).get();
@@ -170,6 +171,7 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
     this.listeners.add(listener);
   }
 
+  @SuppressWarnings("unused")
   public void removeActionListener(final ProgressListener listener) {
     this.listeners.remove(listener);
   }
@@ -260,7 +262,7 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
                     rgbPalette = this.screenCapturer.makeGlobalRgb256Palette();
                     LOGGER.info("Starting calculate RGB to index table");
                     final long startTime = System.currentTimeMillis();
-                    rgb2indexTable = this.makeTrueColorIndexTableForPalette(rgbPalette);
+                    rgb2indexTable = this.generateIndexTable(rgbPalette);
                     if (rgb2indexTable == null) {
                       LOGGER.severe("Calculation of RGB index table has been interrupted so that interrupting conversion");
                       break mainLoop;
@@ -340,6 +342,11 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
     chunks.forEach(x -> this.listeners.forEach(a -> a.onProgress(this, x)));
   }
 
+  public void dispose() {
+    this.cancel(true);
+    this.forkJoinPool.shutdownNow();
+  }
+
   @FunctionalInterface
   public interface ProgressListener {
     void onProgress(APngToGifConvertingWorker converter, int progress);
@@ -356,11 +363,6 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
       }
     }
 
-  }
-
-  public void dispose() {
-    this.cancel(true);
-    this.forkJoinPool.shutdownNow();
   }
 
   private static class IhdrChunk {
@@ -420,6 +422,7 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
     private final String name;
     private final byte[] data;
 
+    @SuppressWarnings("unused")
     public PngChunk(final DataInputStream in, final AtomicLong counter) throws IOException {
       final int dataLength = in.readInt();
       final StringBuilder nameBuffer = new StringBuilder(4);

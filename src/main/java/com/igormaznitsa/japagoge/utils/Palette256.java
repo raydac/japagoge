@@ -7,12 +7,14 @@ import java.util.Scanner;
 
 public enum Palette256 {
   AUTO(null),
-  DUEL("duel"),
-  ATARI("atari"),
-  AURORA("aurora"),
-  RGBM("rgbm"),
-  UZEBOX("uzebox"),
-  WIN95("win95");
+  UNIVERSAL("duel.hex"),
+  GAMES("aurora.hex"),
+  OLD_GAMES("hocus-pocus.hex"),
+  WARM("rgbm.hex"),
+  WIN95("win95.hex"),
+  ATARI("atari.hex"),
+  SONIC("srb2.hex"),
+  UZEBOX("uzebox.hex");
 
   private final int[] rgbPalette;
 
@@ -21,7 +23,7 @@ public enum Palette256 {
       this.rgbPalette = null;
     } else {
       final int[] rgb = new int[256];
-      try (final Scanner in = new Scanner(Objects.requireNonNull(Palette256.class.getResourceAsStream("/palettes/" + paletteName + ".hex")), StandardCharsets.UTF_8)) {
+      try (final Scanner in = new Scanner(Objects.requireNonNull(Palette256.class.getResourceAsStream("/palettes/" + paletteName)), StandardCharsets.UTF_8)) {
         int index = 0;
         while (in.hasNext()) {
           final String next = in.next().trim();
@@ -33,6 +35,11 @@ public enum Palette256 {
       }
       this.rgbPalette = rgb;
     }
+  }
+
+  @Override
+  public String toString() {
+    return this.name().replace('_', ' ');
   }
 
   public Optional<int[]> getPalette() {

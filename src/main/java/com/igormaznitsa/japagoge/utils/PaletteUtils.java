@@ -12,24 +12,24 @@ public final class PaletteUtils {
     return IntStream.range(0, 256).map(y -> (y << 16) | (y << 8) << 8).toArray();
   }
 
-  public static double calcRgbDistance(final int r1, final int g1, final int b1, final int y1, final double h1, final int r2, final int g2, final int b2) {
+  public static float calcRgbDistance(final int r1, final int g1, final int b1, final int y1, final float h1, final int r2, final int g2, final int b2) {
     final int dr = r1 - r2;
     final int dg = g1 - g2;
     final int db = b1 - b2;
     final int dy = y1 - toY(r2, g2, b2);
-    final double dh = h1 - toHue(r2, g2, b2);
-    return Math.sqrt(dr * dr + dg * dg + db * db + dy * dy + dh * dh);
+    final float dh = h1 - toHue(r2, g2, b2);
+    return dr * dr + dg * dg + db * db + dy * dy + dh * dh;
   }
 
-  public static double toHue(final int r, final int g, final int b) {
-    final double dr = r / 255.0d;
-    final double dg = g / 255.0d;
-    final double db = b / 255.0d;
+  public static float toHue(final int r, final int g, final int b) {
+    final float dr = r / 255.0f;
+    final float dg = g / 255.0f;
+    final float db = b / 255.0f;
 
-    final double cMax = Math.max(dr, Math.max(dg, db)); // maximum of r, g, b
-    final double cMin = Math.min(dr, Math.min(dg, db)); // minimum of r, g, b
-    final double diff = cMax - cMin; // diff of cmax and cmin.
-    double h = -1;
+    final float cMax = Math.max(dr, Math.max(dg, db));
+    final float cMin = Math.min(dr, Math.min(dg, db));
+    final float diff = cMax - cMin;
+    float h = -1;
 
     if (cMax == cMin) {
       h = 0;

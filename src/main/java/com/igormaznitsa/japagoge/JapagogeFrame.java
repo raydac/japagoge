@@ -408,6 +408,7 @@ public class JapagogeFrame extends JFrame {
     if (this.state.get() == State.SELECT_POSITION) {
       LOGGER.info("Closing by button");
       this.dispose();
+      System.exit(0);
     }
   }
 
