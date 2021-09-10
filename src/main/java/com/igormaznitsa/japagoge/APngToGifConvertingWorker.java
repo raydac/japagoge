@@ -24,13 +24,15 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
 
   private final ScreenCapturer screenCapturer;
   private final File target;
+  private final boolean accurateRgb;
   private final long sourceLength;
   private final AtomicLong readCounter = new AtomicLong();
   private final List<ProgressListener> listeners = new CopyOnWriteArrayList<>();
   private final ForkJoinPool forkJoinPool = new ForkJoinPool(Runtime.getRuntime().availableProcessors());
 
-  public APngToGifConvertingWorker(final ScreenCapturer screenCapturer, final File target) {
+  public APngToGifConvertingWorker(final ScreenCapturer screenCapturer, final boolean accurateRgb, final File target) {
     super();
+    this.accurateRgb = accurateRgb;
     this.screenCapturer = screenCapturer;
     this.target = target;
     this.sourceLength = screenCapturer.getTargetFile().length();
@@ -101,7 +103,7 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
     return result;
   }
 
-  private byte[] generateIndexTable(final int[] rgb256Palette) {
+  private byte[] generateIndexTable(final int[] rgb256Palette, final boolean accurateRgb) {
     final int paletteLength = rgb256Palette.length;
 
     final int[] splitRgbPalette = new int[rgb256Palette.length * 3];
@@ -125,9 +127,15 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
                 final int g = (rgb >> 8) & 0xFF;
                 final int b = rgb & 0xFF;
 
-                final int y = PaletteUtils.toY(r, g, b);
-                final float h = PaletteUtils.toHue(r, g, b);
-
+                final int y;
+                final float h;
+                if (accurateRgb) {
+                  y = PaletteUtils.toY(r, g, b);
+                  h = PaletteUtils.toHue(r, g, b);
+                } else {
+                  y = 0;
+                  h = 0;
+                }
                 float distance = Float.MAX_VALUE;
 
                 int foundPaletteIndex = 0;
@@ -138,7 +146,15 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
                   final int tg = splitRgbPalette[offset++];
                   final int tb = splitRgbPalette[offset];
 
-                  final float distanceRgb = PaletteUtils.calcRgbDistance(r, g, b, y, h, tr, tg, tb);
+                  final float distanceRgb;
+                  if (accurateRgb) {
+                    distanceRgb = PaletteUtils.calcAccurateRgbDistance(r, g, b, y, h, tr, tg, tb);
+                  } else {
+                    final int dr = r - tr;
+                    final int dg = g - tg;
+                    final int db = b - tb;
+                    distanceRgb = dr * dr + dg * dg + db * db;
+                  }
 
                   if (distanceRgb < distance) {
                     foundPaletteIndex = i;
@@ -260,9 +276,9 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
                   break;
                   case 2: { // rgb
                     rgbPalette = this.screenCapturer.makeGlobalRgb256Palette();
-                    LOGGER.info("Starting calculate RGB to index table");
+                    LOGGER.info("Starting calculate RGB to index table, accurate RGB is " + this.accurateRgb);
                     final long startTime = System.currentTimeMillis();
-                    rgb2indexTable = this.generateIndexTable(rgbPalette);
+                    rgb2indexTable = this.generateIndexTable(rgbPalette, this.accurateRgb);
                     if (rgb2indexTable == null) {
                       LOGGER.severe("Calculation of RGB index table has been interrupted so that interrupting conversion");
                       break mainLoop;

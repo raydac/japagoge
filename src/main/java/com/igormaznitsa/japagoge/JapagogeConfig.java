@@ -60,6 +60,14 @@ public class JapagogeConfig {
     this.preferences.putBoolean(Key.POINTER.name(), flag);
   }
 
+  public boolean isAccurateRgb() {
+    return this.preferences.getBoolean(Key.ACCURATE_RGB.name(), false);
+  }
+
+  public void setAccurateRgb(final boolean flag) {
+    this.preferences.putBoolean(Key.ACCURATE_RGB.name(), flag);
+  }
+
   public long getFrameDelay() {
     return this.preferences.getLong(Key.FRAME_DELAY.name(), 80);
   }
@@ -109,6 +117,7 @@ public class JapagogeConfig {
   private enum Key {
     FRAME_DELAY,
     LOOPS,
+    ACCURATE_RGB,
     POINTER,
     GIF_PALETTE_FOR_RGB,
     FOLDER_PATH,
@@ -117,6 +126,7 @@ public class JapagogeConfig {
 
   public static class JapagogeConfigData {
     private boolean pointer;
+    private boolean accurateRgb;
     private RgbPixelFilter filter;
     private Palette256 gifPaletteForRgb;
     private long frameDelay;
@@ -124,6 +134,7 @@ public class JapagogeConfig {
     private int loops;
 
     public JapagogeConfigData() {
+      this.accurateRgb = getInstance().isAccurateRgb();
       this.gifPaletteForRgb = getInstance().getGifPaletteForRgb();
       this.pointer = getInstance().isPointer();
       this.filter = getInstance().getFilter();
@@ -156,6 +167,14 @@ public class JapagogeConfig {
       this.pointer = pointer;
     }
 
+    public boolean isAccurateRgb() {
+      return this.accurateRgb;
+    }
+
+    public void setAccurateRgb(final boolean flag) {
+      this.accurateRgb = flag;
+    }
+
     public long getFrameDelay() {
       return frameDelay;
     }
@@ -183,6 +202,7 @@ public class JapagogeConfig {
     public void save() {
       getInstance().setGifPaletteForRgb(this.gifPaletteForRgb);
       getInstance().setPointer(this.pointer);
+      getInstance().setAccurateRgb(this.accurateRgb);
       getInstance().setFilter(this.filter);
       getInstance().setLoops(this.loops);
       getInstance().setTargetFolder(this.targetFolder);

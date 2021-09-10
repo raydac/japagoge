@@ -19,6 +19,7 @@ public class PreferencesPanel extends JPanel {
   private final JapagogeConfig.JapagogeConfigData data;
 
   private final JCheckBox checkBoxPointer;
+  private final JCheckBox checkBoxAccurateRgb;
   private final JComboBox<RgbPixelFilter> comboBoxFilter;
   private final JComboBox<Palette256> comboBoxPaletteForGifRgb;
   private final JSpinner spinnerFrameDelay;
@@ -29,6 +30,7 @@ public class PreferencesPanel extends JPanel {
     this.data = Objects.requireNonNull(data);
 
     this.checkBoxPointer = new JCheckBox(null, null, data.isPointer());
+    this.checkBoxAccurateRgb = new JCheckBox(null, null, data.isAccurateRgb());
     this.comboBoxFilter = new JComboBox<>(RgbPixelFilter.values());
     this.comboBoxFilter.setSelectedItem(data.getFilter());
 
@@ -55,6 +57,9 @@ public class PreferencesPanel extends JPanel {
 
     this.add(new JLabel("Palette for RGB to GIF: "), gblLeft);
     this.add(this.comboBoxPaletteForGifRgb, gblRight);
+
+    this.add(new JLabel("Accurate RGB (slower GIF conversion): "), gblLeft);
+    this.add(this.checkBoxAccurateRgb, gblRight);
 
     gblLeft.gridwidth = 2;
     gblLeft.anchor = GridBagConstraints.CENTER;
@@ -85,6 +90,7 @@ public class PreferencesPanel extends JPanel {
 
   public void fillData() {
     this.data.setPointer(this.checkBoxPointer.isSelected());
+    this.data.setAccurateRgb(this.checkBoxAccurateRgb.isSelected());
     this.data.setFilter((RgbPixelFilter) this.comboBoxFilter.getSelectedItem());
     this.data.setGifPaletteForRgb((Palette256) this.comboBoxPaletteForGifRgb.getSelectedItem());
     this.data.setLoops(((Number) this.spinnerLoops.getValue()).intValue());

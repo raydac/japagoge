@@ -12,7 +12,7 @@ public final class PaletteUtils {
     return IntStream.range(0, 256).map(y -> (y << 16) | (y << 8) << 8).toArray();
   }
 
-  public static float calcRgbDistance(final int r1, final int g1, final int b1, final int y1, final float h1, final int r2, final int g2, final int b2) {
+  public static float calcAccurateRgbDistance(final int r1, final int g1, final int b1, final int y1, final float h1, final int r2, final int g2, final int b2) {
     final int dr = r1 - r2;
     final int dg = g1 - g2;
     final int db = b1 - b2;

@@ -299,7 +299,7 @@ public class JapagogeFrame extends JFrame {
 
                   if (selectedFilter == gifFilter) {
                     LOGGER.info("Converting APNG file into GIF: " + tempFile);
-                    var converter = new APngToGifConvertingWorker(currentCapturer, selectedFile);
+                    var converter = new APngToGifConvertingWorker(currentCapturer, JapagogeConfig.getInstance().isAccurateRgb(), selectedFile);
                     converter.execute();
                     try {
                       JOptionPane.showOptionDialog(

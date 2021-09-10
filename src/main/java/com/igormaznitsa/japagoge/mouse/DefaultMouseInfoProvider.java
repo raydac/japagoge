@@ -23,6 +23,7 @@ class DefaultMouseInfoProvider implements MouseInfoProvider {
   public static final MousePointerIcon MOUSEICON_UP = makeMousePointerIcon("mouse_up", 10, 10);
   public static final MousePointerIcon MOUSEICON_WAIT = makeMousePointerIcon("mouse_wait", 10, 10);
   public static final MousePointerIcon MOUSEICON_NORMAL = makeMousePointerIcon("mouse_normal", 10, 10);
+  public static final MousePointerIcon MOUSEICON_DRAG = makeMousePointerIcon("mouse_drag", 10, 10);
 
   private static MousePointerIcon makeMousePointerIcon(final String name, final int px, final int py) {
     try (InputStream in = DefaultMouseInfoProvider.class.getResourceAsStream(String.format("/icons/mouse/%s.png", name))) {

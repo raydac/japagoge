@@ -119,6 +119,8 @@ final class WinMouseInfoProvider extends DefaultMouseInfoProvider {
     HELP(32651, MOUSEICON_HELP),
     IBEAM(32513, MOUSEICON_IBEAM),
     NO(32648, MOUSEICON_NO),
+    ICON(32641, MOUSEICON_NORMAL),
+    SIZE(32640, MOUSEICON_SIZE_ALL),
     SIZEALL(32646, MOUSEICON_SIZE_ALL),
     SIZENESW(32643, MOUSEICON_SIZE_NESW),
     SIZENS(32645, MOUSEICON_SIZE_NS),
@@ -126,6 +128,9 @@ final class WinMouseInfoProvider extends DefaultMouseInfoProvider {
     SIZEWE(32644, MOUSEICON_SIZE_WE),
     UP(32516, MOUSEICON_UP),
     WAIT(32514, MOUSEICON_WAIT),
+    DRAG(32766, MOUSEICON_DRAG),
+    MULTI_DRAG(32763, MOUSEICON_DRAG),
+    NO_DROP(32767, MOUSEICON_NO),
     PEN(32631, MOUSEICON_PEN);
 
     private final int code;
@@ -148,7 +153,7 @@ final class WinMouseInfoProvider extends DefaultMouseInfoProvider {
 
   @SuppressWarnings("unused")
   private interface User32Ext extends Library {
-    User32Ext INSTANCE = Native.loadLibrary("User32.dll", User32Ext.class);
+    User32Ext INSTANCE = Native.load("User32.dll", User32Ext.class);
 
     int GetCursorInfo(CURSORINFO cursorinfo);
 
