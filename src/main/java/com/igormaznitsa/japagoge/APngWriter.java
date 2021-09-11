@@ -347,8 +347,10 @@ public final class APngWriter {
   }
 
   public synchronized Statistics close(final int loopCount) throws IOException {
-    if (this.state != State.STARTED) throw new IllegalStateException("State: " + this.state);
+    if (this.state == State.CLOSED) throw new IllegalStateException("Already closed");
+    final State oldState = this.state;
     this.state = State.CLOSED;
+    if (oldState == State.CREATED) return null;
 
     if (this.lastFoundDifference != null) {
       this.saveSingleFrame(this.lastFoundDifference, this.accumulatedFrameDuration);

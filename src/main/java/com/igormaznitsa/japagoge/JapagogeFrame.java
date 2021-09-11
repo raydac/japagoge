@@ -1,6 +1,7 @@
 package com.igormaznitsa.japagoge;
 
 import com.igormaznitsa.japagoge.mouse.MouseInfoProviderFactory;
+import com.igormaznitsa.japagoge.utils.ClipboardUtils;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
@@ -242,117 +243,124 @@ public class JapagogeFrame extends JFrame {
             currentCapturer.stop(JapagogeConfig.getInstance().getLoops());
             this.setState(State.SAVING_RESULT);
 
-            SwingUtilities.invokeLater(() -> {
-              var targetFile = this.makeTargetFile(JapagogeConfig.getInstance().getTargetFolder(), currentCapturer.getFilter().name(), "png");
-              var tempFile = currentCapturer.getTargetFile();
-              try {
-                var fileChooser = new JFileChooser(JapagogeConfig.getInstance().getTargetFolder());
-                fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
-                fileChooser.setSelectedFile(targetFile);
-                fileChooser.setAcceptAllFileFilterUsed(false);
+            if (currentCapturer.hasStatistics()) {
+              SwingUtilities.invokeLater(() -> {
+                var targetFile = this.makeTargetFile(JapagogeConfig.getInstance().getTargetFolder(), currentCapturer.getFilter().name(), "png");
+                var tempFile = currentCapturer.getTargetFile();
+                try {
+                  var fileChooser = new JFileChooser(JapagogeConfig.getInstance().getTargetFolder());
+                  fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+                  fileChooser.setSelectedFile(targetFile);
+                  fileChooser.setAcceptAllFileFilterUsed(false);
 
-                var apngFilter = new FileFilter() {
-                  @Override
-                  public boolean accept(final File f) {
-                    return f.isDirectory() || f.getName().toLowerCase(Locale.ENGLISH).endsWith(".png");
-                  }
-
-                  @Override
-                  public String getDescription() {
-                    return "PNG animation files (*.png)";
-                  }
-                };
-
-                var gifFilter = new FileFilter() {
-                  @Override
-                  public boolean accept(final File f) {
-                    return f.isDirectory() || f.getName().toLowerCase(Locale.ENGLISH).endsWith(".gif");
-                  }
-
-                  @Override
-                  public String getDescription() {
-                    return "GIF animation files (*.gif)";
-                  }
-                };
-
-                fileChooser.addChoosableFileFilter(apngFilter);
-                fileChooser.addChoosableFileFilter(gifFilter);
-                fileChooser.setFileFilter(apngFilter);
-
-                fileChooser.setDialogTitle("Save record");
-
-                fileChooser.addPropertyChangeListener(JFileChooser.FILE_FILTER_CHANGED_PROPERTY, evt -> {
-                  var selectedFilter = (FileFilter) evt.getNewValue();
-                  final String extension;
-                  if (selectedFilter == gifFilter) {
-                    extension = "gif";
-                  } else {
-                    extension = "png";
-                  }
-                  fileChooser.setSelectedFile(this.makeTargetFile(fileChooser.getCurrentDirectory(), currentCapturer.getFilter().name(), extension));
-                });
-                if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
-                  var selectedFile = fileChooser.getSelectedFile();
-
-                  var selectedFilter = fileChooser.getFileFilter();
-                  JapagogeConfig.getInstance().setTargetFolder(selectedFile.getParentFile());
-
-                  if (selectedFilter == gifFilter) {
-                    LOGGER.info("Converting APNG file into GIF: " + tempFile);
-                    var converter = new APngToGifConvertingWorker(currentCapturer, JapagogeConfig.getInstance().isAccurateRgb(), selectedFile);
-                    converter.execute();
-                    try {
-                      JOptionPane.showOptionDialog(
-                              this,
-                              APngToGifConvertingWorker.makePanelFor(converter),
-                              "Exporting as GIF (might take a while)",
-                              JOptionPane.DEFAULT_OPTION,
-                              JOptionPane.PLAIN_MESSAGE,
-                              new ImageIcon(this.imageHourglassIcon),
-                              new Object[]{"Cancel"},
-                              null);
-                    } finally {
-                      converter.dispose();
+                  var apngFilter = new FileFilter() {
+                    @Override
+                    public boolean accept(final File f) {
+                      return f.isDirectory() || f.getName().toLowerCase(Locale.ENGLISH).endsWith(".png");
                     }
-                  } else {
-                    LOGGER.info("Just moving APNG file: " + tempFile);
-                    try {
-                      Files.move(tempFile.toPath(), selectedFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                      LOGGER.info("Saved result file " + selectedFile.getName() + " size " + selectedFile.length() + " bytes");
-                    } catch (Exception ex) {
-                      LOGGER.log(Level.SEVERE, "Can't move result file", ex);
-                      JOptionPane.showMessageDialog(this, "Can't move result file!", "Error", JOptionPane.ERROR_MESSAGE);
+
+                    @Override
+                    public String getDescription() {
+                      return "PNG animation files (*.png)";
                     }
-                  }
-                } else {
-                  LOGGER.info("Canceling file save");
-                }
-              } finally {
-                if (tempFile.exists()) {
-                  Exception detectedError;
-                  int attempts = 3;
-                  do {
-                    detectedError = null;
-                    try {
-                      Files.deleteIfExists(tempFile.toPath());
-                    } catch (Exception ex) {
+                  };
+
+                  var gifFilter = new FileFilter() {
+                    @Override
+                    public boolean accept(final File f) {
+                      return f.isDirectory() || f.getName().toLowerCase(Locale.ENGLISH).endsWith(".gif");
+                    }
+
+                    @Override
+                    public String getDescription() {
+                      return "GIF animation files (*.gif)";
+                    }
+                  };
+
+                  fileChooser.addChoosableFileFilter(apngFilter);
+                  fileChooser.addChoosableFileFilter(gifFilter);
+                  fileChooser.setFileFilter(apngFilter);
+
+                  fileChooser.setDialogTitle("Save record");
+
+                  fileChooser.addPropertyChangeListener(JFileChooser.FILE_FILTER_CHANGED_PROPERTY, evt -> {
+                    var selectedFilter = (FileFilter) evt.getNewValue();
+                    final String extension;
+                    if (selectedFilter == gifFilter) {
+                      extension = "gif";
+                    } else {
+                      extension = "png";
+                    }
+                    fileChooser.setSelectedFile(this.makeTargetFile(fileChooser.getCurrentDirectory(), currentCapturer.getFilter().name(), extension));
+                  });
+                  if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
+                    var selectedFile = fileChooser.getSelectedFile();
+
+                    var selectedFilter = fileChooser.getFileFilter();
+                    JapagogeConfig.getInstance().setTargetFolder(selectedFile.getParentFile());
+
+                    if (selectedFilter == gifFilter) {
+                      LOGGER.info("Converting APNG file into GIF: " + tempFile);
+                      var converter = new APngToGifConvertingWorker(currentCapturer, JapagogeConfig.getInstance().isAccurateRgb(), selectedFile);
+                      converter.execute();
                       try {
-                        Thread.sleep(500);
-                      } catch (InterruptedException ix) {
-                        Thread.currentThread().interrupt();
-                        break;
+                        JOptionPane.showOptionDialog(
+                                this,
+                                APngToGifConvertingWorker.makePanelFor(converter),
+                                "Converting to GIF (might take a while)",
+                                JOptionPane.DEFAULT_OPTION,
+                                JOptionPane.PLAIN_MESSAGE,
+                                new ImageIcon(this.imageHourglassIcon),
+                                new Object[]{"Cancel"},
+                                null);
+                        ClipboardUtils.placeFileLinks(selectedFile);
+                      } finally {
+                        converter.dispose();
                       }
-                      detectedError = ex;
+                    } else {
+                      LOGGER.info("Just moving APNG file: " + tempFile);
+                      try {
+                        Files.move(tempFile.toPath(), selectedFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                        LOGGER.info("Saved result file " + selectedFile.getName() + " size " + selectedFile.length() + " bytes");
+                        ClipboardUtils.placeFileLinks(selectedFile);
+                      } catch (Exception ex) {
+                        LOGGER.log(Level.SEVERE, "Can't move result file", ex);
+                        JOptionPane.showMessageDialog(this, "Can't move result file!", "Error", JOptionPane.ERROR_MESSAGE);
+                      }
                     }
-                  } while (detectedError != null && --attempts > 0);
-                  if (detectedError != null) {
-                    LOGGER.log(Level.SEVERE, "Can't delete temp file, marking it delete on exit: " + tempFile, detectedError);
-                    tempFile.deleteOnExit();
+                  } else {
+                    LOGGER.info("Canceling file save");
                   }
+                } finally {
+                  if (tempFile.exists()) {
+                    Exception detectedError;
+                    int attempts = 3;
+                    do {
+                      detectedError = null;
+                      try {
+                        Files.deleteIfExists(tempFile.toPath());
+                      } catch (Exception ex) {
+                        try {
+                          Thread.sleep(500);
+                        } catch (InterruptedException ix) {
+                          Thread.currentThread().interrupt();
+                          break;
+                        }
+                        detectedError = ex;
+                      }
+                    } while (detectedError != null && --attempts > 0);
+                    if (detectedError != null) {
+                      LOGGER.log(Level.SEVERE, "Can't delete temp file, marking it delete on exit: " + tempFile, detectedError);
+                      tempFile.deleteOnExit();
+                    }
+                  }
+                  this.setState(State.SELECT_POSITION);
                 }
-                this.setState(State.SELECT_POSITION);
-              }
-            });
+              });
+            } else {
+              LOGGER.severe("No statistics, may be too quick stop");
+              this.setState(State.SELECT_POSITION);
+            }
           } else {
             this.setState(State.SELECT_POSITION);
           }

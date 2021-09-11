@@ -144,18 +144,27 @@ public final class ScreenCapturer {
     if (apngWriter != null) {
       try {
         final APngWriter.Statistics statistics = apngWriter.close(loops);
-        this.pngStatistics = statistics;
-        LOGGER.info(String.format("Image(%s) %dx%d, buffer %d bytes, %d frames, length %d bytes",
-                this.filter.name(),
-                statistics.width,
-                statistics.height,
-                statistics.bufferSize,
-                statistics.frames,
-                statistics.size
-        ));
+        if (statistics == null) {
+          LOGGER.severe("No write data");
+          this.pngStatistics = null;
+        } else {
+          this.pngStatistics = statistics;
+          LOGGER.info(String.format("Image(%s) %dx%d, buffer %d bytes, %d frames, length %d bytes",
+                  this.filter.name(),
+                  statistics.width,
+                  statistics.height,
+                  statistics.bufferSize,
+                  statistics.frames,
+                  statistics.size
+          ));
+        }
       } catch (Exception ex) {
         LOGGER.log(Level.SEVERE, "Error during close writer", ex);
       }
     }
+  }
+
+  public boolean hasStatistics() {
+    return this.pngStatistics != null;
   }
 }
