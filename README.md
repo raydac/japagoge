@@ -7,7 +7,7 @@
 
 ## Changelog
 
-- 2.0.0 (11-sep-2021)
+- __2.0.0 (11-sep-2021)__
   - improved rendering for mouse pointer
   - added support of GIF export
   - added support of color filters recording
@@ -15,8 +15,6 @@
 - __1.0.1 (01-sep-2021)__
   - internal optimizations to decrease result file size
 
-- __1.0.0 (30-aug-2021)__
-  - initial release
 
 ## Pre-word
 
