@@ -15,7 +15,6 @@
 - __1.0.1 (01-sep-2021)__
   - internal optimizations to decrease result file size
 
-
 ## Pre-word
 
 During writing an article for some online resource, I wanted to make small GIF animations and expected to use Peek
@@ -63,7 +62,8 @@ time.
 
 #### How to convert APNG into GIF?
 
-If you work under Ubuntu then you can use `apng2gif` utility to convert file format.
+You can directly save GIF through the File save dialog in the end of grabbing, just select GIF file type instead of PNG.
+Also, if you work under Ubuntu then you can use `apng2gif` utility for conversion and `gifsicle` for GIF optimization.
 
 ### I have unexpected color artifacts in result GIF
 
