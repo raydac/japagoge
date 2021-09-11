@@ -344,6 +344,7 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
             break;
           }
         } while (!Thread.currentThread().isInterrupted());
+        output.flush();
       }
       this.publish(Integer.MAX_VALUE);
     } catch (Exception ex) {

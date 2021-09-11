@@ -7,11 +7,15 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public final class AGifWriter {
 
+  private static final int DISPOSAL_NOT_SPECIFIED = 0;
+  private static final int DISPOSAL_DO_NOT_DISPOSE = 1;
+  private static final int DISPOSAL_OVERWRITE_BY_BACKGROUND_COLOR = 2;
+  private static final int DISPOSAL_OVERWRITE_WITH_PREVIOUS_GRAPHICS = 4;
+
   private final OutputStream outputStream;
   private final int[] globalRgbPalette;
   private final int logicalImageWidth;
   private final int logicalImageHeight;
-
   private final AtomicInteger frameCounter = new AtomicInteger();
   private final int repeat;
   private final int backgroundColorIndex;
@@ -73,11 +77,11 @@ public final class AGifWriter {
     }
   }
 
-  private void writeGraphicCtrlExt(final Duration delay) throws IOException {
+  private void writeGraphicCtrlExt(final Duration delay, final int disposalMethod) throws IOException {
     this.outputStream.write(0x21);
     this.outputStream.write(0xF9);
     this.outputStream.write(0x04);
-    this.outputStream.write(0x04);
+    this.outputStream.write((disposalMethod & 7) << 2);
     writeShort(Math.round(delay.toMillis() / 10.0f));
     this.outputStream.write(0);
     this.outputStream.write(0);
@@ -131,8 +135,10 @@ public final class AGifWriter {
       if (this.repeat >= 0) {
         writeNetscapeExt(this.repeat);
       }
+      writeGraphicCtrlExt(delay, DISPOSAL_NOT_SPECIFIED);
+    } else {
+      writeGraphicCtrlExt(delay, DISPOSAL_DO_NOT_DISPOSE);
     }
-    writeGraphicCtrlExt(delay);
     writeImageDesc(x, y, width, height);
     new GifLzwCompressor(this.outputStream, width, height, pixelIndexes).encode();
   }
