@@ -1,4 +1,4 @@
-# Japagoge (APNG screen grabber)
+# Japagoge (APNG-GIF screen grabber)
 
 [![License Apache 2.0](https://img.shields.io/badge/license-Apache%20License%202.0-green.svg)](http://www.apache.org/licenses/LICENSE-2.0)
 [![Java 11+](https://img.shields.io/badge/java-11%2b-green.svg)](https://bell-sw.com/pages/downloads/#/java-11-lts)
@@ -7,9 +7,9 @@
 
 ## Changelog
 
-- 2.0.0 (SNAPSHOT)
+- 2.0.0 (11-sep-2021)
   - improved rendering for mouse pointer
-  - added support of save result as GIF
+  - added support of GIF export
   - added support of color filters recording
 
 - __1.0.1 (01-sep-2021)__
@@ -18,17 +18,21 @@
 - __1.0.0 (30-aug-2021)__
   - initial release
 
-## Preword
+## Pre-word
 
 During writing an article for some online resource, I wanted to make small GIF animations and expected to use Peek
 utility for that. I was badly surprised to detect that the utility doesn't work well in multi-monitor environment.
-Googling didn't help me find any simple working analogue and I decided quickly make some similar application but
-implemented in Java for cross-platform use. Instead of GIF I decided to produce APNG because it supports TrueColor.
+Googling didn't help me find any simple working analogue, so I decided quickly make some similar application but
+implemented in Java for cross-platform use. By default, it grabs into APNG images (Animation PNG records) abd it allows
+save TrueColor (in opposite to Gif which supports only 256 colors). But since 2.0.0 version, conversion into GIF
+allowed, by default it uses AUTO palette based on image statistics. There are some number of predefined palettes which
+are selectable through preferences.
 
 ## How to use the utility?
 
-As the first one you can download its distributive for your OS from the releases page. It requires Java 11+ for work but
-some archives provide bundled JRE.
+You can download its distributive for your OS from [the releases page](https://github.com/raydac/japagoge/releases). It
+requires Java 11+ for work but some archives provide bundled JRE. Keep in mind that it is very tricky to grab mouse
+pointer appearance under Java so grabbed pointer look may differ from your system one.
 
 ### Positioning
 
@@ -45,13 +49,16 @@ will be removed and the window changes its color.
 ![Positioning state](assets/screens/state_recording.png)   
 __To stop recording, you should again make mouse double-click on the window title area.__ After stop of recording you
 will see the save file dialog to save your recorded file, if you press cancel button then the record will be ignored and
-just deleted. I have not implemented any optimization for saved data so that result files can be big.
+just deleted. I have not implemented any optimization for saved data so that result files can be big. If you choose GIF
+file as the result one then conversion will be started, it can take some time and depends on power of your computer.
 
 ### Options
 
 You can tune recording options. For instance disable show of mouse pointer or limit number of loops in the result record
-show. For that you should click the preferences button during positioning mode and you will see the preferences
-dialog.   
+show. For that you should click the preferences button during positioning mode, so you will see the Preferences dialog.
+If you are going to make GIF file as the result one then I would recommend make some sample with different palettes to
+find better result. Flag `Accurate RGB' can increase precision of colors during conversion but increasing spent
+time.    
 ![Positioning state](assets/screens/state_preferences.png)
 
 ### F.A.Q.
@@ -59,3 +66,8 @@ dialog.
 #### How to convert APNG into GIF?
 
 If you work under Ubuntu then you can use `apng2gif` utility to convert file format.
+
+### I have unexpected color artifacts in result GIF
+
+Try change `Palette for RGB to GIF` from AUTO to UNIVERSAL or any other fixed palette, also try turn on
+flag `Accurate RGB`.

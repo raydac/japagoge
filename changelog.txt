@@ -1,7 +1,7 @@
-2.0.0 (SNAPSHOT)
- - improved rendering for mouse pointer
- - added support of save result as GIF
- - added support of color filters recording
+- 2.0.0 (11-sep-2021)
+  - improved rendering for mouse pointer
+  - added support of GIF export
+  - added support of color filters recording
 
 1.0.1 (01-sep-2021)
  - internal optimizations to decrease result file size
