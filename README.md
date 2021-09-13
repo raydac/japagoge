@@ -1,4 +1,4 @@
-# Japagoge (APNG-GIF screen grabber)
+# Japagoge (PNG and GIF screen recorder)
 
 [![License Apache 2.0](https://img.shields.io/badge/license-Apache%20License%202.0-green.svg)](http://www.apache.org/licenses/LICENSE-2.0)
 [![Java 11+](https://img.shields.io/badge/java-11%2b-green.svg)](https://bell-sw.com/pages/downloads/#/java-11-lts)
