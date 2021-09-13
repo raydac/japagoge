@@ -22,18 +22,12 @@
 During writing an article for some online resource, I wanted to make small GIF animations and expected to use Peek
 utility for that. I was badly surprised to detect that the utility doesn't work well in multi-monitor environment.
 Googling didn't help me find any simple working analogue, so I decided quickly make some similar application but
-implemented in Java for cross-platform use. By default, it grabs into APNG images (Animation PNG records) abd it allows
-save TrueColor (in opposite to Gif which supports only 256 colors). But since 2.0.0 version, conversion into GIF
-allowed, by default it uses AUTO palette based on image statistics. There are some number of predefined palettes which
-are selectable through preferences.
+implemented in Java for cross-platform use. By default, it grabs into APNG images (Animation PNG records) allow save
+TrueColor (in opposite to Gif which supports only 256 colors). But since 2.0.0 version, conversion into GIF allowed, by
+default it uses AUTO palette based on image statistics. There are some number of predefined palettes which are
+selectable through preferences.
 
-## How to use the utility?
-
-You can download its distributive for your OS from [the releases page](https://github.com/raydac/japagoge/releases). It
-requires Java 11+ for work but some archives provide bundled JRE. Keep in mind that it is very tricky to grab mouse
-pointer appearance under Java so grabbed pointer look may differ from your system one.
-
-# Pre-built components
+## Pre-built
 
 | OS                                           |  Download link                                                                                                                                                                                | 
 | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -42,6 +36,12 @@ pointer appearance under Java so grabbed pointer look may differ from your syste
 | ![OSX Arm64](assets/icons/macosarm64x64.png) | __[Archive for OSX Arm64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.0.0/japagoge-2.0.0-macos-arm64-jdk.zip)__                 |
 | ![Linux](assets/icons/linux64x64.png)        | __[Archive for Linux x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.0.0/japagoge-2.0.0-linux-jdk.tar.gz)__              |
 | ![Java](assets/icons/java64x64.png)          | __[Cross-platform JAR file](https://github.com/raydac/japagoge/releases/download/2.0.0/japagoge-2.0.0.jar)__                                     | 
+
+## How to use the utility?
+
+You can download its distributive for your OS from [the releases page](https://github.com/raydac/japagoge/releases). It
+requires Java 11+ for work but some archives provide bundled JRE. Keep in mind that it is very tricky to grab mouse
+pointer appearance under Java so grabbed pointer look may differ from your system one.
 
 ### Positioning
 
