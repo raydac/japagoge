@@ -1,4 +1,4 @@
-![Banner](assets/banner.png)
+![Banner image](assets/banner.png)
 
 # Japagoge (PNG and GIF screen recorder)
 
