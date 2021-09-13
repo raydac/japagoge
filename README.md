@@ -37,7 +37,7 @@ pointer appearance under Java so grabbed pointer look may differ from your syste
 
 | OS                                           |  Download link                                                                                                                                                                                | 
 | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| ![Windows](assets/icons/win64x64.png)        | __[Archive for Windows x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.0.0/japagoe-2.0.0-windows-jdk.zip)__             |
+| ![Windows](assets/icons/win64x64.png)        | __[Archive for Windows x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.0.0/japagoge-2.0.0-windows-jdk.zip)__             |
 | ![OSX](assets/icons/macos64x64.png)          | __[Archive for OSX x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.0.0/japagoge-2.0.0-macos-jdk.zip)__                   |
 | ![OSX Arm64](assets/icons/macosarm64x64.png) | __[Archive for OSX Arm64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.0.0/japagoge-2.0.0-macos-arm64-jdk.zip)__                 |
 | ![Linux](assets/icons/linux64x64.png)        | __[Archive for Linux x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.0.0/japagoge-2.0.0-linux-jdk.tar.gz)__              |
