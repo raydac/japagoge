@@ -33,6 +33,16 @@ You can download its distributive for your OS from [the releases page](https://g
 requires Java 11+ for work but some archives provide bundled JRE. Keep in mind that it is very tricky to grab mouse
 pointer appearance under Java so grabbed pointer look may differ from your system one.
 
+# Pre-built components
+
+| OS                                           |  Download link                                                                                                                                                                                | 
+| -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ![Windows](assets/icons/win64x64.png)        | __[Game client for Windows x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.0.0/japagoe-2.0.0-windows-jdk.zip)__             |
+| ![OSX](assets/icons/macos64x64.png)          | __[Game client for OSX x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.0.0/japagoge-2.0.0-macos-jdk.zip)__                   |
+| ![OSX Arm64](assets/icons/macosarm64x64.png) | __[Game client for OSX Arm64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.0.0/japagoge-2.0.0-macos-arm64-jdk.zip)__                 |
+| ![Linux](assets/icons/linux64x64.png)        | __[Game client for Linux x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.0.0/japagoge-2.0.0-linux-jdk.tar.gz)__              |
+| ![Java](assets/icons/java64x64.png)          | __[Game client, cross-platform JAR file](https://github.com/raydac/japagoge/releases/download/2.0.0/japagoge-2.0.0.jar)__                                     | 
+
 ### Positioning
 
 Just after start, the window in positioning mode and shown in green color. All communications with the window only by
