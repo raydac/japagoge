@@ -55,78 +55,80 @@ final class WinMouseInfoProvider extends DefaultMouseInfoProvider {
       if (this.user32ext.GetCursorInfo(cursorinfo).booleanValue() && cursorinfo.hCursor != null) {
         return cachedCursorImages.computeIfAbsent(cursorinfo.hCursor, hCursor -> {
           LOGGER.info("Loading icon for cursor: " + hCursor);
-          final ICONINFOEXA iconinfoExa = new ICONINFOEXA();
-          if (this.user32ext.GetIconInfoExA(hCursor, iconinfoExa).booleanValue()) {
-            final BufferedImage cursorImage = this.loadIcon(hCursor);
-            if (cursorImage == null) {
-              return DefaultCursor.findForHandler(hCursor).orElse(DefaultCursor.ARROW).defaultIcon;
-            } else {
-              final MousePointerIcon result = new MousePointerIcon(cursorImage, iconinfoExa.xHotspot.intValue(), iconinfoExa.yHotspot.intValue());
-              LOGGER.info("Loaded cursor icon: " + hCursor + ' ' + result);
-              return result;
-            }
-          } else {
-            LOGGER.severe("Can't get icon info for cursor: " + hCursor + ", " + Kernel32Util.getLastErrorMessage());
+          final MousePointerIcon mousePointerIcon = this.loadMouseIcon(hCursor);
+          if (mousePointerIcon == null) {
+            LOGGER.severe("Can't load cursor icon: " + hCursor);
             return DefaultCursor.findForHandler(hCursor).orElse(DefaultCursor.ARROW).defaultIcon;
+          } else {
+            LOGGER.info("Loaded cursor icon: " + hCursor + ' ' + mousePointerIcon);
+            return mousePointerIcon;
           }
         });
       } else {
         return DefaultCursor.ARROW.defaultIcon;
       }
     } catch (Exception ex) {
+      LOGGER.log(Level.SEVERE, "Unexpoected error in getMousePointerIcon", ex);
       return super.getMousePointerIcon();
     }
   }
 
-  private BufferedImage loadIcon(final WinNT.HICON hIcon) {
-    final WinGDI.ICONINFO iconInfo = new WinGDI.ICONINFO();
+  private MousePointerIcon loadMouseIcon(final WinDef.HICON hIcon) {
+    final Dimension iconSize = WindowUtils.getIconSize(hIcon);
+    if (iconSize.width == 0 || iconSize.height == 0)
+      return null;
 
+    final int width = iconSize.width;
+    final int height = iconSize.height;
+    final short depth = 24;
+
+    final byte[] lpBitsColor = new byte[width * height * depth / 8];
+    final Pointer lpBitsColorPtr = new Memory(lpBitsColor.length);
+    final byte[] lpBitsMask = new byte[width * height * depth / 8];
+    final Pointer lpBitsMaskPtr = new Memory(lpBitsMask.length);
+    final WinGDI.BITMAPINFO bitmapInfo = new WinGDI.BITMAPINFO();
+    final WinGDI.BITMAPINFOHEADER hdr = new WinGDI.BITMAPINFOHEADER();
+
+    bitmapInfo.bmiHeader = hdr;
+    hdr.biWidth = width;
+    hdr.biHeight = height;
+    hdr.biPlanes = 1;
+    hdr.biBitCount = depth;
+    hdr.biCompression = 0;
+    hdr.write();
+    bitmapInfo.write();
+
+    final WinDef.HDC hDC = this.user32.GetDC(null);
     try {
-      final Dimension iconSize = WindowUtils.getIconSize(hIcon);
-      final int width = iconSize.width;
-      final int height = iconSize.height;
+      final WinGDI.ICONINFO iconInfo = new WinGDI.ICONINFO();
+      this.user32.GetIconInfo(hIcon, iconInfo);
+      iconInfo.read();
+      this.gdi32.GetDIBits(hDC, iconInfo.hbmColor, 0, height, lpBitsColorPtr, bitmapInfo, 0);
+      lpBitsColorPtr.read(0, lpBitsColor, 0, lpBitsColor.length);
+      this.gdi32.GetDIBits(hDC, iconInfo.hbmMask, 0, height, lpBitsMaskPtr, bitmapInfo, 0);
+      lpBitsMaskPtr.read(0, lpBitsMask, 0, lpBitsMask.length);
+      final BufferedImage image = new BufferedImage(width, height,
+              BufferedImage.TYPE_INT_ARGB);
 
-      if (!this.user32.GetIconInfo(hIcon, iconInfo)) {
-        LOGGER.severe("Can't get icon info: " + hIcon + ", " + Kernel32Util.getLastErrorMessage());
-        return null;
+      int opaquePixels = 0;
+      int x = 0, y = height - 1;
+      for (int i = 0; i < lpBitsColor.length; i += 3) {
+        final int b = lpBitsColor[i] & 0xFF;
+        final int g = lpBitsColor[i + 1] & 0xFF;
+        final int r = lpBitsColor[i + 2] & 0xFF;
+        final int a = 0xFF - lpBitsMask[i] & 0xFF;
+        final int argb = (a << 24) | (r << 16) | (g << 8) | b;
+        if (a != 0) opaquePixels++;
+        image.setRGB(x, y, argb);
+        x = (x + 1) % width;
+        if (x == 0) y--;
       }
-
-      final WinDef.HWND hWnd = new WinDef.HWND();
-      final WinDef.HDC dc = this.user32.GetDC(hWnd);
-
-      if (dc == null) {
-        LOGGER.severe("DC is null," + Kernel32Util.getLastErrorMessage());
-        return null;
-      }
-
-      try {
-        final int nBits = width * height * 4;
-        final Memory colorBitsMem = new Memory(nBits);
-        final WinGDI.BITMAPINFO bitMapInfo = new WinGDI.BITMAPINFO();
-
-        bitMapInfo.bmiHeader.biWidth = width;
-        bitMapInfo.bmiHeader.biHeight = -height;
-        bitMapInfo.bmiHeader.biPlanes = 1;
-        bitMapInfo.bmiHeader.biBitCount = 32;
-        bitMapInfo.bmiHeader.biCompression = WinGDI.BI_RGB;
-
-        this.gdi32.GetDIBits(dc, iconInfo.hbmColor, 0, height, colorBitsMem, bitMapInfo, WinGDI.DIB_RGB_COLORS);
-        final int[] colorBits = colorBitsMem.getIntArray(0, width * height);
-
-        final BufferedImage resultImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-        resultImage.setRGB(0, 0, width, height, colorBits, 0, height);
-        return resultImage;
-      } finally {
-        this.user32.ReleaseDC(hWnd, dc);
-      }
-    } catch (Exception ex) {
-      LOGGER.log(Level.SEVERE, "Error during icon reading: " + hIcon, ex);
+      return opaquePixels == 0 ? null : new MousePointerIcon(image, iconInfo.xHotspot, iconInfo.yHotspot);
     } finally {
-      this.gdi32.DeleteObject(iconInfo.hbmColor);
-      this.gdi32.DeleteObject(iconInfo.hbmMask);
+      User32.INSTANCE.ReleaseDC(null, hDC);
     }
-    return null;
   }
+
 
   public enum DefaultCursor {
     APPSTARTING(WinUser.IDC_APPSTARTING, MOUSEICON_APPSTARTING),
@@ -170,7 +172,7 @@ final class WinMouseInfoProvider extends DefaultMouseInfoProvider {
   private interface User32Ext extends Library {
     User32Ext INSTANCE = Native.load("User32.dll", User32Ext.class);
 
-    WinDef.BOOL GetIconInfoExA(WinDef.HCURSOR hCursor, ICONINFOEXA iconInfoExa);
+    WinDef.BOOL GetIconInfoExA(WinDef.HICON hCursor, ICONINFOEXA iconInfoExa);
 
     WinDef.BOOL GetCursorInfo(CURSORINFO cursorinfo);
 
