@@ -70,6 +70,16 @@ find better result. Flag `Accurate RGB' can increase precision of colors during 
 time.    
 ![Positioning state](assets/screens/state_preferences.png)
 
+### Known bugs
+
+#### Window is non-transparent for mouse events under MacOS
+
+[It is a bug on Java API level, still not fixed](https://bugs.openjdk.java.net/browse/JDK-8013450)
+
+#### Under Windows mouse pointer looks differ from system one
+
+When it is impossible take system icon then pre-defined cursor icons in use.
+
 ### F.A.Q.
 
 #### How to convert APNG into GIF?
