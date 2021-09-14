@@ -23,6 +23,7 @@
     <java.version>11</java.version>
     <app.name>${project.build.finalName}</app.name>
     <executable.jar>false</executable.jar>
+    <jna.version>5.9.0</jna.version>
     <final.ext></final.ext>
     <maven.compiler.source>11</maven.compiler.source>
     <maven.compiler.target>11</maven.compiler.target>
@@ -517,7 +518,7 @@
     <dependency>
       <groupId>net.java.dev.jna</groupId>
       <artifactId>jna-platform</artifactId>
-      <version>5.9.0</version>
+      <version>${jna.version}</version>
     </dependency>
   </dependencies>
 
