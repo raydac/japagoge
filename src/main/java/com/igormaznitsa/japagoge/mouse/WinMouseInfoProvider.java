@@ -6,66 +6,99 @@ import com.sun.jna.platform.win32.*;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.util.List;
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
-// from https://stackoverflow.com/questions/47634213/get-mouse-type-in-java-using-jna
 @SuppressWarnings("unused")
 final class WinMouseInfoProvider extends DefaultMouseInfoProvider {
   private static final Logger LOGGER = Logger.getLogger(WinMouseInfoProvider.class.getSimpleName());
 
-  private final Map<WinNT.HANDLE, Cursor> cursors;
   private final User32Ext user32ext;
   private final User32 user32;
   private final GDI32 gdi32;
-  private final Map<Cursor, BufferedImage> cachedCursorImages = new EnumMap<>(Cursor.class);
+  private final Map<WinDef.HCURSOR, MousePointerIcon> cachedCursorImages = new HashMap<>();
 
   public WinMouseInfoProvider() {
     super();
     this.user32ext = User32Ext.INSTANCE;
     this.user32 = User32.INSTANCE;
     this.gdi32 = GDI32.INSTANCE;
-    this.cursors = this.loadCursors();
+    loadDefaultCursorHandlers();
+  }
+
+  private void loadDefaultCursorHandlers() {
+    for (final DefaultCursor defaultCursor : DefaultCursor.values()) {
+      final Memory memory = new Memory(Native.getNativeSize(Long.class, null));
+      memory.setLong(0, defaultCursor.idc);
+      final Pointer resource = memory.getPointer(0);
+      final WinNT.HANDLE hCursor = this.user32ext.LoadImageA(
+              null, resource, new WinDef.UINT(WinUser.IMAGE_CURSOR), 0, 0, new WinDef.UINT(WinUser.LR_SHARED)
+      );
+      if (hCursor == null || Native.getLastError() != 0) {
+        LOGGER.log(Level.SEVERE, "Can't load cursor: " + defaultCursor + ", " + Kernel32Util.getLastErrorMessage());
+      } else {
+        LOGGER.info("Loaded cursor: " + defaultCursor + ", " + hCursor);
+        defaultCursor.hCursor.set(hCursor);
+      }
+    }
   }
 
   @Override
-  public MousePointerIcon getMousePointerIcon() {
+  public synchronized MousePointerIcon getMousePointerIcon() {
     try {
-      final Cursor cursor = this.getCurrentCursor();
-      return cursor == null ? super.getMousePointerIcon() : cursor.getDefaultIcon();
+      final CURSORINFO cursorinfo = new CURSORINFO();
+      if (this.user32ext.GetCursorInfo(cursorinfo).booleanValue() && cursorinfo.hCursor != null) {
+        return cachedCursorImages.computeIfAbsent(cursorinfo.hCursor, hCursor -> {
+          LOGGER.info("Loading icon for cursor: " + hCursor);
+          final ICONINFOEXA iconinfoExa = new ICONINFOEXA();
+          if (this.user32ext.GetIconInfoExA(hCursor, iconinfoExa).booleanValue()) {
+            final BufferedImage cursorImage = this.loadIcon(hCursor);
+            if (cursorImage == null) {
+              return DefaultCursor.findForHandler(hCursor).orElse(DefaultCursor.ARROW).defaultIcon;
+            } else {
+              final MousePointerIcon result = new MousePointerIcon(cursorImage, iconinfoExa.xHotspot.intValue(), iconinfoExa.yHotspot.intValue());
+              LOGGER.info("Loaded cursor icon: " + hCursor + ' ' + result);
+              return result;
+            }
+          } else {
+            LOGGER.severe("Can't get icon info for cursor: " + hCursor + ", " + Kernel32Util.getLastErrorMessage());
+            return DefaultCursor.findForHandler(hCursor).orElse(DefaultCursor.ARROW).defaultIcon;
+          }
+        });
+      } else {
+        return DefaultCursor.ARROW.defaultIcon;
+      }
     } catch (Exception ex) {
       return super.getMousePointerIcon();
     }
   }
 
-  private Cursor getCurrentCursor() {
-    final CURSORINFO cursorinfo = new CURSORINFO();
-    final int success = this.user32ext.GetCursorInfo(cursorinfo);
-    if (success == 1 && cursorinfo.hCursor != null) {
-      return cursors.getOrDefault(cursorinfo.hCursor, Cursor.HAND);
-    }
-    return null;
-  }
-
-  public BufferedImage getImageByHICON(final WinDef.HICON hicon) {
+  private BufferedImage loadIcon(final WinNT.HICON hIcon) {
     final WinGDI.ICONINFO iconInfo = new WinGDI.ICONINFO();
 
     try {
-      final Dimension iconSize = WindowUtils.getIconSize(hicon);
+      final Dimension iconSize = WindowUtils.getIconSize(hIcon);
       final int width = iconSize.width;
       final int height = iconSize.height;
 
-      if (!this.user32.GetIconInfo(hicon, iconInfo)) {
+      if (!this.user32.GetIconInfo(hIcon, iconInfo)) {
+        LOGGER.severe("Can't get icon info: " + hIcon + ", " + Kernel32Util.getLastErrorMessage());
         return null;
       }
-      final WinDef.HWND hwdn = new WinDef.HWND();
-      final WinDef.HDC dc = this.user32.GetDC(hwdn);
+
+      final WinDef.HWND hWnd = new WinDef.HWND();
+      final WinDef.HDC dc = this.user32.GetDC(hWnd);
 
       if (dc == null) {
-
+        LOGGER.severe("DC is null");
         return null;
       }
+
       try {
         final int nBits = width * height * 4;
         final Memory colorBitsMem = new Memory(nBits);
@@ -84,70 +117,52 @@ final class WinMouseInfoProvider extends DefaultMouseInfoProvider {
         resultImage.setRGB(0, 0, width, height, colorBits, 0, height);
         return resultImage;
       } finally {
-        this.user32.ReleaseDC(hwdn, dc);
+        this.user32.ReleaseDC(hWnd, dc);
       }
+    } catch (Exception ex) {
+      LOGGER.log(Level.SEVERE, "Error during icon reading: " + hIcon, ex);
     } finally {
-      this.user32.DestroyIcon(new WinDef.HICON(hicon.getPointer()));
       this.gdi32.DeleteObject(iconInfo.hbmColor);
       this.gdi32.DeleteObject(iconInfo.hbmMask);
     }
+    return null;
   }
 
-  private Map<WinNT.HANDLE, Cursor> loadCursors() {
-    final Map<WinNT.HANDLE, Cursor> cursors = new HashMap<>();
-    for (final Cursor cursor : Cursor.values()) {
-      final Memory memory = new Memory(Native.getNativeSize(Long.class, null));
-      memory.setLong(0, cursor.getCode());
-      final Pointer resource = memory.getPointer(0);
-      final WinNT.HANDLE cursorHandle = this.user32ext.LoadImageA(
-              null, resource, WinUser.IMAGE_CURSOR, 0, 0, WinUser.LR_SHARED
-      );
-      if (cursorHandle == null || Native.getLastError() != 0) {
-        LOGGER.severe(String.format("Cursor %s could not be loaded: %d", cursor, Native.getLastError()));
-      } else {
-        cursors.put(cursorHandle, cursor);
-      }
-    }
-    return Collections.unmodifiableMap(cursors);
-  }
+  public enum DefaultCursor {
+    APPSTARTING(WinUser.IDC_APPSTARTING, MOUSEICON_APPSTARTING),
+    ARROW(WinUser.IDC_ARROW, MOUSEICON_NORMAL),
+    CROSS(WinUser.IDC_CROSS, MOUSEICON_CROSS),
+    HAND(WinUser.IDC_HAND, MOUSEICON_HAND),
+    HELP(WinUser.IDC_HELP, MOUSEICON_HELP),
+    IBEAM(WinUser.IDC_IBEAM, MOUSEICON_IBEAM),
+    NO(WinUser.IDC_NO, MOUSEICON_NO),
+    SIZEALL(WinUser.IDC_SIZEALL, MOUSEICON_SIZE_ALL),
+    SIZENESW(WinUser.IDC_SIZENESW, MOUSEICON_SIZE_NESW),
+    SIZENS(WinUser.IDC_SIZENS, MOUSEICON_SIZE_NS),
+    SIZENWSE(WinUser.IDC_SIZENWSE, MOUSEICON_SIZE_NWSE),
+    SIZEWE(WinUser.IDC_SIZEWE, MOUSEICON_SIZE_WE),
+    UP(WinUser.IDC_UPARROW, MOUSEICON_UP),
+    WAIT(WinUser.IDC_WAIT, MOUSEICON_WAIT);
 
-  public enum Cursor {
-    APPSTARTING(32650, MOUSEICON_APPSTARTING),
-    NORMAL(32512, MOUSEICON_NORMAL),
-    CROSS(32515, MOUSEICON_CROSS),
-    HAND(32649, MOUSEICON_HAND),
-    HELP(32651, MOUSEICON_HELP),
-    IBEAM(32513, MOUSEICON_IBEAM),
-    NO(32648, MOUSEICON_NO),
-    ICON(32641, MOUSEICON_NORMAL),
-    SIZE(32640, MOUSEICON_SIZE_ALL),
-    SIZEALL(32646, MOUSEICON_SIZE_ALL),
-    SIZENESW(32643, MOUSEICON_SIZE_NESW),
-    SIZENS(32645, MOUSEICON_SIZE_NS),
-    SIZENWSE(32642, MOUSEICON_SIZE_NWSE),
-    SIZEWE(32644, MOUSEICON_SIZE_WE),
-    UP(32516, MOUSEICON_UP),
-    WAIT(32514, MOUSEICON_WAIT),
-    DRAG(32766, MOUSEICON_DRAG),
-    MULTI_DRAG(32763, MOUSEICON_DRAG),
-    NO_DROP(32767, MOUSEICON_NO),
-    PEN(32631, MOUSEICON_PEN);
-
-    private final int code;
+    private final int idc;
     private final MousePointerIcon defaultIcon;
+    private final AtomicReference<WinNT.HANDLE> hCursor = new AtomicReference<>();
 
-    Cursor(final int code, final MousePointerIcon defaultIcon) {
-      this.code = code;
+    DefaultCursor(final int idc, final MousePointerIcon defaultIcon) {
+      this.idc = idc;
       this.defaultIcon = defaultIcon;
+    }
+
+    public static Optional<DefaultCursor> findForHandler(final WinNT.HANDLE handler) {
+      return Arrays.stream(DefaultCursor.values())
+              .filter(x -> x.hCursor.get() != null && x.hCursor.get().equals(handler))
+              .findFirst();
     }
 
     public MousePointerIcon getDefaultIcon() {
       return this.defaultIcon;
     }
 
-    public int getCode() {
-      return code;
-    }
   }
 
 
@@ -155,33 +170,45 @@ final class WinMouseInfoProvider extends DefaultMouseInfoProvider {
   private interface User32Ext extends Library {
     User32Ext INSTANCE = Native.load("User32.dll", User32Ext.class);
 
-    int GetCursorInfo(CURSORINFO cursorinfo);
+    WinDef.BOOL GetIconInfoExA(WinDef.HCURSOR hCursor, ICONINFOEXA iconInfoExa);
+
+    WinDef.BOOL GetCursorInfo(CURSORINFO cursorinfo);
 
     WinNT.HANDLE LoadImageA(
             WinDef.HINSTANCE hinst,
             Pointer lpszName,
-            int uType,
+            WinNT.UINT uType,
             int cxDesired,
             int cyDesired,
-            int fuLoad
+            WinNT.UINT fuLoad
     );
 
   }
 
+  @Structure.FieldOrder({"cbSize", "fIcon", "xHotspot", "yHotspot", "hbmMask", "hbmColor", "wResID", "szModName", "szResName"})
+  public static class ICONINFOEXA extends Structure {
+    public WinDef.DWORD cbSize;
+    public WinDef.BOOL fIcon;
+    public WinDef.DWORD xHotspot;
+    public WinDef.DWORD yHotspot;
+    public WinDef.HBITMAP hbmMask;
+    public WinDef.HBITMAP hbmColor;
+    public WinDef.WORD wResID;
+    public byte[] szModName = new byte[256];
+    public byte[] szResName = new byte[256];
+  }
+
+  @Structure.FieldOrder({"cbSize", "flags", "hCursor", "ptScreenPos"})
   public static class CURSORINFO extends Structure {
 
-    public int cbSize;
-    public int flags;
+    public WinNT.DWORD cbSize;
+    public WinNT.DWORD flags;
     public WinDef.HCURSOR hCursor;
     public WinDef.POINT ptScreenPos;
 
     public CURSORINFO() {
-      this.cbSize = Native.getNativeSize(CURSORINFO.class, null);
-    }
-
-    @Override
-    protected List<String> getFieldOrder() {
-      return Arrays.asList("cbSize", "flags", "hCursor", "ptScreenPos");
+      this.cbSize = new WinDef.DWORD(Native.getNativeSize(CURSORINFO.class, null));
     }
   }
+
 }

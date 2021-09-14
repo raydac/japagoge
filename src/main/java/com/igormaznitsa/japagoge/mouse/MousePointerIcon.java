@@ -37,4 +37,9 @@ public class MousePointerIcon {
   public Point getHotPoint() {
     return this.hotPoint;
   }
+
+  @Override
+  public String toString() {
+    return String.format("MousePointer[%dx%d,x=%d,y=%d]", this.image.getWidth(null), this.image.getHeight(null), this.hotPoint.x, this.hotPoint.y);
+  }
 }
