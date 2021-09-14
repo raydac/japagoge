@@ -31,7 +31,6 @@ public class JapagogeFrame extends JFrame {
   private static final int BORDER_SIZE = 5;
   private static final int TITLE_HEIGHT = 26;
 
-  private static final Dimension INITIAL_SIZE = new Dimension(256, 256);
   private static final Color COLOR_SELECT_POSITION = Color.GREEN;
   private static final Color COLOR_RECORDING = Color.CYAN;
   private static final Color COLOR_SAVING_RESULT = Color.YELLOW;
@@ -39,6 +38,7 @@ public class JapagogeFrame extends JFrame {
   private final AtomicReference<ScreenCapturer> currentScreenCapturer = new AtomicReference<>();
   private final BufferedImage imageClose;
   private final BufferedImage imagePreferences;
+  private final BufferedImage imageTitle;
   private final BufferedImage imageHourglassIcon;
   private final Rectangle buttonClose = new Rectangle();
   private final Rectangle buttonPreferences = new Rectangle();
@@ -56,9 +56,12 @@ public class JapagogeFrame extends JFrame {
       this.imageHourglassIcon = ImageIO.read(requireNonNull(JapagogeFrame.class.getResourceAsStream("/icons/hourglass48x48.png")));
       this.imageClose = ImageIO.read(requireNonNull(JapagogeFrame.class.getResourceAsStream("/icons/btn_close.png")));
       this.imagePreferences = ImageIO.read(requireNonNull(JapagogeFrame.class.getResourceAsStream("/icons/btn_prefs.png")));
+      this.imageTitle = ImageIO.read(requireNonNull(JapagogeFrame.class.getResourceAsStream("/icons/title.png")));
     } catch (Exception ex) {
       throw new Error(ex);
     }
+
+    final Dimension initialSize = new Dimension(this.imageTitle.getWidth() + this.imagePreferences.getWidth() + this.imagePreferences.getWidth() + 20, 256);
 
     this.setUndecorated(true);
     this.setBackground(Color.ORANGE);
@@ -80,8 +83,8 @@ public class JapagogeFrame extends JFrame {
       }
     });
 
-    this.setPreferredSize(INITIAL_SIZE);
-    this.setSize(INITIAL_SIZE);
+    this.setPreferredSize(initialSize);
+    this.setSize(initialSize);
 
     this.addMouseListener(new MouseAdapter() {
 
@@ -439,6 +442,8 @@ public class JapagogeFrame extends JFrame {
     if (this.state.get() == State.SELECT_POSITION) {
       gfx.drawImage(this.imagePreferences, this.buttonPreferences.x, this.buttonPreferences.y, null);
       gfx.drawImage(this.imageClose, this.buttonClose.x, this.buttonClose.y, null);
+      gfx.setClip(0, 0, this.buttonPreferences.x - BORDER_SIZE, TITLE_HEIGHT);
+      gfx.drawImage(this.imageTitle, BORDER_SIZE, (TITLE_HEIGHT - this.imageTitle.getHeight()) / 2, null);
     } else {
       gfx.setColor(Color.BLACK);
       gfx.drawRect(0, 0, bounds.width - 1, bounds.height - 1);
