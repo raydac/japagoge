@@ -49,6 +49,7 @@ public class JapagogeFrame extends JFrame {
     super("Japagoge", gc);
 
     this.getRootPane().putClientProperty("Window.shadow", Boolean.FALSE);
+    this.getRootPane().getRootPane().putClientProperty("apple.awt.draggableWindowBackground", Boolean.FALSE);
 
     try {
       this.setIconImage(ImageIO.read(requireNonNull(JapagogeFrame.class.getResourceAsStream("/icons/appico.png"))));
