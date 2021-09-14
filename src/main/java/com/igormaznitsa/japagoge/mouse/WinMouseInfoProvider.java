@@ -95,7 +95,7 @@ final class WinMouseInfoProvider extends DefaultMouseInfoProvider {
       final WinDef.HDC dc = this.user32.GetDC(hWnd);
 
       if (dc == null) {
-        LOGGER.severe("DC is null");
+        LOGGER.severe("DC is null," + Kernel32Util.getLastErrorMessage());
         return null;
       }
 
