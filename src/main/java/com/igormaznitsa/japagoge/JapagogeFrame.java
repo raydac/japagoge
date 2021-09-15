@@ -45,6 +45,12 @@ public class JapagogeFrame extends JFrame {
   private Point lastMousePressedTitleScreenPoint = null;
   private final AtomicReference<State> state = new AtomicReference<>(State.SELECT_POSITION);
 
+  private final JWindow statisticWindow;
+  private final JLabel labelStatX;
+  private final JLabel labelStatY;
+  private final JLabel labelStatWidth;
+  private final JLabel labelStatHeight;
+
   public JapagogeFrame(final GraphicsConfiguration gc) throws AWTException {
     super("Japagoge", gc);
 
@@ -155,10 +161,45 @@ public class JapagogeFrame extends JFrame {
 
           lastMousePressedTitleScreenPoint = newMouseScreenPoint;
 
+          positioningStatisticWindow(JapagogeFrame.this.getBounds());
+
           e.consume();
         }
       }
     });
+
+    this.statisticWindow = new JWindow(this);
+    this.statisticWindow.setFocusable(false);
+    this.statisticWindow.getRootPane().putClientProperty("Window.shadow", Boolean.FALSE);
+    this.statisticWindow.getRootPane().getRootPane().putClientProperty("apple.awt.draggableWindowBackground", Boolean.FALSE);
+
+    this.statisticWindow.setFocusableWindowState(false);
+    this.statisticWindow.getContentPane().setBackground(COLOR_SELECT_POSITION);
+    this.statisticWindow.getContentPane().setForeground(COLOR_SELECT_POSITION);
+    this.statisticWindow.getContentPane().setLayout(new BoxLayout(this.statisticWindow.getContentPane(), BoxLayout.Y_AXIS));
+
+    final Font labelFont = new Font(Font.MONOSPACED, Font.BOLD, 12);
+
+    this.labelStatX = new JLabel(" X= ");
+    this.labelStatX.setFont(labelFont);
+    this.labelStatX.setBackground(COLOR_SELECT_POSITION);
+
+    this.labelStatY = new JLabel(" Y= ");
+    this.labelStatY.setFont(labelFont);
+    this.labelStatY.setBackground(COLOR_SELECT_POSITION);
+
+    this.labelStatWidth = new JLabel(" W= ");
+    this.labelStatWidth.setFont(labelFont);
+    this.labelStatWidth.setBackground(COLOR_SELECT_POSITION);
+
+    this.labelStatHeight = new JLabel(" H= ");
+    this.labelStatHeight.setFont(labelFont);
+    this.labelStatHeight.setBackground(COLOR_SELECT_POSITION);
+
+    this.statisticWindow.getContentPane().add(this.labelStatX);
+    this.statisticWindow.getContentPane().add(this.labelStatY);
+    this.statisticWindow.getContentPane().add(this.labelStatWidth);
+    this.statisticWindow.getContentPane().add(this.labelStatHeight);
 
     this.setState(State.SELECT_POSITION);
   }
@@ -171,10 +212,21 @@ public class JapagogeFrame extends JFrame {
     this.updateLook();
   }
 
+  private void positioningStatisticWindow(final Rectangle mainWindowBounds) {
+    final Rectangle capturingArea = this.findScreeCaptureArea();
+    this.labelStatX.setText(" X=" + capturingArea.x + ' ');
+    this.labelStatY.setText(" Y=" + capturingArea.y + ' ');
+    this.labelStatWidth.setText(" W=" + capturingArea.width + ' ');
+    this.labelStatHeight.setText(" H=" + capturingArea.height + ' ');
+    this.statisticWindow.pack();
+    this.statisticWindow.setLocation(mainWindowBounds.x, mainWindowBounds.y + TITLE_HEIGHT - 2);
+  }
+
   private void updateLook() {
     var bounds = this.getBounds();
     switch (this.state.get()) {
       case RECORD: {
+        this.statisticWindow.setVisible(false);
         this.setOpacity(0.3f);
         this.setBackground(COLOR_RECORDING);
         this.setForeground(COLOR_RECORDING);
@@ -183,14 +235,18 @@ public class JapagogeFrame extends JFrame {
       }
       break;
       case SELECT_POSITION: {
+        this.statisticWindow.setVisible(true);
         this.setOpacity(1.0f);
         this.setBackground(COLOR_SELECT_POSITION);
         this.setForeground(COLOR_SELECT_POSITION);
         this.getContentPane().setBackground(COLOR_SELECT_POSITION);
         this.setShape(this.makeArea(bounds.width, bounds.height, true));
+        this.statisticWindow.setVisible(true);
+        this.positioningStatisticWindow(bounds);
       }
       break;
       case SAVING_RESULT: {
+        this.statisticWindow.setVisible(false);
         this.setOpacity(1.0f);
         this.setBackground(COLOR_SAVING_RESULT);
         this.setForeground(COLOR_SAVING_RESULT);
