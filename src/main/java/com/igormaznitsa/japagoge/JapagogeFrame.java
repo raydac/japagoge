@@ -161,7 +161,7 @@ public class JapagogeFrame extends JFrame {
 
           lastMousePressedTitleScreenPoint = newMouseScreenPoint;
 
-          positioningStatisticWindow(JapagogeFrame.this.getBounds());
+          validate();
 
           e.consume();
         }
@@ -178,7 +178,7 @@ public class JapagogeFrame extends JFrame {
     this.statisticWindow.getContentPane().setForeground(COLOR_SELECT_POSITION);
     this.statisticWindow.getContentPane().setLayout(new BoxLayout(this.statisticWindow.getContentPane(), BoxLayout.Y_AXIS));
 
-    final Font labelFont = new Font(Font.MONOSPACED, Font.BOLD, 12);
+    final Font labelFont = new Font(Font.MONOSPACED, Font.BOLD, 14);
 
     this.labelStatX = new JLabel(" X= ");
     this.labelStatX.setFont(labelFont);
@@ -214,14 +214,18 @@ public class JapagogeFrame extends JFrame {
     this.updateLook();
   }
 
-  private void positioningStatisticWindow(final Rectangle mainWindowBounds) {
+  @Override
+  public void validate() {
+    super.validate();
+
+    final Rectangle mainWindowBounds = JapagogeFrame.this.getBounds();
     final Rectangle capturingArea = this.findScreeCaptureArea();
     this.labelStatX.setText(" X=" + capturingArea.x + ' ');
     this.labelStatY.setText(" Y=" + capturingArea.y + ' ');
     this.labelStatWidth.setText(" W=" + capturingArea.width + ' ');
     this.labelStatHeight.setText(" H=" + capturingArea.height + ' ');
     this.statisticWindow.pack();
-    this.statisticWindow.setLocation(mainWindowBounds.x + BORDER_SIZE - 1, mainWindowBounds.y + TITLE_HEIGHT - 1);
+    this.statisticWindow.setLocation(mainWindowBounds.x + mainWindowBounds.width - (BORDER_SIZE - 2) - this.statisticWindow.getWidth(), mainWindowBounds.y + TITLE_HEIGHT - 1);
   }
 
   private void updateLook() {
@@ -244,7 +248,7 @@ public class JapagogeFrame extends JFrame {
         this.getContentPane().setBackground(COLOR_SELECT_POSITION);
         this.setShape(this.makeArea(bounds.width, bounds.height, true));
         this.statisticWindow.setVisible(true);
-        this.positioningStatisticWindow(bounds);
+        this.validate();
       }
       break;
       case SAVING_RESULT: {
