@@ -201,6 +201,8 @@ public class JapagogeFrame extends JFrame {
     this.statisticWindow.getContentPane().add(this.labelStatWidth);
     this.statisticWindow.getContentPane().add(this.labelStatHeight);
 
+    this.statisticWindow.setOpacity(0.6f);
+
     this.setState(State.SELECT_POSITION);
   }
 
@@ -219,7 +221,7 @@ public class JapagogeFrame extends JFrame {
     this.labelStatWidth.setText(" W=" + capturingArea.width + ' ');
     this.labelStatHeight.setText(" H=" + capturingArea.height + ' ');
     this.statisticWindow.pack();
-    this.statisticWindow.setLocation(mainWindowBounds.x, mainWindowBounds.y + TITLE_HEIGHT - 2);
+    this.statisticWindow.setLocation(mainWindowBounds.x + BORDER_SIZE - 1, mainWindowBounds.y + TITLE_HEIGHT - 1);
   }
 
   private void updateLook() {
@@ -270,7 +272,7 @@ public class JapagogeFrame extends JFrame {
           LOGGER.info("Temp file: " + tempFile);
         } catch (IOException ex) {
           LOGGER.log(Level.SEVERE, "Can't make temp file", ex);
-          JOptionPane.showMessageDialog(this, "Can't create temp file", "Error", JOptionPane.ERROR_MESSAGE);
+          JOptionPane.showMessageDialog(this, ex.getMessage() == null ? "Can't create temp file" : ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
           this.setState(State.SELECT_POSITION);
           return;
         }
@@ -442,7 +444,20 @@ public class JapagogeFrame extends JFrame {
   }
 
   private File makeTempRecordFile() throws IOException {
-    return File.createTempFile(".japagoge-record", ".png");
+    final String tempFolderPath = JapagogeConfig.getInstance().getTempFolder();
+    final File tempFolder = tempFolderPath.isBlank() ? null : new File(tempFolderPath);
+    if (tempFolder != null) {
+      if (!tempFolder.isDirectory()) {
+        throw new IOException("Can't find temp folder: " + tempFolder);
+      }
+      if (!tempFolder.canRead()) {
+        throw new IOException("Can't read temp folder: " + tempFolder);
+      }
+      if (!tempFolder.canWrite()) {
+        throw new IOException("Can't write temp folder: " + tempFolder);
+      }
+    }
+    return File.createTempFile(".japagoge-record", ".png", tempFolder);
   }
 
   private Area makeArea(final int width, final int height, final boolean cross) {

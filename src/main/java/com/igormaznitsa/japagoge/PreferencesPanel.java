@@ -18,6 +18,7 @@ public class PreferencesPanel extends JPanel {
 
   private final JapagogeConfig.JapagogeConfigData data;
 
+  private final JTextField textTempFolder;
   private final JCheckBox checkBoxPointer;
   private final JCheckBox checkBoxAccurateRgb;
   private final JComboBox<RgbPixelFilter> comboBoxFilter;
@@ -29,19 +30,34 @@ public class PreferencesPanel extends JPanel {
     super(new GridBagLayout());
     this.data = Objects.requireNonNull(data);
 
+    this.textTempFolder = new JTextField(data.getTenpFolder());
+    this.textTempFolder.setToolTipText("Folder to keep intermediate results of recording, default if empty");
+
     this.checkBoxPointer = new JCheckBox(null, null, data.isPointer());
+    this.checkBoxPointer.setToolTipText("If ON then pointer will be presented in result");
+
     this.checkBoxAccurateRgb = new JCheckBox(null, null, data.isAccurateRgb());
+    this.checkBoxAccurateRgb.setToolTipText("If ON then precise palette color in use during GIF conversion, but slower");
+
     this.comboBoxFilter = new JComboBox<>(RgbPixelFilter.values());
+    this.comboBoxFilter.setToolTipText("Select color filter for recording");
     this.comboBoxFilter.setSelectedItem(data.getFilter());
 
     this.comboBoxPaletteForGifRgb = new JComboBox<>(Palette256.values());
+    this.comboBoxPaletteForGifRgb.setToolTipText("256 color palette for GIF conversion");
     this.comboBoxPaletteForGifRgb.setSelectedItem(data.getGifPaletteForRgb());
 
     this.spinnerFrameDelay = new JSpinner(new SpinnerNumberModel(data.getFrameDelay(), 20, Short.MAX_VALUE, 1));
+    this.spinnerFrameDelay.setToolTipText("Delay in milliseconds per frame show");
+
     this.spinnerLoops = new JSpinner(new SpinnerNumberModel(data.getLoops(), 0, 1000000, 1));
+    this.spinnerLoops.setToolTipText("Number of repeats, zero means infinity loops");
 
     final GridBagConstraints gblLeft = new GridBagConstraints(0, GridBagConstraints.RELATIVE, 1, 1, 1.0f, 1.0f, GridBagConstraints.EAST, GridBagConstraints.NONE, new Insets(2, 0, 2, 0), 0, 0);
     final GridBagConstraints gblRight = new GridBagConstraints(1, GridBagConstraints.RELATIVE, 1, 1, 1.0f, 1.0f, GridBagConstraints.WEST, GridBagConstraints.HORIZONTAL, new Insets(2, 0, 2, 0), 0, 0);
+
+    this.add(new JLabel("Temp folder: "), gblLeft);
+    this.add(this.textTempFolder, gblRight);
 
     this.add(new JLabel("Frame delay (ms): "), gblLeft);
     this.add(this.spinnerFrameDelay, gblRight);
@@ -89,6 +105,7 @@ public class PreferencesPanel extends JPanel {
   }
 
   public void fillData() {
+    this.data.setTenpFolder(this.textTempFolder.getText());
     this.data.setPointer(this.checkBoxPointer.isSelected());
     this.data.setAccurateRgb(this.checkBoxAccurateRgb.isSelected());
     this.data.setFilter((RgbPixelFilter) this.comboBoxFilter.getSelectedItem());

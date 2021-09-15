@@ -36,6 +36,18 @@ public class JapagogeConfig {
     }
   }
 
+  public String getTempFolder() {
+    return this.preferences.get(Key.TEMP_FOLDER.name(), "");
+  }
+
+  public void setTempFolder(final String value) {
+    if (value == null) {
+      this.preferences.remove(Key.TEMP_FOLDER.name());
+    } else {
+      this.preferences.put(Key.TEMP_FOLDER.name(), value);
+    }
+  }
+
   public Palette256 getGifPaletteForRgb() {
     try {
       return Palette256.valueOf(this.preferences.get(Key.GIF_PALETTE_FOR_RGB.name(), Palette256.AUTO.name()).trim().toUpperCase(Locale.ENGLISH));
@@ -115,6 +127,7 @@ public class JapagogeConfig {
   }
 
   private enum Key {
+    TEMP_FOLDER,
     FRAME_DELAY,
     LOOPS,
     ACCURATE_RGB,
@@ -125,6 +138,7 @@ public class JapagogeConfig {
   }
 
   public static class JapagogeConfigData {
+    private String tenpFolder;
     private boolean pointer;
     private boolean accurateRgb;
     private RgbPixelFilter filter;
@@ -134,6 +148,7 @@ public class JapagogeConfig {
     private int loops;
 
     public JapagogeConfigData() {
+      this.tenpFolder = getInstance().getTempFolder();
       this.accurateRgb = getInstance().isAccurateRgb();
       this.gifPaletteForRgb = getInstance().getGifPaletteForRgb();
       this.pointer = getInstance().isPointer();
@@ -141,6 +156,14 @@ public class JapagogeConfig {
       this.frameDelay = getInstance().getFrameDelay();
       this.targetFolder = getInstance().getTargetFolder();
       this.loops = getInstance().getLoops();
+    }
+
+    public String getTenpFolder() {
+      return this.tenpFolder;
+    }
+
+    public void setTenpFolder(final String path) {
+      this.tenpFolder = path;
     }
 
     public RgbPixelFilter getFilter() {
@@ -200,6 +223,7 @@ public class JapagogeConfig {
     }
 
     public void save() {
+      getInstance().setTempFolder(this.tenpFolder);
       getInstance().setGifPaletteForRgb(this.gifPaletteForRgb);
       getInstance().setPointer(this.pointer);
       getInstance().setAccurateRgb(this.accurateRgb);
