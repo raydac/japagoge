@@ -28,7 +28,8 @@ public final class ScreenCapturer {
   private final Robot robot;
   private final Rectangle screenArea;
   private final File targetFile;
-  private final Duration durationBetweenFrames;
+  private final Duration delayBetweenFrames;
+  private final Duration delayBetweenCaptures;
   private final RgbPixelFilter filter;
   private final AtomicReference<TimerTask> timerTask = new AtomicReference<>();
   private final AtomicReference<APngWriter> apngWriter = new AtomicReference<>();
@@ -42,6 +43,7 @@ public final class ScreenCapturer {
           final MouseInfoProvider mouseInfoProvider,
           final RgbPixelFilter filter,
           final Palette256 palette,
+          final Duration delayBetweenCaptures,
           final Duration delayBetweenFrames
   ) throws AWTException {
     this.palette = palette;
@@ -50,7 +52,8 @@ public final class ScreenCapturer {
     this.mouseInfoProvider = mouseInfoProvider;
     this.screenArea = Objects.requireNonNull(screenArea);
     this.targetFile = targetFile;
-    this.durationBetweenFrames = Objects.requireNonNull(delayBetweenFrames);
+    this.delayBetweenCaptures = delayBetweenCaptures;
+    this.delayBetweenFrames = Objects.requireNonNull(delayBetweenFrames);
   }
 
   public RgbPixelFilter getFilter() {
@@ -82,7 +85,9 @@ public final class ScreenCapturer {
       if (!this.apngWriter.compareAndSet(null, newWriter)) {
         throw new Error("Unexpected state");
       }
-      internalTimer.scheduleAtFixedRate(newTimerTask, 50L, this.durationBetweenFrames.toMillis());
+
+      LOGGER.info("Staring capture task, delay " + this.delayBetweenCaptures.toMillis() + " ms");
+      internalTimer.scheduleAtFixedRate(newTimerTask, 50L, this.delayBetweenCaptures.toMillis());
     }
   }
 
@@ -109,7 +114,7 @@ public final class ScreenCapturer {
         if (writer.getState() == APngWriter.State.CREATED) {
           writer.start(image.getWidth(), image.getHeight());
         }
-        writer.addFrame(image, this.durationBetweenFrames);
+        writer.addFrame(image, this.delayBetweenFrames);
       }
     } catch (Exception ex) {
       LOGGER.log(Level.SEVERE, "Error during capturing", ex);

@@ -88,6 +88,14 @@ public class JapagogeConfig {
     this.preferences.putLong(Key.FRAME_DELAY.name(), Math.max(10, Math.min(delayMs, Short.MAX_VALUE)));
   }
 
+  public long getCaptureDelay() {
+    return this.preferences.getLong(Key.CAPTURE_DELAY.name(), this.getFrameDelay());
+  }
+
+  public void setCaptureDelay(final long delayMs) {
+    this.preferences.putLong(Key.CAPTURE_DELAY.name(), Math.max(10, Math.min(delayMs, Short.MAX_VALUE)));
+  }
+
   public int getLoops() {
     return Math.max(0, this.preferences.getInt(Key.LOOPS.name(), 0));
   }
@@ -128,6 +136,7 @@ public class JapagogeConfig {
 
   private enum Key {
     TEMP_FOLDER,
+    CAPTURE_DELAY,
     FRAME_DELAY,
     LOOPS,
     ACCURATE_RGB,
@@ -144,6 +153,7 @@ public class JapagogeConfig {
     private RgbPixelFilter filter;
     private Palette256 gifPaletteForRgb;
     private long frameDelay;
+    private long captureDelay;
     private File targetFolder;
     private int loops;
 
@@ -154,6 +164,7 @@ public class JapagogeConfig {
       this.pointer = getInstance().isPointer();
       this.filter = getInstance().getFilter();
       this.frameDelay = getInstance().getFrameDelay();
+      this.captureDelay = getInstance().getCaptureDelay();
       this.targetFolder = getInstance().getTargetFolder();
       this.loops = getInstance().getLoops();
     }
@@ -206,6 +217,14 @@ public class JapagogeConfig {
       this.frameDelay = frameDelay;
     }
 
+    public long getCaptureDelay() {
+      return captureDelay;
+    }
+
+    public void setCaptureDelay(final long delay) {
+      this.captureDelay = delay;
+    }
+
     public File getTargetFolder() {
       return this.targetFolder;
     }
@@ -231,6 +250,7 @@ public class JapagogeConfig {
       getInstance().setLoops(this.loops);
       getInstance().setTargetFolder(this.targetFolder);
       getInstance().setFrameDelay(this.frameDelay);
+      getInstance().setCaptureDelay(this.captureDelay);
       getInstance().flush();
     }
   }

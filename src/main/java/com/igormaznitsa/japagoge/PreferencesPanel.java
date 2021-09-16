@@ -24,6 +24,7 @@ public class PreferencesPanel extends JPanel {
   private final JComboBox<RgbPixelFilter> comboBoxFilter;
   private final JComboBox<Palette256> comboBoxPaletteForGifRgb;
   private final JSpinner spinnerFrameDelay;
+  private final JSpinner spinnerCaptureDelay;
   private final JSpinner spinnerLoops;
 
   public PreferencesPanel(final JapagogeConfig.JapagogeConfigData data) {
@@ -47,8 +48,13 @@ public class PreferencesPanel extends JPanel {
     this.comboBoxPaletteForGifRgb.setToolTipText("256 color palette for GIF conversion");
     this.comboBoxPaletteForGifRgb.setSelectedItem(data.getGifPaletteForRgb());
 
+    this.spinnerCaptureDelay = new JSpinner(new SpinnerNumberModel(data.getCaptureDelay(), 20, Short.MAX_VALUE, 1));
+    this.spinnerCaptureDelay.setToolTipText("Delay in milliseconds between screen captures");
+
     this.spinnerFrameDelay = new JSpinner(new SpinnerNumberModel(data.getFrameDelay(), 20, Short.MAX_VALUE, 1));
-    this.spinnerFrameDelay.setToolTipText("Delay in milliseconds per frame show");
+    this.spinnerFrameDelay.setToolTipText("Delay in milliseconds between result frames");
+
+    this.spinnerCaptureDelay.addChangeListener(e -> spinnerFrameDelay.setValue(spinnerCaptureDelay.getValue()));
 
     this.spinnerLoops = new JSpinner(new SpinnerNumberModel(data.getLoops(), 0, 1000000, 1));
     this.spinnerLoops.setToolTipText("Number of repeats, zero means infinity loops");
@@ -58,6 +64,9 @@ public class PreferencesPanel extends JPanel {
 
     this.add(new JLabel("Temp folder: "), gblLeft);
     this.add(this.textTempFolder, gblRight);
+
+    this.add(new JLabel("Capture delay (ms): "), gblLeft);
+    this.add(this.spinnerCaptureDelay, gblRight);
 
     this.add(new JLabel("Frame delay (ms): "), gblLeft);
     this.add(this.spinnerFrameDelay, gblRight);
@@ -112,6 +121,7 @@ public class PreferencesPanel extends JPanel {
     this.data.setGifPaletteForRgb((Palette256) this.comboBoxPaletteForGifRgb.getSelectedItem());
     this.data.setLoops(((Number) this.spinnerLoops.getValue()).intValue());
     this.data.setFrameDelay(((Number) this.spinnerFrameDelay.getValue()).intValue());
+    this.data.setCaptureDelay(((Number) this.spinnerCaptureDelay.getValue()).intValue());
   }
 
 }

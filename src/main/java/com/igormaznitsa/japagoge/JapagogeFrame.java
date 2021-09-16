@@ -203,6 +203,8 @@ public class JapagogeFrame extends JFrame {
 
     this.statisticWindow.setOpacity(0.6f);
 
+    this.setLocationRelativeTo(null);
+
     this.setState(State.SELECT_POSITION);
   }
 
@@ -291,6 +293,7 @@ public class JapagogeFrame extends JFrame {
                   JapagogeConfig.getInstance().isPointer() ? MouseInfoProviderFactory.getInstance().makeProvider() : null,
                   JapagogeConfig.getInstance().getFilter(),
                   JapagogeConfig.getInstance().getGifPaletteForRgb(),
+                  Duration.ofMillis(JapagogeConfig.getInstance().getCaptureDelay()),
                   Duration.ofMillis(JapagogeConfig.getInstance().getFrameDelay())
           );
           if (this.currentScreenCapturer.compareAndSet(null, newScreenCapturer)) {
