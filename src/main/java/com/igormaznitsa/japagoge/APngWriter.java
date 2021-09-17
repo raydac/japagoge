@@ -265,7 +265,7 @@ public final class APngWriter {
     return Optional.ofNullable(this.colorStatistics);
   }
 
-  public synchronized void addFrame(final BufferedImage image, final Duration delay) throws IOException {
+  public synchronized void addFrame(final BufferedImage image, final boolean forceWholeFrame, final Duration delay) throws IOException {
     if (this.state == State.STARTED) {
       if (image.getWidth() != this.width || image.getHeight() != this.height) {
         throw new IllegalArgumentException("Unexpected image size");
@@ -292,6 +292,10 @@ public final class APngWriter {
         if (foundDifference == null) {
           this.accumulatedFrameDuration = this.accumulatedFrameDuration.plus(delay);
         } else {
+          if (forceWholeFrame) {
+            System.arraycopy(this.imageDataBufferTemp, 0, this.imageDataBufferLast, 0, this.imageDataBufferTemp.length);
+            this.lastFoundDifference = new ImagePortion(0, 0, this.width, this.height, this.imageDataBufferLast);
+          }
           this.saveSingleFrame(this.lastFoundDifference, this.accumulatedFrameDuration);
 
           System.arraycopy(this.imageDataBufferTemp, 0, this.imageDataBufferLast, 0, this.imageDataBufferTemp.length);
@@ -300,7 +304,6 @@ public final class APngWriter {
           }
 
           this.lastFoundDifference = foundDifference;
-
           this.accumulatedFrameDuration = delay;
         }
       }

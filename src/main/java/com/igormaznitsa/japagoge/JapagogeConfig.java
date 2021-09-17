@@ -80,6 +80,14 @@ public class JapagogeConfig {
     this.preferences.putBoolean(Key.ACCURATE_RGB.name(), flag);
   }
 
+  public boolean isDithering() {
+    return this.preferences.getBoolean(Key.DITHERING.name(), false);
+  }
+
+  public void setDithering(final boolean flag) {
+    this.preferences.putBoolean(Key.DITHERING.name(), flag);
+  }
+
   public long getFrameDelay() {
     return this.preferences.getLong(Key.FRAME_DELAY.name(), 80);
   }
@@ -140,6 +148,7 @@ public class JapagogeConfig {
     FRAME_DELAY,
     LOOPS,
     ACCURATE_RGB,
+    DITHERING,
     POINTER,
     GIF_PALETTE_FOR_RGB,
     FOLDER_PATH,
@@ -149,6 +158,7 @@ public class JapagogeConfig {
   public static class JapagogeConfigData {
     private String tenpFolder;
     private boolean pointer;
+    private boolean dithering;
     private boolean accurateRgb;
     private RgbPixelFilter filter;
     private Palette256 gifPaletteForRgb;
@@ -160,6 +170,7 @@ public class JapagogeConfig {
     public JapagogeConfigData() {
       this.tenpFolder = getInstance().getTempFolder();
       this.accurateRgb = getInstance().isAccurateRgb();
+      this.dithering = getInstance().isDithering();
       this.gifPaletteForRgb = getInstance().getGifPaletteForRgb();
       this.pointer = getInstance().isPointer();
       this.filter = getInstance().getFilter();
@@ -209,6 +220,14 @@ public class JapagogeConfig {
       this.accurateRgb = flag;
     }
 
+    public boolean isDithering() {
+      return this.dithering;
+    }
+
+    public void setDithering(final boolean flag) {
+      this.dithering = flag;
+    }
+
     public long getFrameDelay() {
       return frameDelay;
     }
@@ -246,6 +265,7 @@ public class JapagogeConfig {
       getInstance().setGifPaletteForRgb(this.gifPaletteForRgb);
       getInstance().setPointer(this.pointer);
       getInstance().setAccurateRgb(this.accurateRgb);
+      getInstance().setDithering(this.dithering);
       getInstance().setFilter(this.filter);
       getInstance().setLoops(this.loops);
       getInstance().setTargetFolder(this.targetFolder);

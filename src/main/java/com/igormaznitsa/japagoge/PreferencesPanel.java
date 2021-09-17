@@ -21,6 +21,7 @@ public class PreferencesPanel extends JPanel {
   private final JTextField textTempFolder;
   private final JCheckBox checkBoxPointer;
   private final JCheckBox checkBoxAccurateRgb;
+  private final JCheckBox checkBoxDithering;
   private final JComboBox<RgbPixelFilter> comboBoxFilter;
   private final JComboBox<Palette256> comboBoxPaletteForGifRgb;
   private final JSpinner spinnerFrameDelay;
@@ -39,6 +40,9 @@ public class PreferencesPanel extends JPanel {
 
     this.checkBoxAccurateRgb = new JCheckBox(null, null, data.isAccurateRgb());
     this.checkBoxAccurateRgb.setToolTipText("If ON then precise palette color in use during GIF conversion, but slower");
+
+    this.checkBoxDithering = new JCheckBox(null, null, data.isDithering());
+    this.checkBoxDithering.setToolTipText("If ON then dithering will be used in result GIF, size can grow dramatically");
 
     this.comboBoxFilter = new JComboBox<>(RgbPixelFilter.values());
     this.comboBoxFilter.setToolTipText("Select color filter for recording");
@@ -86,6 +90,9 @@ public class PreferencesPanel extends JPanel {
     this.add(new JLabel("Accurate RGB (slower GIF conversion): "), gblLeft);
     this.add(this.checkBoxAccurateRgb, gblRight);
 
+    this.add(new JLabel("Dithering GIF colors: "), gblLeft);
+    this.add(this.checkBoxDithering, gblRight);
+
     gblLeft.gridwidth = 2;
     gblLeft.anchor = GridBagConstraints.CENTER;
 
@@ -117,6 +124,7 @@ public class PreferencesPanel extends JPanel {
     this.data.setTenpFolder(this.textTempFolder.getText());
     this.data.setPointer(this.checkBoxPointer.isSelected());
     this.data.setAccurateRgb(this.checkBoxAccurateRgb.isSelected());
+    this.data.setDithering(this.checkBoxDithering.isSelected());
     this.data.setFilter((RgbPixelFilter) this.comboBoxFilter.getSelectedItem());
     this.data.setGifPaletteForRgb((Palette256) this.comboBoxPaletteForGifRgb.getSelectedItem());
     this.data.setLoops(((Number) this.spinnerLoops.getValue()).intValue());

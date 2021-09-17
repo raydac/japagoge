@@ -8,8 +8,70 @@ public final class PaletteUtils {
   private PaletteUtils() {
   }
 
+  public static byte[] splitRgb(final int[] rgb) {
+    final byte[] result = new byte[rgb.length * 3];
+    for (int i = 0; i < rgb.length; i++) {
+      final int rgbColor = rgb[i];
+      int outIndex = i * 3;
+      result[outIndex++] = (byte) (rgbColor >> 16);
+      result[outIndex++] = (byte) (rgbColor >> 8);
+      result[outIndex] = (byte) rgbColor;
+    }
+    return result;
+  }
+
   public static int[] makeGrayscaleRgb256() {
     return IntStream.range(0, 256).map(y -> (y << 16) | (y << 8) << 8).toArray();
+  }
+
+  public static int findClosestIndex(final int r, final int g, final int b, final byte[] rgbPalette) {
+    final int paletteItems = rgbPalette.length / 3;
+    float distance = Float.MAX_VALUE;
+    int foundIndex = 0;
+    for (int i = 0; i < paletteItems; i++) {
+      int paletteOffset = i * 3;
+
+      final int paletteR = rgbPalette[paletteOffset++] & 0xFF;
+      final int paletteG = rgbPalette[paletteOffset++] & 0xFF;
+      final int paletteB = rgbPalette[paletteOffset] & 0xFF;
+
+      final int deltaR = r - paletteR;
+      final int deltaG = g - paletteG;
+      final int deltaB = b - paletteB;
+
+      final float newDistance = deltaR * deltaR + deltaG * deltaG + deltaB * deltaB;
+      if (newDistance <= distance) {
+        distance = newDistance;
+        foundIndex = i;
+      }
+    }
+    return foundIndex;
+  }
+
+  public static int findClosestIndex(final int r, final int g, final int b, final int y, final float h, final byte[] rgbPalette) {
+    float distance = Float.MAX_VALUE;
+    int foundIndex = 0;
+    for (int i = 0; i < rgbPalette.length; ) {
+      final int currentIndex = i / 3;
+      final int pr = rgbPalette[i++] & 0xFF;
+      final int pg = rgbPalette[i++] & 0xFF;
+      final int pb = rgbPalette[i++] & 0xFF;
+
+      final int dr = r - pr;
+      final int dg = g - pg;
+      final int db = b - pb;
+
+      final int dy = y - toY(pr, pg, pb);
+      final float dh = h - toHue(pr, pg, pb);
+
+      final float newDistance = dr * dr + dg * dg + db * db + dy * dy + dh * dh;
+
+      if (newDistance < distance) {
+        distance = newDistance;
+        foundIndex = currentIndex;
+      }
+    }
+    return foundIndex;
   }
 
   public static float calcAccurateRgbDistance(final int r1, final int g1, final int b1, final int y1, final float h1, final int r2, final int g2, final int b2) {

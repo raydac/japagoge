@@ -29,9 +29,11 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
   private final AtomicLong readCounter = new AtomicLong();
   private final List<ProgressListener> listeners = new CopyOnWriteArrayList<>();
   private final ForkJoinPool forkJoinPool = new ForkJoinPool(Runtime.getRuntime().availableProcessors());
+  private final boolean dithering;
 
-  public APngToGifConvertingWorker(final ScreenCapturer screenCapturer, final boolean accurateRgb, final File target) {
+  public APngToGifConvertingWorker(final ScreenCapturer screenCapturer, final boolean accurateRgb, final boolean dithering, final File target) {
     super();
+    this.dithering = dithering;
     this.accurateRgb = accurateRgb;
     this.screenCapturer = screenCapturer;
     this.target = target;
@@ -103,22 +105,41 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
     return result;
   }
 
-  private byte[] generateIndexTable(final int[] rgb256Palette, final boolean accurateRgb) {
-    final int paletteLength = rgb256Palette.length;
-
-    final int[] splitRgbPalette = new int[rgb256Palette.length * 3];
-    for (int i = 0; i < paletteLength; i++) {
-      final int r = (rgb256Palette[i] >> 16) & 0xFF;
-      final int g = (rgb256Palette[i] >> 8) & 0xFF;
-      final int b = rgb256Palette[i] & 0xFF;
-      int offset = i * 3;
-      splitRgbPalette[offset++] = r;
-      splitRgbPalette[offset++] = g;
-      splitRgbPalette[offset] = b;
+  private static byte[] unpackFrameData(final int width, final int height, final byte[] pngFrameData) {
+    Inflater inflater = new Inflater();
+    inflater.setInput(pngFrameData);
+    final byte[] unpacked = new byte[(width * 3 * height) + height];
+    try {
+      final int length = inflater.inflate(unpacked);
+      if (length != unpacked.length) throw new IllegalStateException("Unexpected unpacked frame length");
+    } catch (Exception ex) {
+      throw new RuntimeException("Can't decompress frame", ex);
     }
+    return unpacked;
+  }
 
+  public void addProgressListener(final ProgressListener listener) {
+    this.listeners.add(listener);
+  }
+
+  @SuppressWarnings("unused")
+  public void removeActionListener(final ProgressListener listener) {
+    this.listeners.remove(listener);
+  }
+
+  private static void addArrayCell(final byte[] array, final int index, final int value) {
+    array[index] = (byte) Math.max(0, Math.min(0xFF, (array[index] & 0xFF) + value));
+  }
+
+  private byte[] generateIndexTable(final byte[] rgb256Palette, final boolean accurateRgb) {
+
+    final int[] intRgbPalette = new int[rgb256Palette.length];
+    for (int i = 0; i < rgb256Palette.length; i++) {
+      intRgbPalette[i] = rgb256Palette[i] & 0xFF;
+    }
     final byte[] result = new byte[256 * 256 * 256];
 
+    final int paletteItems = rgb256Palette.length / 3;
     try {
       this.forkJoinPool.submit(() -> IntStream.range(0, 256 * 256 * 256)
               .parallel()
@@ -139,12 +160,12 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
                 float distance = Float.MAX_VALUE;
 
                 int foundPaletteIndex = 0;
-                for (int i = 0; i < paletteLength; i++) {
+                for (int i = 0; i < paletteItems; i++) {
                   int offset = i * 3;
 
-                  final int tr = splitRgbPalette[offset++];
-                  final int tg = splitRgbPalette[offset++];
-                  final int tb = splitRgbPalette[offset];
+                  final int tr = intRgbPalette[offset++];
+                  final int tg = intRgbPalette[offset++];
+                  final int tb = intRgbPalette[offset];
 
                   final float distanceRgb;
                   if (accurateRgb) {
@@ -183,26 +204,9 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
     return result;
   }
 
-  public void addProgressListener(final ProgressListener listener) {
-    this.listeners.add(listener);
-  }
-
-  @SuppressWarnings("unused")
-  public void removeActionListener(final ProgressListener listener) {
-    this.listeners.remove(listener);
-  }
-
   private byte[] convertRgbToIndexes(final int width, final int height, final byte[] pngFrameData, final byte[] rgb2IndexTable) {
     final byte[] result = new byte[width * height];
-    Inflater inflater = new Inflater();
-    inflater.setInput(pngFrameData);
-    final byte[] unpacked = new byte[(width * 3 * height) + height];
-    try {
-      final int length = inflater.inflate(unpacked);
-      if (length != unpacked.length) throw new IllegalStateException("Unexpected unpacked frame length");
-    } catch (Exception ex) {
-      throw new RuntimeException("Can't decompress frame", ex);
-    }
+    final byte[] unpacked = unpackFrameData(width, height, pngFrameData);
     final int scanLineWidth = width * 3;
     for (int y = 0; y < height; y++) {
       final int lineOffset = y * (scanLineWidth + 1);
@@ -217,6 +221,72 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
     return result;
   }
 
+  private byte[] convertRgbToIndexesDithering(final int width, final int height, final byte[] rgbPalette, final boolean accurateRgb, final byte[] pngFrameData) {
+    final byte[] resultIndex = new byte[width * height];
+    final byte[] rasterRgb = unpackFrameData(width, height, pngFrameData);
+
+    final int rgbLineByteLength = width * 3 + 1;
+
+    for (int y = 0; y < height; y++) {
+      final int indexLineStart = y * width;
+      final int rgbLineStart = rgbLineByteLength * y + 1;
+
+      for (int x = 0; x < width; x++) {
+        int pixelOffset = rgbLineStart + x * 3;
+        final int rasterR = rasterRgb[pixelOffset++] & 0xFF;
+        final int rasterG = rasterRgb[pixelOffset++] & 0xFF;
+        final int rasterB = rasterRgb[pixelOffset] & 0xFF;
+
+        final int paletteIndex;
+        if (accurateRgb) {
+          paletteIndex = PaletteUtils.findClosestIndex(rasterR, rasterG, rasterB, PaletteUtils.toY(rasterR, rasterG, rasterB), PaletteUtils.toHue(rasterR, rasterG, rasterB), rgbPalette);
+        } else {
+          paletteIndex = PaletteUtils.findClosestIndex(rasterR, rasterG, rasterB, rgbPalette);
+        }
+
+        resultIndex[indexLineStart + x] = (byte) paletteIndex;
+
+        int paletteOffset = paletteIndex * 3;
+        final int errorR = rasterR - (rgbPalette[paletteOffset++] & 0xFF);
+        final int errorG = rasterG - (rgbPalette[paletteOffset++] & 0xFF);
+        final int errorB = rasterB - (rgbPalette[paletteOffset] & 0xFF);
+
+        if (x < width - 1) {
+          // x+1, y
+          pixelOffset = rgbLineStart + (x + 1) * 3;
+          addArrayCell(rasterRgb, pixelOffset++, Math.round(errorR * 7.0f / 16.0f));
+          addArrayCell(rasterRgb, pixelOffset++, Math.round(errorG * 7.0f / 16.0f));
+          addArrayCell(rasterRgb, pixelOffset, Math.round(errorB * 7.0f / 16.0f));
+
+          if (y < height - 1) {
+            // x+1, y + 1
+            pixelOffset = rgbLineStart + rgbLineByteLength + (x + 1) * 3;
+            addArrayCell(rasterRgb, pixelOffset++, Math.round(errorR * 1.0f / 16.0f));
+            addArrayCell(rasterRgb, pixelOffset++, Math.round(errorG * 1.0f / 16.0f));
+            addArrayCell(rasterRgb, pixelOffset, Math.round(errorB * 1.0f / 16.0f));
+          }
+        }
+
+        if (y < height - 1) {
+          // x, y + 1
+          pixelOffset = (rgbLineStart + rgbLineByteLength) + x * 3;
+          addArrayCell(rasterRgb, pixelOffset++, Math.round(errorR * 5.0f / 16.0f));
+          addArrayCell(rasterRgb, pixelOffset++, Math.round(errorG * 5.0f / 16.0f));
+          addArrayCell(rasterRgb, pixelOffset, Math.round(errorB * 5.0f / 16.0f));
+        }
+
+        if (x > 0 && y < height - 1) {
+          // x-1. y+1
+          pixelOffset = (rgbLineStart + rgbLineByteLength) + (x - 1) * 3;
+          addArrayCell(rasterRgb, pixelOffset++, Math.round(errorR * 3.0f / 16.0f));
+          addArrayCell(rasterRgb, pixelOffset++, Math.round(errorG * 3.0f / 16.0f));
+          addArrayCell(rasterRgb, pixelOffset, Math.round(errorB * 3.0f / 16.0f));
+        }
+      }
+    }
+    return resultIndex;
+  }
+
   private void notifyUpdateForSizeChange() {
     final long read = this.readCounter.get();
     this.publish((int) Math.round(((double) read / (double) this.sourceLength) * 100));
@@ -229,6 +299,16 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
       final byte[] rawData = new byte[dataChunk.data.length - 4];
       System.arraycopy(dataChunk.data, 4, rawData, 0, rawData.length);
       writer.addFrame(fctl.x, fctl.y, fctl.width, fctl.height, fctl.getDuration(), convertRgbToIndexes(fctl.width, fctl.height, rawData, rgb2indexTable));
+    }
+  }
+
+  private void writeRgbFrameDithering(final AGifWriter writer, final IhdrChunk ihdrChunk, final byte[] rgbPalette, final boolean preciseRgb, final PngChunk dataChunk, final FctlChunk fctl) throws IOException {
+    if (dataChunk.name.equals("IDAT")) {
+      writer.addFrame(0, 0, ihdrChunk.width, ihdrChunk.height, fctl.getDuration(), convertRgbToIndexesDithering(ihdrChunk.width, ihdrChunk.height, rgbPalette, preciseRgb, dataChunk.data));
+    } else {
+      final byte[] rawData = new byte[dataChunk.data.length - 4];
+      System.arraycopy(dataChunk.data, 4, rawData, 0, rawData.length);
+      writer.addFrame(fctl.x, fctl.y, fctl.width, fctl.height, fctl.getDuration(), convertRgbToIndexesDithering(fctl.width, fctl.height, rgbPalette, preciseRgb, rawData));
     }
   }
 
@@ -247,7 +327,7 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
     try (final DataInputStream in = new DataInputStream(new BufferedInputStream(new FileInputStream(this.screenCapturer.getTargetFile())))) {
       assertNext(in, this.readCounter, 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A);
 
-      int[] workRgbPalette = null;
+      byte[] workRgbPalette = null;
 
       IhdrChunk ihdrChunk = null;
       FctlChunk fctlChunk = null;
@@ -265,42 +345,53 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
             case "IDAT":
             case "fdAT": {
               if (gifWriter == null) {
-                final int[] rgbPalette;
+                final byte[] generatedPalette;
                 switch (Objects.requireNonNull(ihdrChunk, "Can't find IHDR before image").colorType) {
                   case 0: { // grayscale
-                    rgbPalette = new int[256];
+                    generatedPalette = new byte[256 * 3];
                     for (int i = 0; i < 256; i++) {
-                      rgbPalette[i] = (i << 16) | (i << 8) | i;
+                      int index = i * 3;
+                      generatedPalette[index++] = (byte) i;
+                      generatedPalette[index++] = (byte) i;
+                      generatedPalette[index] = (byte) i;
                     }
                   }
                   break;
                   case 2: { // rgb
-                    rgbPalette = this.screenCapturer.makeGlobalRgb256Palette();
-                    LOGGER.info("Starting calculate RGB to index table, accurate RGB is " + this.accurateRgb);
-                    final long startTime = System.currentTimeMillis();
-                    rgb2indexTable = this.generateIndexTable(rgbPalette, this.accurateRgb);
-                    if (rgb2indexTable == null) {
-                      LOGGER.severe("Calculation of RGB index table has been interrupted so that interrupting conversion");
-                      break mainLoop;
+                    generatedPalette = PaletteUtils.splitRgb(this.screenCapturer.makeGlobalRgb256Palette());
+                    if (this.dithering) {
+                      LOGGER.info("Don't build RGB index table because dithering mode");
+                    } else {
+                      LOGGER.info("Starting calculate RGB to index table, accurate RGB is " + this.accurateRgb);
+                      final long startTime = System.currentTimeMillis();
+                      rgb2indexTable = this.generateIndexTable(generatedPalette, this.accurateRgb);
+                      if (rgb2indexTable == null) {
+                        LOGGER.severe("Calculation of RGB index table has been interrupted so that interrupting conversion");
+                        break mainLoop;
+                      }
+                      LOGGER.info("Calculate RGB to index table completed, took " + (System.currentTimeMillis() - startTime) + "ms");
                     }
-                    LOGGER.info("Calculate RGB to index table completed, took " + (System.currentTimeMillis() - startTime) + "ms");
                   }
                   break;
                   case 3: { // palette
-                    rgbPalette = workRgbPalette == null ? this.screenCapturer.makeGlobalRgb256Palette() : workRgbPalette;
+                    generatedPalette = workRgbPalette == null ? PaletteUtils.splitRgb(this.screenCapturer.makeGlobalRgb256Palette()) : workRgbPalette;
                   }
                   break;
                   default:
                     throw new IOException("Unexpected color type: " + ihdrChunk.colorType);
                 }
                 this.publish(0);
-                workRgbPalette = rgbPalette;
+                workRgbPalette = generatedPalette;
                 gifWriter = new AGifWriter(output, ihdrChunk.width, ihdrChunk.height, 0, workRgbPalette, actlChunk == null ? 0 : actlChunk.numPlays);
               }
+
               switch (ihdrChunk.colorType) {
                 case 2: {
                   // rgb
-                  this.writeRgbFrame(gifWriter, ihdrChunk, rgb2indexTable, nextChunk, fctlChunk);
+                  if (this.dithering)
+                    this.writeRgbFrameDithering(gifWriter, ihdrChunk, workRgbPalette, this.accurateRgb, nextChunk, fctlChunk);
+                  else
+                    this.writeRgbFrame(gifWriter, ihdrChunk, rgb2indexTable, nextChunk, fctlChunk);
                 }
                 break;
                 case 0:
@@ -316,15 +407,8 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
             }
             break;
             case "PLTE": {
-              final int paletteItems = nextChunk.data.length / 3;
-              int index = 0;
-              workRgbPalette = new int[paletteItems];
-              for (int i = 0; i < nextChunk.data.length; ) {
-                int r = nextChunk.data[i++] & 0xFF;
-                int g = nextChunk.data[i++] & 0xFF;
-                int b = nextChunk.data[i++] & 0xFF;
-                workRgbPalette[index++] = (r << 16) | (g << 8) | b;
-              }
+              workRgbPalette = new byte[nextChunk.data.length];
+              System.arraycopy(nextChunk.data, 0, workRgbPalette, 0, workRgbPalette.length);
             }
             break;
             case "acTL": {

@@ -13,7 +13,7 @@ public final class AGifWriter {
   private static final int DISPOSAL_OVERWRITE_WITH_PREVIOUS_GRAPHICS = 4;
 
   private final OutputStream outputStream;
-  private final int[] globalRgbPalette;
+  private final byte[] globalRgbPalette;
   private final int logicalImageWidth;
   private final int logicalImageHeight;
   private final AtomicInteger frameCounter = new AtomicInteger();
@@ -25,7 +25,7 @@ public final class AGifWriter {
           final int logicalImageWidth,
           final int logicalImageHeight,
           final int backgroundColorIndex,
-          final int[] globalRgbPalette,
+          final byte[] globalRgbPalette,
           final int repeat
   ) {
     this.outputStream = outputStream;
@@ -107,15 +107,11 @@ public final class AGifWriter {
     this.outputStream.write(0);
   }
 
-  private void writePalette(final int[] rgb) throws IOException {
-    for (int c : rgb) {
-      this.outputStream.write(c >> 16);
-      this.outputStream.write(c >> 8);
-      this.outputStream.write(c);
-    }
+  private void writePalette(final byte[] rgb) throws IOException {
+    this.outputStream.write(rgb);
   }
 
-  public int[] getGlobalPalette() {
+  public byte[] getGlobalPalette() {
     return this.globalRgbPalette;
   }
 

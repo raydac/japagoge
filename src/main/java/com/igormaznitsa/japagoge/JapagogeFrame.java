@@ -292,6 +292,7 @@ public class JapagogeFrame extends JFrame {
                   tempFile,
                   JapagogeConfig.getInstance().isPointer() ? MouseInfoProviderFactory.getInstance().makeProvider() : null,
                   JapagogeConfig.getInstance().getFilter(),
+                  JapagogeConfig.getInstance().isDithering(),
                   JapagogeConfig.getInstance().getGifPaletteForRgb(),
                   Duration.ofMillis(JapagogeConfig.getInstance().getCaptureDelay()),
                   Duration.ofMillis(JapagogeConfig.getInstance().getFrameDelay())
@@ -370,7 +371,12 @@ public class JapagogeFrame extends JFrame {
 
                     if (selectedFilter == gifFilter) {
                       LOGGER.info("Converting APNG file into GIF: " + tempFile);
-                      var converter = new APngToGifConvertingWorker(currentCapturer, JapagogeConfig.getInstance().isAccurateRgb(), selectedFile);
+                      var converter = new APngToGifConvertingWorker(
+                              currentCapturer,
+                              JapagogeConfig.getInstance().isAccurateRgb(),
+                              JapagogeConfig.getInstance().isDithering(),
+                              selectedFile
+                      );
                       converter.execute();
                       try {
                         JOptionPane.showOptionDialog(

@@ -35,6 +35,7 @@ public final class ScreenCapturer {
   private final AtomicReference<APngWriter> apngWriter = new AtomicReference<>();
   private final MouseInfoProvider mouseInfoProvider;
   private final Palette256 palette;
+  private final boolean dithering;
 
   public ScreenCapturer(
           final GraphicsDevice device,
@@ -42,10 +43,12 @@ public final class ScreenCapturer {
           final File targetFile,
           final MouseInfoProvider mouseInfoProvider,
           final RgbPixelFilter filter,
+          final boolean dithering,
           final Palette256 palette,
           final Duration delayBetweenCaptures,
           final Duration delayBetweenFrames
   ) throws AWTException {
+    this.dithering = dithering;
     this.palette = palette;
     this.robot = new Robot(device);
     this.filter = filter;
@@ -114,7 +117,7 @@ public final class ScreenCapturer {
         if (writer.getState() == APngWriter.State.CREATED) {
           writer.start(image.getWidth(), image.getHeight());
         }
-        writer.addFrame(image, this.delayBetweenFrames);
+        writer.addFrame(image, this.dithering, this.delayBetweenFrames);
       }
     } catch (Exception ex) {
       LOGGER.log(Level.SEVERE, "Error during capturing", ex);
