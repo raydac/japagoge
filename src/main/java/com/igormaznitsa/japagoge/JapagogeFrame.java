@@ -382,7 +382,7 @@ public class JapagogeFrame extends JFrame {
                         JOptionPane.showOptionDialog(
                                 this,
                                 APngToGifConvertingWorker.makePanelFor(converter),
-                                "Converting to GIF (might take a while)",
+                                "Converting into GIF (might take a while)",
                                 JOptionPane.DEFAULT_OPTION,
                                 JOptionPane.PLAIN_MESSAGE,
                                 new ImageIcon(this.imageHourglassIcon),
