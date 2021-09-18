@@ -1,6 +1,7 @@
 package com.igormaznitsa.japagoge.utils;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Scanner;
@@ -13,6 +14,7 @@ public enum Palette256 {
   WARM("rgbm.hex"),
   WIN95("win95.hex"),
   ATARI("atari.hex"),
+  ZXSPECTRUM("zxspectrum.hex"),
   SONIC("srb2.hex"),
   UZEBOX("uzebox.hex");
 
@@ -26,12 +28,12 @@ public enum Palette256 {
       try (final Scanner in = new Scanner(Objects.requireNonNull(Palette256.class.getResourceAsStream("/palettes/" + paletteName)), StandardCharsets.UTF_8)) {
         int index = 0;
         while (in.hasNext()) {
-          final String next = in.next().trim();
+          final String next = in.next().trim().toLowerCase(Locale.ENGLISH);
           if (!next.isEmpty()) {
             rgb[index++] = Integer.parseInt(next, 16);
           }
         }
-        if (index != 256) throw new Error("No 256 colors in " + paletteName);
+        if (index > 256) throw new Error("Palette has more than 256 colors: " + paletteName);
       }
       this.rgbPalette = rgb;
     }
