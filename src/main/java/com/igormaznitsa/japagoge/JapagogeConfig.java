@@ -72,6 +72,22 @@ public class JapagogeConfig {
     this.preferences.putBoolean(Key.POINTER.name(), flag);
   }
 
+  public boolean isShowBoundsInfo() {
+    return this.preferences.getBoolean(Key.SHOW_BOUNDS_INFO.name(), false);
+  }
+
+  public void setShowBoundsInfo(final boolean flag) {
+    this.preferences.putBoolean(Key.SHOW_BOUNDS_INFO.name(), flag);
+  }
+
+  public boolean isForceWholeFrame() {
+    return this.preferences.getBoolean(Key.FORCE_WHOLE_FRAME.name(), false);
+  }
+
+  public void setForceWholeFrame(final boolean flag) {
+    this.preferences.putBoolean(Key.FORCE_WHOLE_FRAME.name(), flag);
+  }
+
   public boolean isAccurateRgb() {
     return this.preferences.getBoolean(Key.ACCURATE_RGB.name(), false);
   }
@@ -144,6 +160,8 @@ public class JapagogeConfig {
 
   private enum Key {
     TEMP_FOLDER,
+    FORCE_WHOLE_FRAME,
+    SHOW_BOUNDS_INFO,
     CAPTURE_DELAY,
     FRAME_DELAY,
     LOOPS,
@@ -158,6 +176,8 @@ public class JapagogeConfig {
   public static class JapagogeConfigData {
     private String tenpFolder;
     private boolean pointer;
+    private boolean forceWholeFrame;
+    private boolean showBoundsInfo;
     private boolean dithering;
     private boolean accurateRgb;
     private RgbPixelFilter filter;
@@ -173,11 +193,29 @@ public class JapagogeConfig {
       this.dithering = getInstance().isDithering();
       this.gifPaletteForRgb = getInstance().getGifPaletteForRgb();
       this.pointer = getInstance().isPointer();
+      this.showBoundsInfo = getInstance().isShowBoundsInfo();
+      this.forceWholeFrame = getInstance().isForceWholeFrame();
       this.filter = getInstance().getFilter();
       this.frameDelay = getInstance().getFrameDelay();
       this.captureDelay = getInstance().getCaptureDelay();
       this.targetFolder = getInstance().getTargetFolder();
       this.loops = getInstance().getLoops();
+    }
+
+    public boolean isForceWholeFrame() {
+      return forceWholeFrame;
+    }
+
+    public void setForceWholeFrame(final boolean value) {
+      this.forceWholeFrame = value;
+    }
+
+    public boolean isShowBoundsInfo() {
+      return this.showBoundsInfo;
+    }
+
+    public void setShowBoundsInfo(final boolean flag) {
+      this.showBoundsInfo = flag;
     }
 
     public String getTenpFolder() {
@@ -264,6 +302,8 @@ public class JapagogeConfig {
       getInstance().setTempFolder(this.tenpFolder);
       getInstance().setGifPaletteForRgb(this.gifPaletteForRgb);
       getInstance().setPointer(this.pointer);
+      getInstance().setForceWholeFrame(this.forceWholeFrame);
+      getInstance().setShowBoundsInfo(this.showBoundsInfo);
       getInstance().setAccurateRgb(this.accurateRgb);
       getInstance().setDithering(this.dithering);
       getInstance().setFilter(this.filter);

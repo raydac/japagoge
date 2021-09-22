@@ -20,6 +20,8 @@ public class PreferencesPanel extends JPanel {
 
   private final JTextField textTempFolder;
   private final JCheckBox checkBoxPointer;
+  private final JCheckBox checkBoxShowBoundsInfo;
+  private final JCheckBox checkBoxForceWholeFrame;
   private final JCheckBox checkBoxAccurateRgb;
   private final JCheckBox checkBoxDithering;
   private final JComboBox<RgbPixelFilter> comboBoxFilter;
@@ -36,27 +38,33 @@ public class PreferencesPanel extends JPanel {
     this.textTempFolder.setToolTipText("Folder to keep intermediate results of recording, default if empty");
 
     this.checkBoxPointer = new JCheckBox(null, null, data.isPointer());
-    this.checkBoxPointer.setToolTipText("If ON then pointer will be presented in result");
+    this.checkBoxPointer.setToolTipText("Record mouse pointer");
 
     this.checkBoxAccurateRgb = new JCheckBox(null, null, data.isAccurateRgb());
-    this.checkBoxAccurateRgb.setToolTipText("If ON then precise palette color in use during GIF conversion, but slower");
+    this.checkBoxAccurateRgb.setToolTipText("Find better colors in GIF palette for RGB, slow");
 
     this.checkBoxDithering = new JCheckBox(null, null, data.isDithering());
-    this.checkBoxDithering.setToolTipText("If ON then dithering will be used in result GIF, size can grow dramatically");
+    this.checkBoxDithering.setToolTipText("Use dithering in result GIF, increasing result size");
+
+    this.checkBoxShowBoundsInfo = new JCheckBox(null, null, data.isShowBoundsInfo());
+    this.checkBoxShowBoundsInfo.setToolTipText("Show coordinates of capturing area");
+
+    this.checkBoxForceWholeFrame = new JCheckBox(null, null, data.isForceWholeFrame());
+    this.checkBoxForceWholeFrame.setToolTipText("Disable size optimization, helps for quality of dithering GIF");
 
     this.comboBoxFilter = new JComboBox<>(RgbPixelFilter.values());
     this.comboBoxFilter.setToolTipText("Select color filter for recording");
     this.comboBoxFilter.setSelectedItem(data.getFilter());
 
     this.comboBoxPaletteForGifRgb = new JComboBox<>(Palette256.values());
-    this.comboBoxPaletteForGifRgb.setToolTipText("256 color palette for GIF conversion");
+    this.comboBoxPaletteForGifRgb.setToolTipText("Pre-defined palette for GIF conversion");
     this.comboBoxPaletteForGifRgb.setSelectedItem(data.getGifPaletteForRgb());
 
     this.spinnerCaptureDelay = new JSpinner(new SpinnerNumberModel(data.getCaptureDelay(), 20, Short.MAX_VALUE, 1));
-    this.spinnerCaptureDelay.setToolTipText("Delay in milliseconds between screen captures");
+    this.spinnerCaptureDelay.setToolTipText("Delay for capturing, milliseconds");
 
     this.spinnerFrameDelay = new JSpinner(new SpinnerNumberModel(data.getFrameDelay(), 20, Short.MAX_VALUE, 1));
-    this.spinnerFrameDelay.setToolTipText("Delay in milliseconds between result frames");
+    this.spinnerFrameDelay.setToolTipText("Delay for result frames, milliseconds");
 
     this.spinnerCaptureDelay.addChangeListener(e -> spinnerFrameDelay.setValue(spinnerCaptureDelay.getValue()));
 
@@ -78,7 +86,10 @@ public class PreferencesPanel extends JPanel {
     this.add(new JLabel("Loops (0 infinity): "), gblLeft);
     this.add(this.spinnerLoops, gblRight);
 
-    this.add(new JLabel("Show pointer: "), gblLeft);
+    this.add(new JLabel("Show capturing area metrics: "), gblLeft);
+    this.add(this.checkBoxShowBoundsInfo, gblRight);
+
+    this.add(new JLabel("Grab mouse pointer: "), gblLeft);
     this.add(this.checkBoxPointer, gblRight);
 
     this.add(new JLabel("Color filter: "), gblLeft);
@@ -87,11 +98,14 @@ public class PreferencesPanel extends JPanel {
     this.add(new JLabel("Palette for RGB to GIF: "), gblLeft);
     this.add(this.comboBoxPaletteForGifRgb, gblRight);
 
-    this.add(new JLabel("Accurate RGB (slower GIF conversion): "), gblLeft);
+    this.add(new JLabel("Better RGB colors in GIF : "), gblLeft);
     this.add(this.checkBoxAccurateRgb, gblRight);
 
-    this.add(new JLabel("Dithering GIF colors: "), gblLeft);
+    this.add(new JLabel("Dithering GIF: "), gblLeft);
     this.add(this.checkBoxDithering, gblRight);
+
+    this.add(new JLabel("Force whole frame: "), gblLeft);
+    this.add(this.checkBoxForceWholeFrame, gblRight);
 
     gblLeft.gridwidth = 2;
     gblLeft.anchor = GridBagConstraints.CENTER;
@@ -123,6 +137,8 @@ public class PreferencesPanel extends JPanel {
   public void fillData() {
     this.data.setTenpFolder(this.textTempFolder.getText());
     this.data.setPointer(this.checkBoxPointer.isSelected());
+    this.data.setShowBoundsInfo(this.checkBoxShowBoundsInfo.isSelected());
+    this.data.setForceWholeFrame(this.checkBoxForceWholeFrame.isSelected());
     this.data.setAccurateRgb(this.checkBoxAccurateRgb.isSelected());
     this.data.setDithering(this.checkBoxDithering.isSelected());
     this.data.setFilter((RgbPixelFilter) this.comboBoxFilter.getSelectedItem());
