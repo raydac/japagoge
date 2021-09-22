@@ -9,6 +9,7 @@ import javax.swing.filechooser.FileFilter;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.geom.Area;
+import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -24,6 +25,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+@SuppressWarnings("unused")
 public class JapagogeFrame extends JFrame {
 
   private static final Logger LOGGER = Logger.getLogger("JapagogeFrame");
@@ -37,12 +39,12 @@ public class JapagogeFrame extends JFrame {
   private final ComponentResizer resizer;
   private final AtomicReference<ScreenCapturer> currentScreenCapturer = new AtomicReference<>();
   private final BufferedImage imageClose = loadIcon("button-close.png");
-  private final BufferedImage imagePreferences = loadIcon("button-settings.png");
+  private final BufferedImage imageSettings = loadIcon("button-settings.png");
   private final BufferedImage imageRecord = loadIcon("button-record.png");
   private final BufferedImage imageStop = loadIcon("button-stop.png");
   private final BufferedImage imageHourglassIcon = loadIcon("hourglass48x48.png");
   private final Rectangle areaButtonClose = new Rectangle();
-  private final Rectangle areaButtonPreferences = new Rectangle();
+  private final Rectangle areaButtonSettings = new Rectangle();
   private final Rectangle areaButtonRecordStop = new Rectangle();
   private Point lastMousePressedTitleScreenPoint = null;
   private final AtomicReference<State> state = new AtomicReference<>(State.SELECT_POSITION);
@@ -105,7 +107,7 @@ public class JapagogeFrame extends JFrame {
               } else if (areaButtonClose.contains(componentPoint)) {
                 e.consume();
                 onButtonClose();
-              } else if (areaButtonPreferences.contains(componentPoint)) {
+              } else if (areaButtonSettings.contains(componentPoint)) {
                 e.consume();
                 onButtonSettings();
               }
@@ -151,7 +153,7 @@ public class JapagogeFrame extends JFrame {
         if (!e.isConsumed() && resizer.isEnabled()) {
           var newMouseScreenPoint = new Point(e.getPoint());
           if (newMouseScreenPoint.getY() < TITLE_HEIGHT) {
-            if (areaButtonClose.contains(newMouseScreenPoint) || areaButtonPreferences.contains(newMouseScreenPoint) || areaButtonRecordStop.contains(newMouseScreenPoint)) {
+            if (areaButtonClose.contains(newMouseScreenPoint) || areaButtonSettings.contains(newMouseScreenPoint) || areaButtonRecordStop.contains(newMouseScreenPoint)) {
               setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
             } else {
               setCursor(Cursor.getDefaultCursor());
@@ -505,9 +507,9 @@ public class JapagogeFrame extends JFrame {
 
     final int gapBetweenButtons = 4;
 
-    int buttonStartX = width - this.imagePreferences.getWidth() - this.imageClose.getWidth() - gapBetweenButtons * 2;
-    this.areaButtonPreferences.setBounds(buttonStartX, (TITLE_HEIGHT - this.imagePreferences.getHeight()) / 2, this.imagePreferences.getWidth(), this.imagePreferences.getHeight());
-    buttonStartX += this.areaButtonPreferences.width + gapBetweenButtons;
+    int buttonStartX = width - this.imageSettings.getWidth() - this.imageClose.getWidth() - gapBetweenButtons * 2;
+    this.areaButtonSettings.setBounds(buttonStartX, (TITLE_HEIGHT - this.imageSettings.getHeight()) / 2, this.imageSettings.getWidth(), this.imageSettings.getHeight());
+    buttonStartX += this.areaButtonSettings.width + gapBetweenButtons;
     this.areaButtonClose.setBounds(buttonStartX, (TITLE_HEIGHT - this.imageClose.getHeight()) / 2, this.imageClose.getWidth(), this.imageClose.getHeight());
     this.areaButtonRecordStop.setBounds(BORDER_SIZE, (TITLE_HEIGHT - this.imageRecord.getHeight()) / 2, this.imageRecord.getWidth(), this.imageRecord.getHeight());
 
@@ -540,6 +542,16 @@ public class JapagogeFrame extends JFrame {
     repaint();
   }
 
+  private void drawTitleText(final Graphics2D gfx, final String text) {
+    final Rectangle freeArea = new Rectangle(this.areaButtonRecordStop.x + this.areaButtonRecordStop.width, 0, areaButtonSettings.x - this.areaButtonRecordStop.x - this.areaButtonRecordStop.width, TITLE_HEIGHT);
+    gfx.setColor(Color.BLACK);
+    final Rectangle2D textBounds = gfx.getFontMetrics().getStringBounds(text, gfx);
+    final Shape oldClip = gfx.getClip();
+    gfx.setClip(freeArea);
+    gfx.drawString(text, freeArea.x + (freeArea.width - (int) textBounds.getWidth()) / 2, freeArea.y + (freeArea.height - (int) textBounds.getHeight()) / 2 + (int) textBounds.getHeight());
+    gfx.setClip(oldClip);
+  }
+
   @Override
   public void paint(final Graphics g) {
     final Graphics2D gfx = (Graphics2D) g;
@@ -547,7 +559,7 @@ public class JapagogeFrame extends JFrame {
     gfx.setColor(this.getBackground());
     gfx.fillRect(0, 0, bounds.width, bounds.height);
     if (this.state.get() == State.SELECT_POSITION) {
-      gfx.drawImage(this.imagePreferences, this.areaButtonPreferences.x, this.areaButtonPreferences.y, null);
+      gfx.drawImage(this.imageSettings, this.areaButtonSettings.x, this.areaButtonSettings.y, null);
       gfx.drawImage(this.imageClose, this.areaButtonClose.x, this.areaButtonClose.y, null);
       gfx.drawImage(this.imageRecord, this.areaButtonRecordStop.x, this.areaButtonRecordStop.y, null);
     } else {
