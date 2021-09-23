@@ -300,7 +300,7 @@
               <versionInfo>
                 <fileVersion>2.1.0.0</fileVersion>
                 <txtFileVersion>${project.version}</txtFileVersion>
-                <fileDescription>Screen grabber into APNG files</fileDescription>
+                <fileDescription>Screen capturing in APNG and GIF</fileDescription>
                 <copyright>2021 Igor Maznitsa</copyright>
                 <productVersion>2.1.0.0</productVersion>
                 <txtProductVersion>${project.version}</txtProductVersion>
