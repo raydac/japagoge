@@ -218,8 +218,6 @@ public class JapagogeFrame extends JFrame {
     this.statisticWindow.getContentPane().add(this.labelStatWidth);
     this.statisticWindow.getContentPane().add(this.labelStatHeight);
 
-    this.statisticWindow.setOpacity(0.6f);
-
     this.setLocationRelativeTo(null);
 
     this.showCapturingAreaMetrics = JapagogeConfig.getInstance().isShowBoundsInfo();
@@ -237,10 +235,21 @@ public class JapagogeFrame extends JFrame {
     }
   }
 
+  private boolean drawStopButton = true;
+  private final Timer halfSecondTimer = new Timer(500, e -> {
+    drawStopButton = !drawStopButton;
+    repaint();
+  });
+
   private void setState(final State newState) {
     if (this.state.get() != newState) {
       LOGGER.info("Change state to: " + newState);
       this.state.set(newState);
+      if (newState == State.RECORDING) {
+        this.halfSecondTimer.start();
+      } else {
+        this.halfSecondTimer.stop();
+      }
     }
     this.updateLook();
   }
@@ -558,14 +567,26 @@ public class JapagogeFrame extends JFrame {
     var bounds = this.getBounds();
     gfx.setColor(this.getBackground());
     gfx.fillRect(0, 0, bounds.width, bounds.height);
-    if (this.state.get() == State.SELECT_POSITION) {
-      gfx.drawImage(this.imageSettings, this.areaButtonSettings.x, this.areaButtonSettings.y, null);
-      gfx.drawImage(this.imageClose, this.areaButtonClose.x, this.areaButtonClose.y, null);
-      gfx.drawImage(this.imageRecord, this.areaButtonRecordStop.x, this.areaButtonRecordStop.y, null);
-    } else {
-      gfx.setColor(Color.BLACK);
-      gfx.drawRect(0, 0, bounds.width - 1, bounds.height - 1);
-      gfx.drawImage(this.imageStop, this.areaButtonRecordStop.x, this.areaButtonRecordStop.y, null);
+    switch (this.state.get()) {
+      case SELECT_POSITION: {
+        gfx.drawImage(this.imageSettings, this.areaButtonSettings.x, this.areaButtonSettings.y, null);
+        gfx.drawImage(this.imageClose, this.areaButtonClose.x, this.areaButtonClose.y, null);
+        gfx.drawImage(this.imageRecord, this.areaButtonRecordStop.x, this.areaButtonRecordStop.y, null);
+      }
+      break;
+      case RECORDING: {
+        gfx.setColor(Color.BLACK);
+        gfx.drawRect(0, 0, bounds.width - 1, bounds.height - 1);
+        if (this.drawStopButton)
+          gfx.drawImage(this.imageStop, this.areaButtonRecordStop.x, this.areaButtonRecordStop.y, null);
+      }
+      break;
+      case SAVING_RESULT: {
+        // draw nothing
+      }
+      break;
+      default:
+        throw new Error("Unexpected state");
     }
   }
 
