@@ -9,33 +9,39 @@
 
 ## Changelog
 
+- __2.1.0 (24-sep-2021)__
+  - improved grabbing of mouse pointer under Linux and Windows
+  - added support of window with capturing area coordinates
+  - improved settings panel
+  - added more 256-color fixed palettes
+  - added support of dithering for GIF export
+  - reworked UI
+  - refactoring
+  - embedded JDK updated to 17+35
+
+
 - __2.0.0 (11-sep-2021)__
   - improved rendering for mouse pointer
   - added support of GIF export
   - added support of color filters recording
 
-- __1.0.1 (01-sep-2021)__
-  - internal optimizations to decrease result file size
-
 ## Pre-word
 
-During writing an article for some online resource, I wanted to make small GIF animations and expected to use Peek
-utility for that. I was badly surprised to detect that the utility doesn't work well in multi-monitor environment.
-Googling didn't help me find any simple working analogue, so I decided quickly make some similar application but
-implemented in Java for cross-platform use. By default, it grabs into APNG images (Animation PNG records) allow save
-TrueColor (in opposite to Gif which supports only 256 colors). But since 2.0.0 version, conversion into GIF allowed, by
-default it uses AUTO palette based on image statistics. There are some number of predefined palettes which are
-selectable through preferences.
+During writing [an article](https://habr.com/ru/post/576012/) for some online IT resource, I had needs to make GIF
+animations. I was going to use well known [Peek](https://github.com/phw/peek) but the utility could not start in a
+multi-monitor environment. So that I had to write quickly my own pure cross-platform Java solution to make similar
+business. In the beginning I wrote simple utility which saved only animated PNG files, but then I added support of GIF
+conversion and some extra features.
 
 ## Pre-built
 
 | OS                                           |  Download link                                                                                                                                                                                | 
 | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| ![Windows](assets/icons/win64x64.png)        | __[Archive for Windows x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.0.0/japagoge-2.0.0-windows-jdk.zip)__             |
-| ![OSX](assets/icons/macos64x64.png)          | __[Archive for OSX x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.0.0/japagoge-2.0.0-macos-jdk.zip)__                   |
-| ![OSX Arm64](assets/icons/macosarm64x64.png) | __[Archive for OSX Arm64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.0.0/japagoge-2.0.0-macos-arm64-jdk.zip)__                 |
-| ![Linux](assets/icons/linux64x64.png)        | __[Archive for Linux x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.0.0/japagoge-2.0.0-linux-jdk.tar.gz)__              |
-| ![Java](assets/icons/java64x64.png)          | __[Cross-platform JAR file](https://github.com/raydac/japagoge/releases/download/2.0.0/japagoge-2.0.0.jar)__                                     | 
+| ![Windows](assets/icons/win64x64.png)        | __[Archive for Windows x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.0/japagoge-2.1.0-windows-jdk-amd64.zip)__             |
+| ![OSX](assets/icons/macos64x64.png)          | __[Archive for OSX x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.0/japagoge-2.1.0-macos-jdk-amd64.zip)__                   |
+| ![OSX Arm64](assets/icons/macosarm64x64.png) | __[Archive for OSX Arm64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.0/japagoge-2.1.0-macos-jdk-aarch64.zip)__                 |
+| ![Linux](assets/icons/linux64x64.png)        | __[Archive for Linux x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.0/japagoge-2.1.0-linux-jdk-amd64.tar.gz)__              |
+| ![Java](assets/icons/java64x64.png)          | __[Cross-platform JAR file](https://github.com/raydac/japagoge/releases/download/2.1.0/japagoge-2.1.0.jar)__                                     | 
 
 ## How to use the utility?
 
@@ -45,30 +51,48 @@ pointer appearance under Java so grabbed pointer look may differ from your syste
 
 ### Positioning
 
-Just after start, the window in positioning mode and shown in green color. All communications with the window only by
-mouse and you can drag the window and resize it to cover required screen area. Only in the positioning mode, you can see
-two buttons in the right top corner of the application window. The left one calls the options dialog and the right one
-closes the application. Keep in mind that click the close buttons is the only way to close the application.      
+Just after start, the window in positioning mode and shown in green color. Supported only mouse, and you can drag the
+window and resize it to cover required capture area. During positioning mode, you can see three buttons in top of the
+application window. The leftmost button is the main one and if click on it, recording will start. The middle button is
+to edit application settings and the rightmost button to close application.   
 ![Positioning state](assets/screens/state_positioning.png)
 
 ### Recording
 
-__Recording activation started only through mouse double-click on the window title area__. In recording mode all buttons
-will be removed and the window changes its color.   
+__Recording activated by single click by mouse on the leftmost button in the window title area__. In the recording mode
+all auxiliary buttons will be removed and the window changes its color. Only stop record button will be blinking one in
+the leftmost corner.       
 ![Positioning state](assets/screens/state_recording.png)   
-__To stop recording, you should again make mouse double-click on the window title area.__ After stop of recording you
-will see the save file dialog to save your recorded file, if you press cancel button then the record will be ignored and
-just deleted. I have not implemented any optimization for saved data so that result files can be big. If you choose GIF
-file as the result one then conversion will be started, it can take some time and depends on power of your computer.
+__To stop recording, you should make mouse double-click on the blinking button in the title area.__ After recording
+stop, you will see the save file dialog to save the record file, if you press cancel button then the record will be
+rejected and just deleted. If you choose GIF file type then conversion will be started, it can take some time and
+depends on power of your computer. You can select different options for saved GIF files in settings, but you have to do
+it before record.
 
-### Options
+### Settings
 
-You can tune recording options. For instance disable show of mouse pointer or limit number of loops in the result record
-show. For that you should click the preferences button during positioning mode, so you will see the Preferences dialog.
-If you are going to make GIF file as the result one then I would recommend make some sample with different palettes to
-find better result. Flag `Accurate RGB' can increase precision of colors during conversion but increasing spent
-time.    
+You can tune misc record options. For instance disable show of mouse pointer or limit number of loops in the result
+record show. To do it you should click the setting button and the Settings dialog will be opened.   
 ![Positioning state](assets/screens/state_preferences.png)
+
+- __Temp folder__ allows define the folder where intermediate files will be saved, if empty then default temp folder in
+  use.
+- __Capture delay (ms)__ delay between shots of the recorded area in milliseconds.
+- __Frame delay (ms)__ delay between frame show in result animation in milliseconds. If different with `Capture delay`
+  then animation will be either faster or slower.
+- __Loops__ is number of ami,ation loops to be played during result animation show, zero means infinity animation.
+- __Show capturing area metrics__ allows turn on information about capturing area coordinates during positioning.
+- __Grab mouse pointer__ allows grab position of mouse pointer and show it in the result animation.
+- __Color filter__ allows make some preprocessing of colors and make it gray or amber for instance. Decreasing result
+  file size.
+- __Palette RGB to GIF__ provides palette to be used during GIF conversion, AUTO means some global auto-palette formed
+  on statistic data.
+- __Better RGB colors to GIF__ allows increase precision of palette color search during GIF conversion but make process
+  much slower.
+- __Dithering GIF__ makes dithering in the result GIF to get better quality with provided palette but makes file much
+  bigger and process much slower.
+- __Force whole frame__ allows turn off optimization of saved frames and save whole frame, sometime can help in
+  dithering GIF conversion if area border artifacts presented.
 
 ### Known bugs
 
@@ -76,18 +100,6 @@ time.
 
 [It is a bug on Java API level, still not fixed](https://bugs.openjdk.java.net/browse/JDK-8013450)
 
-#### Under Windows mouse pointer looks differ from system one
+#### Under MacOS mouse pointer looks differ from system one
 
-When it is impossible take system icon then pre-defined cursor icons in use.
-
-### F.A.Q.
-
-#### How to convert APNG into GIF?
-
-You can directly save GIF through the File save dialog in the end of grabbing, just select GIF file type instead of PNG.
-Also, if you work under Ubuntu then you can use `apng2gif` utility for conversion and `gifsicle` for GIF optimization.
-
-### I have unexpected color artifacts in result GIF
-
-Try change `Palette for RGB to GIF` from AUTO to UNIVERSAL or any other fixed palette, also try turn on
-flag `Accurate RGB`.
+I have not found yet way to grab mouse pointer icon under MacOS..

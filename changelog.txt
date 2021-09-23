@@ -1,3 +1,13 @@
+- 2.1.0 (24-sep-2021)
+  - improved grabbing of mouse pointer under Linux and Windows
+  - added support of window with capturing area coordinates
+  - improved settings panel
+  - added more 256-color fixed palettes
+  - added support of dithering for GIF export
+  - reworked UI
+  - refactoring
+  - embedded JDK updated to 17+35
+
 - 2.0.0 (11-sep-2021)
   - improved rendering for mouse pointer
   - added support of GIF export
