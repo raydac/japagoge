@@ -64,7 +64,7 @@ public class JapagogeFrame extends JFrame {
     super("Japagoge", gc);
     this.setIconImage(loadIcon("appico.png"));
 
-    SystemUtils.setApplicationTaskbarTitle(this.getIconImage(), this.getTitle());
+    SystemUtils.setApplicationTaskbarTitle(this.getIconImage(), this.getTitle(), null);
 
     this.setFont(UIManager.getFont("InternalFrame.titleFont"));
 

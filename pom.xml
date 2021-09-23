@@ -288,7 +288,7 @@
             <configuration>
               <downloadUrl>https://bell-sw.com/pages/downloads/#/java-11-lts</downloadUrl>
               <classPath>
-                <mainClass>com.igormaznitsa.japagoge.Starter</mainClass>
+                <mainClass>Japagoge</mainClass>
                 <preCp>anything</preCp>
               </classPath>
               <icon>${basedir}/assets/appico.ico</icon>
@@ -297,10 +297,6 @@
                 <mutexName>japagogegrabber</mutexName>
               </singleInstance>
               <headerType>gui</headerType>
-              <opts>
-                <opt>-client</opt>
-                <opt>-Xverify:none</opt>
-              </opts>
               <versionInfo>
                 <fileVersion>2.1.0.0</fileVersion>
                 <txtFileVersion>${project.version}</txtFileVersion>
@@ -548,9 +544,28 @@
               <goal>shade</goal>
             </goals>
             <configuration>
+              <filters>
+                <filter>
+                  <artifact>*:*</artifact>
+                  <excludes>
+                    <exclude>META-INF/MANIFEST.MF</exclude>
+                    <exclude>META-INF/*.SF</exclude>
+                    <exclude>META-INF/*.DSA</exclude>
+                    <exclude>META-INF/*.RSA</exclude>
+                    <exclude>META-INF/NOTICE.txt</exclude>
+                    <exclude>META-INF/NOTICE</exclude>
+                    <exclude>META-INF/LICENSE.txt</exclude>
+                    <exclude>META-INF/LICENSE</exclude>
+                    <exclude>META-INF/license</exclude>
+                    <exclude>META-INF/AL2.0</exclude>
+                    <exclude>META-INF/LGPL2.1</exclude>
+                    <exclude>META-INF/COPYING</exclude>
+                  </excludes>
+                </filter>
+              </filters>
               <transformers>
                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                  <mainClass>com.igormaznitsa.japagoge.Starter</mainClass>
+                  <mainClass>Japagoge</mainClass>
                 </transformer>
               </transformers>
             </configuration>

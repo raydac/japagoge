@@ -8,7 +8,7 @@ public final class SystemUtils {
 
   }
 
-  public static void setApplicationTaskbarTitle(final Image taskBarIcon, final String taskBarBadgeTitle) {
+  public static void setApplicationTaskbarTitle(final Image taskBarIcon, final String title, final String taskBarBadgeTitle) {
     if (Taskbar.isTaskbarSupported()) {
       final Taskbar taskbar = Taskbar.getTaskbar();
       try {
@@ -28,7 +28,7 @@ public final class SystemUtils {
       final Field awtAppClassNameField =
               toolkit.getClass().getDeclaredField("awtAppClassName");
       awtAppClassNameField.setAccessible(true);
-      awtAppClassNameField.set(toolkit, taskBarBadgeTitle);
+      awtAppClassNameField.set(toolkit, title);
     } catch (Exception ex) {
       // just ignoring
     }

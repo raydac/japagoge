@@ -1,9 +1,9 @@
-package com.igormaznitsa.japagoge;
+import com.igormaznitsa.japagoge.JapagogeFrame;
 
 import javax.swing.*;
 import java.awt.*;
 
-public class Starter {
+public class Japagoge {
   public static void main(final String... args) {
     SwingUtilities.invokeLater(() -> {
       try {
