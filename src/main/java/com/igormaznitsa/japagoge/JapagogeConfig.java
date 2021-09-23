@@ -105,7 +105,7 @@ public class JapagogeConfig {
   }
 
   public long getFrameDelay() {
-    return this.preferences.getLong(Key.FRAME_DELAY.name(), 80);
+    return this.preferences.getLong(Key.FRAME_DELAY.name(), 100);
   }
 
   public void setFrameDelay(final long delayMs) {
