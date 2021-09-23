@@ -548,7 +548,7 @@ public class JapagogeFrame extends JFrame {
   private void onButtonSettings() {
     var data = new JapagogeConfig.JapagogeConfigData();
     var panel = new PreferencesPanel(data);
-    if (JOptionPane.showConfirmDialog(this, panel, "Options", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE) == JOptionPane.OK_OPTION) {
+    if (JOptionPane.showConfirmDialog(this, panel, "Settings", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE) == JOptionPane.OK_OPTION) {
       panel.fillData();
       data.save();
     }

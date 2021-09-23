@@ -32,7 +32,7 @@
       <filtered>false</filtered>
     </fileSet>
     <fileSet>
-      <directory>${project.build.directory}${file.separator}jre_macos</directory>
+      <directory>${project.build.directory}${file.separator}jre_macos_amd64</directory>
       <outputDirectory>
         ${file.separator}Japagoge.app${file.separator}Contents${file.separator}MacOS${file.separator}jre
       </outputDirectory>
