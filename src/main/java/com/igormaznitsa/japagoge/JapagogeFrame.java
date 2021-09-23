@@ -65,8 +65,8 @@ public class JapagogeFrame extends JFrame {
     this.setIconImage(loadIcon("appico.png"));
 
     SystemUtils.setApplicationTaskbarTitle(this.getIconImage(), this.getTitle(), null);
-
-    this.setFont(UIManager.getFont("InternalFrame.titleFont"));
+    final Font uiManagerFont = UIManager.getFont("InternalFrame.titleFont");
+    this.setFont(uiManagerFont == null ? new Font(Font.SANS_SERIF, Font.BOLD, 12) : uiManagerFont);
 
     this.getRootPane().putClientProperty("Window.shadow", Boolean.FALSE);
     this.getRootPane().getRootPane().putClientProperty("apple.awt.draggableWindowBackground", Boolean.FALSE);
@@ -560,11 +560,16 @@ public class JapagogeFrame extends JFrame {
   @SuppressWarnings("SameParameterValue")
   private void drawTitleText(final Graphics2D gfx, final String text) {
     final Rectangle freeArea = new Rectangle(this.areaButtonRecordStop.x + this.areaButtonRecordStop.width, 0, areaButtonSettings.x - this.areaButtonRecordStop.x - this.areaButtonRecordStop.width, TITLE_HEIGHT);
-    gfx.setColor(Color.BLACK);
-    final Rectangle2D textBounds = gfx.getFontMetrics().getStringBounds(text, gfx);
+
+    final Font font = this.getFont();
+    final FontMetrics fontMetrics = this.getFontMetrics(font);
+    final Rectangle2D textBounds = fontMetrics.getStringBounds(text, gfx);
+
     final Shape oldClip = gfx.getClip();
+    gfx.setFont(font);
     gfx.setClip(freeArea);
-    gfx.drawString(text, freeArea.x + (freeArea.width - (int) textBounds.getWidth()) / 2, freeArea.y + (freeArea.height + (int) textBounds.getY()) / 2 - (int) textBounds.getY());
+    gfx.setColor(Color.BLACK);
+    gfx.drawString(text, freeArea.x + (freeArea.width - (int) textBounds.getWidth()) / 2, freeArea.y + (freeArea.height + (int) textBounds.getY()) / 2 - (int) textBounds.getY() - fontMetrics.getLeading());
     gfx.setClip(oldClip);
   }
 
