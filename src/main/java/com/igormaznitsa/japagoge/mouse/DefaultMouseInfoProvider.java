@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Objects;
 
+@SuppressWarnings("unused")
 class DefaultMouseInfoProvider implements MouseInfoProvider {
 
   public static final MousePointerIcon MOUSEICON_APPSTARTING = makeMousePointerIcon("mouse_appstarting", 10, 10);

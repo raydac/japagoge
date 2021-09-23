@@ -1,11 +1,11 @@
 package com.igormaznitsa.japagoge.utils;
 
 public final class HSV {
-  public double hue;
-  public double saturation;
-  public double value;
+  public final double hue;
+  public final double saturation;
+  public final double value;
 
-  HSV(double h, double s, double v) {
+  HSV(final double h, final double s, final double v) {
     this.hue = h;
     this.saturation = s;
     this.value = v;

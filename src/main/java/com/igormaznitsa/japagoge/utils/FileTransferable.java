@@ -63,7 +63,7 @@ public class FileTransferable implements ClipboardOwner, Transferable {
     this.flavors = flavorsList.toArray(new DataFlavor[0]);
   }
 
-  public Object getTransferData(DataFlavor flavor) throws UnsupportedFlavorException, IOException {
+  public Object getTransferData(DataFlavor flavor) throws UnsupportedFlavorException {
     if (DataFlavor.javaFileListFlavor.equals(flavor)) {
       return List.of(this.file);
     } else if (DataFlavor.stringFlavor.equals(flavor)) {

@@ -2,6 +2,7 @@ package com.igormaznitsa.japagoge;
 
 import com.igormaznitsa.japagoge.mouse.MouseInfoProviderFactory;
 import com.igormaznitsa.japagoge.utils.ClipboardUtils;
+import com.igormaznitsa.japagoge.utils.SystemUtils;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
@@ -28,10 +29,12 @@ import java.util.logging.Logger;
 @SuppressWarnings("unused")
 public class JapagogeFrame extends JFrame {
 
+  private static final String VERSION = "v 2.1.0";
+
   private static final Logger LOGGER = Logger.getLogger("JapagogeFrame");
 
   private static final int BORDER_SIZE = 5;
-  private static final int TITLE_HEIGHT = 34;
+  private static final int TITLE_HEIGHT = 36;
 
   private static final Color COLOR_SELECT_POSITION = Color.GREEN;
   private static final Color COLOR_RECORDING = Color.CYAN;
@@ -57,13 +60,16 @@ public class JapagogeFrame extends JFrame {
 
   private boolean showCapturingAreaMetrics;
 
-  public JapagogeFrame(final GraphicsConfiguration gc) throws AWTException {
+  public JapagogeFrame(final GraphicsConfiguration gc) {
     super("Japagoge", gc);
+    this.setIconImage(loadIcon("appico.png"));
+
+    SystemUtils.setApplicationTaskbarTitle(this.getIconImage(), this.getTitle());
+
+    this.setFont(UIManager.getFont("InternalFrame.titleFont"));
 
     this.getRootPane().putClientProperty("Window.shadow", Boolean.FALSE);
     this.getRootPane().getRootPane().putClientProperty("apple.awt.draggableWindowBackground", Boolean.FALSE);
-
-    this.setIconImage(loadIcon("appico.png"));
 
 
     final Dimension initialSize = new Dimension(256, 256);
@@ -265,7 +271,7 @@ public class JapagogeFrame extends JFrame {
     this.labelStatWidth.setText(" W=" + capturingArea.width + ' ');
     this.labelStatHeight.setText(" H=" + capturingArea.height + ' ');
     this.statisticWindow.pack();
-    this.statisticWindow.setLocation(mainWindowBounds.x + mainWindowBounds.width - (BORDER_SIZE - 2) - this.statisticWindow.getWidth(), mainWindowBounds.y + TITLE_HEIGHT - 1);
+    this.statisticWindow.setLocation(mainWindowBounds.x + (mainWindowBounds.width - this.statisticWindow.getWidth()) / 2, mainWindowBounds.y + TITLE_HEIGHT + (mainWindowBounds.height - TITLE_HEIGHT - this.statisticWindow.getHeight()) / 2);
   }
 
   private void updateLook() {
@@ -551,13 +557,14 @@ public class JapagogeFrame extends JFrame {
     repaint();
   }
 
+  @SuppressWarnings("SameParameterValue")
   private void drawTitleText(final Graphics2D gfx, final String text) {
     final Rectangle freeArea = new Rectangle(this.areaButtonRecordStop.x + this.areaButtonRecordStop.width, 0, areaButtonSettings.x - this.areaButtonRecordStop.x - this.areaButtonRecordStop.width, TITLE_HEIGHT);
     gfx.setColor(Color.BLACK);
     final Rectangle2D textBounds = gfx.getFontMetrics().getStringBounds(text, gfx);
     final Shape oldClip = gfx.getClip();
     gfx.setClip(freeArea);
-    gfx.drawString(text, freeArea.x + (freeArea.width - (int) textBounds.getWidth()) / 2, freeArea.y + (freeArea.height - (int) textBounds.getHeight()) / 2 + (int) textBounds.getHeight());
+    gfx.drawString(text, freeArea.x + (freeArea.width - (int) textBounds.getWidth()) / 2, freeArea.y + (freeArea.height + (int) textBounds.getY()) / 2 - (int) textBounds.getY());
     gfx.setClip(oldClip);
   }
 
@@ -569,6 +576,7 @@ public class JapagogeFrame extends JFrame {
     gfx.fillRect(0, 0, bounds.width, bounds.height);
     switch (this.state.get()) {
       case SELECT_POSITION: {
+        this.drawTitleText(gfx, "Japagoge " + VERSION);
         gfx.drawImage(this.imageSettings, this.areaButtonSettings.x, this.areaButtonSettings.y, null);
         gfx.drawImage(this.imageClose, this.areaButtonClose.x, this.areaButtonClose.y, null);
         gfx.drawImage(this.imageRecord, this.areaButtonRecordStop.x, this.areaButtonRecordStop.y, null);

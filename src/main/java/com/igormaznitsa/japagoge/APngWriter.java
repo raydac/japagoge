@@ -612,6 +612,7 @@ public final class APngWriter {
     int height;
     byte[] data;
 
+    @SuppressWarnings("SameParameterValue")
     ImagePortion(final int x, final int y, final int width, final int height, final byte[] data) {
       this.x = x;
       this.y = y;

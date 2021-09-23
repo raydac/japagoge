@@ -18,6 +18,7 @@ import java.util.logging.Logger;
 import java.util.stream.IntStream;
 import java.util.zip.Inflater;
 
+@SuppressWarnings("unused")
 public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
 
   private static final Logger LOGGER = Logger.getLogger("APNGtoGIF");

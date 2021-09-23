@@ -16,7 +16,7 @@ public class Starter {
       try {
         var window = new JapagogeFrame(screen);
         window.setVisible(true);
-      } catch (AWTException ex) {
+      } catch (Exception ex) {
         JOptionPane.showMessageDialog(null, "Can't create frame", "Error", JOptionPane.ERROR_MESSAGE);
       }
     });

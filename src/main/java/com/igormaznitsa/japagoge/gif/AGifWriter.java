@@ -5,6 +5,7 @@ import java.io.OutputStream;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicInteger;
 
+@SuppressWarnings("unused")
 public final class AGifWriter {
 
   private static final int DISPOSAL_NOT_SPECIFIED = 0;
