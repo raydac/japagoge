@@ -2,6 +2,8 @@ package com.igormaznitsa.japagoge;
 
 import com.igormaznitsa.japagoge.mouse.MouseInfoProviderFactory;
 import com.igormaznitsa.japagoge.utils.ClipboardUtils;
+import com.igormaznitsa.japagoge.utils.Palette256;
+import com.igormaznitsa.japagoge.utils.PaletteUtils;
 import com.igormaznitsa.japagoge.utils.SystemUtils;
 
 import javax.imageio.ImageIO;
@@ -41,11 +43,13 @@ public class JapagogeFrame extends JFrame {
   private static final Color COLOR_SAVING_RESULT = Color.YELLOW;
   private final ComponentResizer resizer;
   private final AtomicReference<ScreenCapturer> currentScreenCapturer = new AtomicReference<>();
+  private final BufferedImage imageConvert = loadIcon("button-convert.png");
   private final BufferedImage imageClose = loadIcon("button-close.png");
   private final BufferedImage imageSettings = loadIcon("button-settings.png");
   private final BufferedImage imageRecord = loadIcon("button-record.png");
   private final BufferedImage imageStop = loadIcon("button-stop.png");
   private final BufferedImage imageHourglassIcon = loadIcon("hourglass48x48.png");
+  private final Rectangle areaButtonConvert = new Rectangle();
   private final Rectangle areaButtonClose = new Rectangle();
   private final Rectangle areaButtonSettings = new Rectangle();
   private final Rectangle areaButtonRecordStop = new Rectangle();
@@ -62,6 +66,7 @@ public class JapagogeFrame extends JFrame {
     drawStopButton = !drawStopButton;
     repaint();
   });
+  private File conversionInFolder = null;
 
   public JapagogeFrame(final GraphicsConfiguration gc) {
     super("Japagoge", gc);
@@ -75,7 +80,7 @@ public class JapagogeFrame extends JFrame {
     this.getRootPane().getRootPane().putClientProperty("apple.awt.draggableWindowBackground", Boolean.FALSE);
 
 
-    final Dimension initialSize = new Dimension(256, 256);
+    final Dimension initialSize = new Dimension(320, 256);
 
     this.setUndecorated(true);
     this.setBackground(Color.ORANGE);
@@ -116,6 +121,9 @@ public class JapagogeFrame extends JFrame {
               } else if (areaButtonClose.contains(componentPoint)) {
                 e.consume();
                 onButtonClose();
+              } else if (areaButtonConvert.contains(componentPoint)) {
+                e.consume();
+                onButtonConvert();
               } else if (areaButtonSettings.contains(componentPoint)) {
                 e.consume();
                 onButtonSettings();
@@ -162,7 +170,10 @@ public class JapagogeFrame extends JFrame {
         if (!e.isConsumed() && resizer.isEnabled()) {
           var newMouseScreenPoint = new Point(e.getPoint());
           if (newMouseScreenPoint.getY() < TITLE_HEIGHT) {
-            if (areaButtonClose.contains(newMouseScreenPoint) || areaButtonSettings.contains(newMouseScreenPoint) || areaButtonRecordStop.contains(newMouseScreenPoint)) {
+            if (areaButtonClose.contains(newMouseScreenPoint)
+                    || areaButtonSettings.contains(newMouseScreenPoint)
+                    || areaButtonConvert.contains(newMouseScreenPoint)
+                    || areaButtonRecordStop.contains(newMouseScreenPoint)) {
               setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
             } else {
               setCursor(Cursor.getDefaultCursor());
@@ -344,6 +355,40 @@ public class JapagogeFrame extends JFrame {
     }
   }
 
+  private void doVisualConversionPngToGif(
+          final File pngFile,
+          final File gifFile,
+          final boolean accurateRgb,
+          final boolean dithering,
+          final int[] globalRgb256palette,
+          final boolean placeLinkToClipboard
+  ) {
+    LOGGER.info("Converting APNG file into GIF: " + pngFile + " -> " + gifFile);
+    var converter = new APngToGifConvertingWorker(
+            pngFile,
+            gifFile,
+            accurateRgb,
+            dithering,
+            globalRgb256palette
+    );
+    converter.execute();
+    try {
+      JOptionPane.showOptionDialog(
+              this,
+              APngToGifConvertingWorker.makePanelFor(converter),
+              "Converting into GIF (might take a while)",
+              JOptionPane.DEFAULT_OPTION,
+              JOptionPane.PLAIN_MESSAGE,
+              new ImageIcon(this.imageHourglassIcon),
+              new Object[]{"Cancel"},
+              null);
+      if (placeLinkToClipboard)
+        ClipboardUtils.placeFileLinks(gifFile);
+    } finally {
+      converter.dispose();
+    }
+  }
+
   private void stopRecording() {
     try {
       var currentCapturer = this.currentScreenCapturer.getAndSet(null);
@@ -404,41 +449,29 @@ public class JapagogeFrame extends JFrame {
               if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
                 var selectedFile = fileChooser.getSelectedFile();
 
-                var selectedFilter = fileChooser.getFileFilter();
-                JapagogeConfig.getInstance().setTargetFolder(selectedFile.getParentFile());
+                if (this.ensureOverwrite(selectedFile)) {
 
-                if (selectedFilter == gifFilter) {
-                  LOGGER.info("Converting APNG file into GIF: " + tempFile);
-                  var converter = new APngToGifConvertingWorker(
-                          currentCapturer,
-                          JapagogeConfig.getInstance().isAccurateRgb(),
-                          JapagogeConfig.getInstance().isDithering(),
-                          selectedFile
-                  );
-                  converter.execute();
-                  try {
-                    JOptionPane.showOptionDialog(
-                            this,
-                            APngToGifConvertingWorker.makePanelFor(converter),
-                            "Converting into GIF (might take a while)",
-                            JOptionPane.DEFAULT_OPTION,
-                            JOptionPane.PLAIN_MESSAGE,
-                            new ImageIcon(this.imageHourglassIcon),
-                            new Object[]{"Cancel"},
-                            null);
-                    ClipboardUtils.placeFileLinks(selectedFile);
-                  } finally {
-                    converter.dispose();
-                  }
-                } else {
-                  LOGGER.info("Just moving APNG file: " + tempFile);
-                  try {
-                    Files.move(tempFile.toPath(), selectedFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                    LOGGER.info("Saved result file " + selectedFile.getName() + " size " + selectedFile.length() + " bytes");
-                    ClipboardUtils.placeFileLinks(selectedFile);
-                  } catch (Exception ex) {
-                    LOGGER.log(Level.SEVERE, "Can't move result file", ex);
-                    JOptionPane.showMessageDialog(this, "Can't move result file!", "Error", JOptionPane.ERROR_MESSAGE);
+                  var selectedFilter = fileChooser.getFileFilter();
+                  JapagogeConfig.getInstance().setTargetFolder(selectedFile.getParentFile());
+
+                  if (selectedFilter == gifFilter) {
+                    this.doVisualConversionPngToGif(
+                            tempFile,
+                            selectedFile,
+                            JapagogeConfig.getInstance().isAccurateRgb(),
+                            JapagogeConfig.getInstance().isDithering(),
+                            currentCapturer.makeGlobalRgb256Palette(),
+                            true);
+                  } else {
+                    LOGGER.info("Just moving APNG file: " + tempFile);
+                    try {
+                      Files.move(tempFile.toPath(), selectedFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                      LOGGER.info("Saved result file " + selectedFile.getName() + " size " + selectedFile.length() + " bytes");
+                      ClipboardUtils.placeFileLinks(selectedFile);
+                    } catch (Exception ex) {
+                      LOGGER.log(Level.SEVERE, "Can't move result file", ex);
+                      JOptionPane.showMessageDialog(this, "Can't move result file!", "Error", JOptionPane.ERROR_MESSAGE);
+                    }
                   }
                 }
               } else {
@@ -519,7 +552,9 @@ public class JapagogeFrame extends JFrame {
 
     final int gapBetweenButtons = 4;
 
-    int buttonStartX = width - this.imageSettings.getWidth() - this.imageClose.getWidth() - gapBetweenButtons * 2;
+    int buttonStartX = width - this.imageSettings.getWidth() - this.imageClose.getWidth() - this.imageConvert.getWidth() - gapBetweenButtons * 3;
+    this.areaButtonConvert.setBounds(buttonStartX, (TITLE_HEIGHT - this.imageConvert.getHeight()) / 2, this.imageConvert.getWidth(), this.imageConvert.getHeight());
+    buttonStartX += this.areaButtonConvert.width + gapBetweenButtons;
     this.areaButtonSettings.setBounds(buttonStartX, (TITLE_HEIGHT - this.imageSettings.getHeight()) / 2, this.imageSettings.getWidth(), this.imageSettings.getHeight());
     buttonStartX += this.areaButtonSettings.width + gapBetweenButtons;
     this.areaButtonClose.setBounds(buttonStartX, (TITLE_HEIGHT - this.imageClose.getHeight()) / 2, this.imageClose.getWidth(), this.imageClose.getHeight());
@@ -540,6 +575,96 @@ public class JapagogeFrame extends JFrame {
       this.dispose();
       System.exit(0);
     }
+  }
+
+  private void onButtonConvert() {
+    if (this.state.get() == State.SELECT_POSITION) {
+      LOGGER.info("Conversion activated");
+      final JFileChooser sourceFIleChooser = new JFileChooser(conversionInFolder);
+      sourceFIleChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+      sourceFIleChooser.setMultiSelectionEnabled(false);
+      sourceFIleChooser.setAcceptAllFileFilterUsed(false);
+      sourceFIleChooser.addChoosableFileFilter(new FileFilter() {
+        @Override
+        public boolean accept(final File f) {
+          if (f.isDirectory()) return true;
+          final String name = f.getName().toLowerCase(Locale.ENGLISH);
+          return name.endsWith(".png") || name.endsWith(".apng");
+        }
+
+        @Override
+        public String getDescription() {
+          return "PNG and APNG images (*.png, *.apng)";
+        }
+      });
+
+      sourceFIleChooser.setDialogTitle("Select source PNG or APNG image");
+
+      if (sourceFIleChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+        final File sourceFile = sourceFIleChooser.getSelectedFile();
+        this.conversionInFolder = sourceFile.getParentFile();
+
+        LOGGER.info("Selected source file: " + sourceFile);
+        if (sourceFile.isFile()) {
+          final JFileChooser targetFileChooser = new JFileChooser(JapagogeConfig.getInstance().getTargetFolder());
+          targetFileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+          targetFileChooser.setMultiSelectionEnabled(false);
+          targetFileChooser.setAcceptAllFileFilterUsed(false);
+          targetFileChooser.setDialogTitle("Target GIF file");
+          targetFileChooser.addChoosableFileFilter(new FileFilter() {
+            @Override
+            public boolean accept(final File f) {
+              if (f.isDirectory()) return true;
+              final String name = f.getName().toLowerCase(Locale.ENGLISH);
+              return name.endsWith(".gif");
+            }
+
+            @Override
+            public String getDescription() {
+              return "GIF images (*.gif)";
+            }
+          });
+
+          if (targetFileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
+            final File targetFile = ensureExtension(targetFileChooser.getSelectedFile(), ".gif");
+            LOGGER.info("Selected target file: " + targetFile);
+            if (this.ensureOverwrite(targetFile)) {
+              Palette256 palette = JapagogeConfig.getInstance().getGifPaletteForRgb();
+              if (palette == Palette256.AUTO) palette = Palette256.UNIVERSAL;
+
+              LOGGER.info("Converting " + sourceFile + " to " + targetFile + ", palette " + palette.name());
+
+              this.doVisualConversionPngToGif(sourceFile, targetFile,
+                      JapagogeConfig.getInstance().isAccurateRgb(),
+                      JapagogeConfig.getInstance().isDithering(),
+                      palette.getPalette().orElseGet(PaletteUtils::makeGrayscaleRgb256),
+                      false
+              );
+            }
+          }
+        } else {
+          JOptionPane.showMessageDialog(this, "Can't find file: " + sourceFile, "Error", JOptionPane.ERROR_MESSAGE);
+        }
+      }
+    }
+
+
+  }
+
+  private File ensureExtension(final File file, final String extension) {
+    String name = file.getName();
+    if (!name.toLowerCase(Locale.ENGLISH).endsWith(extension.toLowerCase(Locale.ENGLISH))) {
+      return new File(file.getParentFile(), name + extension);
+    }
+    return file;
+  }
+
+  private boolean ensureOverwrite(final File file) {
+    boolean ok = true;
+    if (file.isFile()) {
+      ok = JOptionPane.showConfirmDialog(this, "File " + file.getName() + " exists, overwrite it?", "Overwrite file?", JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION;
+    }
+    return ok;
   }
 
   private void onButtonSettings() {
@@ -579,6 +704,7 @@ public class JapagogeFrame extends JFrame {
     switch (this.state.get()) {
       case SELECT_POSITION: {
         this.drawTitleText(gfx, "Japagoge " + VERSION);
+        gfx.drawImage(this.imageConvert, this.areaButtonConvert.x, this.areaButtonConvert.y, null);
         gfx.drawImage(this.imageSettings, this.areaButtonSettings.x, this.areaButtonSettings.y, null);
         gfx.drawImage(this.imageClose, this.areaButtonClose.x, this.areaButtonClose.y, null);
         gfx.drawImage(this.imageRecord, this.areaButtonRecordStop.x, this.areaButtonRecordStop.y, null);
