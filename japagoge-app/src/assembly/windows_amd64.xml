@@ -16,7 +16,9 @@
       <outputDirectory>${project.build.finalName}${file.separator}</outputDirectory>
     </file>
     <file>
-      <source>${project.build.directory}${file.separator}japagoge.exe</source>
+      <source>
+        ${project.basedir}${file.separator}..${file.separator}japagoge-win-launcher${file.separator}bin${file.separator}japagoge.exe
+      </source>
       <destName>japagoge.exe</destName>
       <outputDirectory>${project.build.finalName}${file.separator}</outputDirectory>
     </file>

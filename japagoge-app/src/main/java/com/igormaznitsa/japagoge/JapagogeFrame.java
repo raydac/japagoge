@@ -29,7 +29,7 @@ import java.util.logging.Logger;
 @SuppressWarnings("unused")
 public class JapagogeFrame extends JFrame {
 
-  private static final String VERSION = "v 2.1.0";
+  private static final String VERSION = "v 2.1.1";
 
   private static final Logger LOGGER = Logger.getLogger("JapagogeFrame");
 
@@ -49,16 +49,19 @@ public class JapagogeFrame extends JFrame {
   private final Rectangle areaButtonClose = new Rectangle();
   private final Rectangle areaButtonSettings = new Rectangle();
   private final Rectangle areaButtonRecordStop = new Rectangle();
-  private Point lastMousePressedTitleScreenPoint = null;
   private final AtomicReference<State> state = new AtomicReference<>(State.SELECT_POSITION);
-
   private final JWindow statisticWindow;
   private final JLabel labelStatX;
   private final JLabel labelStatY;
   private final JLabel labelStatWidth;
   private final JLabel labelStatHeight;
-
+  private Point lastMousePressedTitleScreenPoint = null;
   private boolean showCapturingAreaMetrics;
+  private boolean drawStopButton = true;
+  private final Timer halfSecondTimer = new Timer(500, e -> {
+    drawStopButton = !drawStopButton;
+    repaint();
+  });
 
   public JapagogeFrame(final GraphicsConfiguration gc) {
     super("Japagoge", gc);
@@ -240,12 +243,6 @@ public class JapagogeFrame extends JFrame {
       throw new Error("Can't load resource image: " + resourceName, ex);
     }
   }
-
-  private boolean drawStopButton = true;
-  private final Timer halfSecondTimer = new Timer(500, e -> {
-    drawStopButton = !drawStopButton;
-    repaint();
-  });
 
   private void setState(final State newState) {
     if (this.state.get() != newState) {

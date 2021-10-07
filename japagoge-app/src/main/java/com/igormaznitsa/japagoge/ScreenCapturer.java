@@ -23,8 +23,6 @@ public final class ScreenCapturer {
   private static final Logger LOGGER = Logger.getLogger("ScreenCapturer");
 
   private static final Timer internalTimer = new Timer("capture-timer", true);
-  private APngWriter.Statistics pngStatistics;
-
   private final Robot robot;
   private final Rectangle screenArea;
   private final File targetFile;
@@ -36,6 +34,7 @@ public final class ScreenCapturer {
   private final MouseInfoProvider mouseInfoProvider;
   private final Palette256 palette;
   private final boolean forceWholeFrame;
+  private APngWriter.Statistics pngStatistics;
 
   public ScreenCapturer(
           final GraphicsDevice device,

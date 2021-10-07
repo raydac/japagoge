@@ -119,6 +119,10 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
     return unpacked;
   }
 
+  private static void addArrayCell(final byte[] array, final int index, final int value) {
+    array[index] = (byte) Math.max(0, Math.min(0xFF, (array[index] & 0xFF) + value));
+  }
+
   public void addProgressListener(final ProgressListener listener) {
     this.listeners.add(listener);
   }
@@ -126,10 +130,6 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
   @SuppressWarnings("unused")
   public void removeActionListener(final ProgressListener listener) {
     this.listeners.remove(listener);
-  }
-
-  private static void addArrayCell(final byte[] array, final int index, final int value) {
-    array[index] = (byte) Math.max(0, Math.min(0xFF, (array[index] & 0xFF) + value));
   }
 
   private byte[] generateIndexTable(final byte[] rgb256Palette, final boolean accurateRgb) {
