@@ -3,6 +3,7 @@ package com.igormaznitsa.japagoge.gif;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @SuppressWarnings("unused")
@@ -34,20 +35,24 @@ public final class AGifWriter {
     this.backgroundColorIndex = backgroundColorIndex;
     this.logicalImageWidth = logicalImageWidth;
     this.logicalImageHeight = logicalImageHeight;
-    this.globalRgbPalette = globalRgbPalette.clone();
+
+    final int globalPaletteItems = (int) Math.pow(2, globalPaletteSize(globalRgbPalette.length / 3) + 1);
+
+    this.globalRgbPalette = Arrays.copyOf(globalRgbPalette.clone(), globalPaletteItems * 3);
   }
 
-  private static int findN(final int number) {
-    int x = number - 1;
-    if (x >= 255) return 7;
-    if (x >= 127) return 6;
-    if (x >= 63) return 5;
-    if (x >= 31) return 4;
-    if (x >= 15) return 3;
-    if (x >= 7) return 2;
-    if (x >= 3) return 1;
-    if (x >= 1) return 0;
-    throw new IllegalArgumentException("Unexpected number: " + number);
+  private static int globalPaletteSize(int paletteColors) {
+    if (paletteColors > 256 || paletteColors <= 0) throw new IllegalArgumentException("Must be in interval 1..256");
+
+    if (paletteColors == 256) return 7;
+    if (paletteColors >= 128) return 6;
+    if (paletteColors >= 64) return 5;
+    if (paletteColors >= 32) return 4;
+    if (paletteColors >= 16) return 3;
+    if (paletteColors >= 8) return 2;
+    if (paletteColors >= 4) return 1;
+
+    return 0;
   }
 
   private void writeLogicalScreenDescriptor(
@@ -58,11 +63,9 @@ public final class AGifWriter {
     writeShort(screenWidth);
     writeShort(screenHeight);
 
-    final int paletteN = findN(paletteSize);
+    final int gctSize = globalPaletteSize(paletteSize);
 
-    final int flags = 0x80 | (paletteN << 4) | paletteN;
-    this.outputStream.write(flags);
-
+    this.outputStream.write(0x80 | (7 << 4) | gctSize);
     this.outputStream.write(backgroundColorIndex);
     this.outputStream.write(0);
   }
@@ -82,9 +85,11 @@ public final class AGifWriter {
     this.outputStream.write(0x21);
     this.outputStream.write(0xF9);
     this.outputStream.write(0x04);
+
     this.outputStream.write((disposalMethod & 7) << 2);
     writeShort(Math.round(delay.toMillis() / 10.0f));
     this.outputStream.write(0);
+
     this.outputStream.write(0);
   }
 
@@ -100,7 +105,7 @@ public final class AGifWriter {
   private void writeNetscapeExt(final int repeats) throws IOException {
     this.outputStream.write(0x21);
     this.outputStream.write(0xFF);
-    this.outputStream.write(11);
+    this.outputStream.write(0x0B);
     writeString("NETSCAPE2.0");
     this.outputStream.write(3);
     this.outputStream.write(1);
@@ -127,7 +132,7 @@ public final class AGifWriter {
     final int frame = this.frameCounter.getAndIncrement();
     if (frame == 0) {
       writeString("GIF89a");
-      writeLogicalScreenDescriptor(this.logicalImageWidth, this.logicalImageHeight, this.backgroundColorIndex, this.globalRgbPalette.length);
+      writeLogicalScreenDescriptor(this.logicalImageWidth, this.logicalImageHeight, this.backgroundColorIndex, this.globalRgbPalette.length / 3);
       writePalette(this.globalRgbPalette);
       if (this.repeat >= 0) {
         writeNetscapeExt(this.repeat);
@@ -137,7 +142,9 @@ public final class AGifWriter {
       writeGraphicCtrlExt(delay, DISPOSAL_DO_NOT_DISPOSE);
     }
     writeImageDesc(x, y, width, height);
-    new GifLzwCompressor(this.outputStream, width, height, pixelIndexes).encode();
+    new GifLzwCompressor(this.outputStream, width, height, pixelIndexes)
+            .encode();
+    this.outputStream.flush();
   }
 }
 

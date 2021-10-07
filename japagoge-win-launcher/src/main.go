@@ -15,8 +15,8 @@ import (
 const (
 	ERROR_ALREADY_EXISTS = 183
 	JDK_PATH             = "\\jre\\bin\\javaw.exe"
-	JAR_FILE             = "\\battleships-resurrection.jar"
-	MUTEX                = "battleships-resurrection"
+	JAR_FILE             = "\\japagoge.jar"
+	MUTEX                = "japagoge-recorder"
 )
 
 var (

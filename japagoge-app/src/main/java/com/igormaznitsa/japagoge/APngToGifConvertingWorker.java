@@ -17,6 +17,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.IntStream;
+import java.util.zip.DataFormatException;
 import java.util.zip.Inflater;
 
 @SuppressWarnings("unused")
@@ -82,7 +83,12 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
       }
       if (p > 100 || p < 0) {
         var window = SwingUtilities.windowForComponent(panel);
-        if (window != null) window.setVisible(false);
+        if (window != null) {
+          if (p == Integer.MIN_VALUE) {
+            JOptionPane.showMessageDialog(window, "Error during conversion, may be wrong image format!", "Error", JOptionPane.ERROR_MESSAGE);
+          }
+          window.setVisible(false);
+        }
       } else {
         progressBar.setValue(p);
       }
@@ -93,21 +99,79 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
     return panel;
   }
 
-  private static byte[] extractPngRaster(final int width, final int height, final byte[] packedData) {
-    Inflater inflater = new Inflater();
-    inflater.setInput(packedData);
-    final byte[] unpacked = new byte[(width * height) + height];
-    try {
-      final int length = inflater.inflate(unpacked);
-      if (length != unpacked.length) throw new IllegalStateException("Unexpected unpacked frame length");
-    } catch (Exception ex) {
-      throw new RuntimeException("Can't decompress frame", ex);
-    }
+  private static byte[] ensureRgb(final PngMode pngMode, final int width, final int height, final byte[] rgbPalette, final byte[] unpackedNormalizedRaster) {
+    byte[] result = unpackedNormalizedRaster;
+    if (pngMode != PngMode.MODE_RGB_8) {
+      final byte[] rgbArray = new byte[width * height * 3];
+      final int bitsPerLine = pngMode.calcBitsPerLine(width) - 8;
+      final int bytesPerLine = pngMode.calcBytesPerScanline(width) - 1;
 
-    final byte[] result = new byte[width * height];
-    final int scanLineWidth = 1 + width;
+      int rgbOffset = 0;
+
+      for (int y = 0; y < height; y++) {
+        int srcOffset = y * bytesPerLine;
+
+        long readSamples = 0L;
+        int samplesRestBits = pngMode.getBitsPerSample() * pngMode.getSamples();
+
+        int bitsInAcc = 0;
+        int acc = 0;
+        for (int x = 0; x < width; ) {
+          if (bitsInAcc == 0) {
+            acc = unpackedNormalizedRaster[srcOffset++];
+            bitsInAcc = 8;
+          }
+          int bitsRead = Math.min(bitsInAcc, samplesRestBits);
+          while (bitsRead > 0) {
+            readSamples = (readSamples << 1) | ((acc >>> 7) & 1);
+            acc <<= 1;
+            samplesRestBits--;
+            bitsRead--;
+            bitsInAcc--;
+          }
+          if (samplesRestBits == 0) {
+            pngMode.samplesToRgb(readSamples, rgbArray, rgbPalette, rgbOffset);
+            samplesRestBits = pngMode.getBitsPerSample() * pngMode.getSamples();
+            rgbOffset += 3;
+            x++;
+          }
+        }
+      }
+      result = rgbArray;
+    }
+    return result;
+  }
+
+  private static Inflater extractData(final Inflater inflater, final PngChunk dataChunk, final ByteArrayOutputStream outputStream) throws IOException {
+    final byte[] workData;
+    if (dataChunk.name.equals("IDAT")) {
+      workData = dataChunk.data;
+    } else if (dataChunk.name.equals("fdAT")) {
+      workData = new byte[dataChunk.data.length - 4];
+      System.arraycopy(dataChunk.data, 4, workData, 0, workData.length);
+    } else throw new IllegalArgumentException("Unsupported data chunk: " + dataChunk.name);
+
+    try {
+      final Inflater workInflater = inflater == null ? new Inflater() : inflater;
+      workInflater.setInput(workData);
+      final byte[] unpackBuffer = new byte[16384];
+      while (!workInflater.finished()) {
+        final int unpackedLength = workInflater.inflate(unpackBuffer, 0, unpackBuffer.length);
+        if (unpackedLength == 0)
+          break;
+        outputStream.write(unpackBuffer, 0, unpackedLength);
+      }
+      return workInflater.finished() ? null : workInflater;
+    } catch (DataFormatException ex) {
+      throw new IOException("Compressed data format error", ex);
+    }
+  }
+
+  private static byte[] trimFilter(final PngMode pngMode, final int width, final int height, final byte[] unpackedData) {
+    final int scanLineWidth = pngMode.calcBytesPerScanline(width);
+    final byte[] result = new byte[(scanLineWidth - 1) * height];
     for (int y = 0; y < height; y++) {
-      System.arraycopy(unpacked, y * scanLineWidth + 1, result, y * width, width);
+      System.arraycopy(unpackedData, y * scanLineWidth + 1, result, y * (scanLineWidth - 1), scanLineWidth - 1);
     }
     return result;
   }
@@ -198,18 +262,14 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
     return result;
   }
 
-  private byte[] convertRgbToIndexes(final int width, final int height, final byte[] pngRaster, final byte[] rgb2IndexTable) {
-    final byte[] result = new byte[width * height];
-    final int scanLineWidth = width * 3;
-    for (int y = 0; y < height; y++) {
-      final int lineOffset = y * (scanLineWidth + 1);
-      int ox = y * width;
-      for (int x = 0; x < scanLineWidth; x += 3) {
-        final int r = pngRaster[lineOffset + x] & 0xFF;
-        final int g = pngRaster[lineOffset + x + 1] & 0xFF;
-        final int b = pngRaster[lineOffset + x + 2] & 0xFF;
-        result[ox++] = rgb2IndexTable[(r << 16) | (g << 8) | b];
-      }
+  private byte[] replaceRgbByIndexes(final byte[] pngRaster, final byte[] rgb2IndexTable) {
+    final byte[] result = new byte[pngRaster.length / 3];
+    for (int i = 0; i < pngRaster.length; ) {
+      final int outIndex = i / 3;
+      final int r = pngRaster[i++] & 0xFF;
+      final int g = pngRaster[i++] & 0xFF;
+      final int b = pngRaster[i++] & 0xFF;
+      result[outIndex] = rgb2IndexTable[(r << 16) | (g << 8) | b];
     }
     return result;
   }
@@ -284,34 +344,43 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
     this.publish((int) Math.round(((double) read / (double) this.sourceLength) * 100));
   }
 
-  private void writeRgbFrame(final AGifWriter writer, final IhdrChunk ihdrChunk, final byte[] rgb2indexTable, final PngChunk dataChunk, final FctlChunk fctl) throws IOException {
-    if (dataChunk.name.equals("IDAT")) {
-      writer.addFrame(0, 0, ihdrChunk.width, ihdrChunk.height, fctl.getDuration(), convertRgbToIndexes(ihdrChunk.width, ihdrChunk.height, extractPngRaster(ihdrChunk.width, ihdrChunk.height, dataChunk.data), rgb2indexTable));
-    } else {
-      final byte[] rawData = new byte[dataChunk.data.length - 4];
-      System.arraycopy(dataChunk.data, 4, rawData, 0, rawData.length);
-      writer.addFrame(fctl.x, fctl.y, fctl.width, fctl.height, fctl.getDuration(), convertRgbToIndexes(fctl.width, fctl.height, extractPngRaster(ihdrChunk.width, ihdrChunk.height, rawData), rgb2indexTable));
-    }
+  private void writeRgbFrameIDAT(final AGifWriter writer, final IhdrChunk ihdrChunk, final byte[] rgb2indexTable, final byte[] rgbPalette, final byte[] unpackedData, final FctlChunk fctl) throws IOException {
+    writer.addFrame(0, 0, ihdrChunk.width, ihdrChunk.height, fctl.getDuration(), replaceRgbByIndexes(ensureRgb(ihdrChunk.mode, ihdrChunk.width, ihdrChunk.height, rgbPalette, trimFilter(ihdrChunk.mode, ihdrChunk.width, ihdrChunk.height, unpackedData)), rgb2indexTable));
   }
 
-  private void writeRgbFrameDithering(final AGifWriter writer, final IhdrChunk ihdrChunk, final byte[] rgbPalette, final boolean preciseRgb, final PngChunk dataChunk, final FctlChunk fctl) throws IOException {
-    if (dataChunk.name.equals("IDAT")) {
-      writer.addFrame(0, 0, ihdrChunk.width, ihdrChunk.height, fctl.getDuration(), convertRgbToIndexesDithering(ihdrChunk.width, ihdrChunk.height, rgbPalette, preciseRgb, extractPngRaster(ihdrChunk.width, ihdrChunk.height, dataChunk.data)));
-    } else {
-      final byte[] rawData = new byte[dataChunk.data.length - 4];
-      System.arraycopy(dataChunk.data, 4, rawData, 0, rawData.length);
-      writer.addFrame(fctl.x, fctl.y, fctl.width, fctl.height, fctl.getDuration(), convertRgbToIndexesDithering(fctl.width, fctl.height, rgbPalette, preciseRgb, extractPngRaster(ihdrChunk.width, ihdrChunk.height, rawData)));
-    }
+  private void writeRgbFrameFDAT(final AGifWriter writer, final IhdrChunk ihdrChunk, final byte[] rgb2indexTable, final byte[] rgbPalette, final byte[] unpackedData, final FctlChunk fctl) throws IOException {
+    writer.addFrame(fctl.x, fctl.y, fctl.width, fctl.height, fctl.getDuration(), replaceRgbByIndexes(ensureRgb(ihdrChunk.mode, fctl.width, fctl.height, rgbPalette, trimFilter(ihdrChunk.mode, fctl.width, fctl.height, unpackedData)), rgb2indexTable));
   }
 
-  private void writeIndexedFrame(final AGifWriter writer, final IhdrChunk ihdrChunk, final PngChunk dataChunk, final FctlChunk fctl) throws IOException {
+  private void writeRgbFrameDitheringIDAT(final AGifWriter writer, final IhdrChunk ihdrChunk, final byte[] rgbPalette, final boolean preciseRgb, final byte[] unpackedData,
+                                          final FctlChunk fctl) throws IOException {
+    writer.addFrame(0, 0, ihdrChunk.width, ihdrChunk.height, fctl.getDuration(), convertRgbToIndexesDithering(ihdrChunk.width, ihdrChunk.height, rgbPalette, preciseRgb, ensureRgb(ihdrChunk.mode, ihdrChunk.width, ihdrChunk.height, rgbPalette, trimFilter(ihdrChunk.mode, ihdrChunk.width, ihdrChunk.height, unpackedData))));
+  }
+
+  private void writeRgbFrameDitheringFDAT(final AGifWriter writer, final IhdrChunk ihdrChunk, final byte[] rgbPalette, final boolean preciseRgb, final byte[] unpackedData,
+                                          final FctlChunk fctl) throws IOException {
+    writer.addFrame(fctl.x, fctl.y, fctl.width, fctl.height, fctl.getDuration(), convertRgbToIndexesDithering(fctl.width, fctl.height, rgbPalette, preciseRgb, ensureRgb(ihdrChunk.mode, fctl.width, fctl.height, rgbPalette, trimFilter(ihdrChunk.mode, fctl.width, fctl.height, unpackedData))));
+  }
+
+  private void writeIndexedFrameIDAT(final AGifWriter writer, final IhdrChunk ihdrChunk, final byte[] unpackedData, final FctlChunk fctl) throws IOException {
+    writer.addFrame(0, 0, ihdrChunk.width, ihdrChunk.height, fctl.getDuration(), trimFilter(ihdrChunk.mode, ihdrChunk.width, ihdrChunk.height, unpackedData));
+  }
+
+  private void writeIndexedFrameFDAT(final AGifWriter writer, final IhdrChunk ihdrChunk, final byte[] unpackedData, final FctlChunk fctl) throws IOException {
+    writer.addFrame(fctl.x, fctl.y, fctl.width, fctl.height, fctl.getDuration(), trimFilter(ihdrChunk.mode, fctl.width, fctl.height, unpackedData));
+  }
+
+  private int calcExpectedRasterDataSize(final IhdrChunk ihdrChunk, final FctlChunk fctlChunk, final PngChunk dataChunk) {
+    final int width;
+    final int height;
     if (dataChunk.name.equals("IDAT")) {
-      writer.addFrame(0, 0, ihdrChunk.width, ihdrChunk.height, fctl.getDuration(), extractPngRaster(ihdrChunk.width, ihdrChunk.height, dataChunk.data));
+      width = ihdrChunk.width;
+      height = ihdrChunk.height;
     } else {
-      final byte[] rawData = new byte[dataChunk.data.length - 4];
-      System.arraycopy(dataChunk.data, 4, rawData, 0, rawData.length);
-      writer.addFrame(fctl.x, fctl.y, fctl.width, fctl.height, fctl.getDuration(), extractPngRaster(fctl.width, fctl.height, rawData));
+      width = fctlChunk.width;
+      height = fctlChunk.height;
     }
+    return ihdrChunk.mode.calcRasterDataSize(width, height);
   }
 
   @Override
@@ -329,6 +398,9 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
 
       byte[] rgb2indexTable = null;
 
+      ByteArrayOutputStream frameDataBuffer = new ByteArrayOutputStream(16384);
+      Inflater currentDataInflater = null;
+
       try (final OutputStream output = new BufferedOutputStream(new FileOutputStream(this.target))) {
         mainLoop:
         do {
@@ -338,8 +410,14 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
             case "fdAT": {
               if (gifWriter == null) {
                 final byte[] generatedPalette;
-                switch (Objects.requireNonNull(ihdrChunk, "Can't find IHDR before image").colorType) {
-                  case 0: { // grayscale
+                switch (Objects.requireNonNull(ihdrChunk, "Can't find IHDR before image").mode) {
+                  case MODE_GRAYSCALE_1:
+                  case MODE_GRAYSCALE_2:
+                  case MODE_GRAYSCALE_4:
+                  case MODE_GRAYSCALE_8:
+                  case MODE_GRAYSCALE_16:
+                  case MODE_GRAYSCALE_ALPHA_8:
+                  case MODE_GRAYSCALE_ALPHA_16: {
                     generatedPalette = new byte[256 * 3];
                     for (int i = 0; i < 256; i++) {
                       int index = i * 3;
@@ -349,7 +427,10 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
                     }
                   }
                   break;
-                  case 2: { // rgb
+                  case MODE_RGB_8:
+                  case MODE_RGB_16:
+                  case MODE_RGB_ALPHA_8:
+                  case MODE_RGB_ALPHA_16: {
                     generatedPalette = PaletteUtils.splitRgb(this.globalRgb256Palette);
                     if (this.dithering) {
                       LOGGER.info("Don't build RGB index table because dithering mode");
@@ -365,7 +446,10 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
                     }
                   }
                   break;
-                  case 3: { // palette
+                  case MODE_INDEX_1:
+                  case MODE_INDEX_2:
+                  case MODE_INDEX_4:
+                  case MODE_INDEX_8: {
                     generatedPalette = workRgbPalette == null ? PaletteUtils.splitRgb(this.globalRgb256Palette) : workRgbPalette;
                   }
                   break;
@@ -377,24 +461,45 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
                 gifWriter = new AGifWriter(output, ihdrChunk.width, ihdrChunk.height, 0, workRgbPalette, actlChunk == null ? 0 : actlChunk.numPlays);
               }
 
-              switch (ihdrChunk.colorType) {
-                case 2: {
-                  // rgb
-                  if (this.dithering)
-                    this.writeRgbFrameDithering(gifWriter, ihdrChunk, workRgbPalette, this.accurateRgb, nextChunk, fctlChunk);
-                  else
-                    this.writeRgbFrame(gifWriter, ihdrChunk, rgb2indexTable, nextChunk, fctlChunk);
+              final int expectedRasterDataSize = calcExpectedRasterDataSize(ihdrChunk, fctlChunk, nextChunk);
+
+              currentDataInflater = extractData(currentDataInflater, nextChunk, frameDataBuffer);
+
+              if (currentDataInflater == null) {
+                final byte[] raster = frameDataBuffer.toByteArray();
+                frameDataBuffer.reset();
+
+                switch (ihdrChunk.mode) {
+                  case MODE_GRAYSCALE_8:
+                  case MODE_INDEX_8: {
+                    // palette or grayscale
+                    if (nextChunk.name.equals("IDAT")) {
+                      this.writeIndexedFrameIDAT(gifWriter, ihdrChunk, raster, fctlChunk);
+                    } else {
+                      this.writeIndexedFrameFDAT(gifWriter, ihdrChunk, raster, fctlChunk);
+                    }
+                  }
+                  break;
+                  default: {
+                    // rgb
+                    if (nextChunk.name.equals("IDAT")) {
+                      if (this.dithering) {
+                        this.writeRgbFrameDitheringIDAT(gifWriter, ihdrChunk, workRgbPalette, this.accurateRgb, raster, fctlChunk);
+                      } else {
+                        this.writeRgbFrameIDAT(gifWriter, ihdrChunk, rgb2indexTable, workRgbPalette, raster, fctlChunk);
+                      }
+                    } else {
+                      if (this.dithering) {
+                        this.writeRgbFrameDitheringFDAT(gifWriter, ihdrChunk, workRgbPalette, this.accurateRgb, raster, fctlChunk);
+                      } else {
+                        this.writeRgbFrameFDAT(gifWriter, ihdrChunk, rgb2indexTable, workRgbPalette, raster, fctlChunk);
+                      }
+                    }
+                  }
+                  break;
                 }
-                break;
-                case 0:
-                case 3: {
-                  // palette or grayscale
-                  this.writeIndexedFrame(gifWriter, ihdrChunk, nextChunk, fctlChunk);
-                }
-                break;
-                default:
-                  throw new IllegalArgumentException("Unexpected color mode: " + ihdrChunk.colorType);
               }
+
               notifyUpdateForSizeChange();
             }
             break;
@@ -506,8 +611,8 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
       this.height = imageHeight;
       this.x = 0;
       this.y = 0;
-      this.delayNum = 0;
-      this.delayDen = 0;
+      this.delayNum = 1;
+      this.delayDen = 100;
       this.disposeOp = 0;
       this.blendOp = 0;
     }
