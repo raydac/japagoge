@@ -98,7 +98,7 @@ public class PreferencesPanel extends JPanel {
     this.add(new JLabel("Palette for RGB to GIF: "), gblLeft);
     this.add(this.comboBoxPaletteForGifRgb, gblRight);
 
-    this.add(new JLabel("Better RGB colors in GIF : "), gblLeft);
+    this.add(new JLabel("Better RGB colors in GIF: "), gblLeft);
     this.add(this.checkBoxAccurateRgb, gblRight);
 
     this.add(new JLabel("Dithering GIF: "), gblLeft);
