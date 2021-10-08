@@ -172,41 +172,86 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
     }
   }
 
-  private static byte[] restoreFiltration(final PngMode pngMode, final int width, final int height, final byte[] unpackedData) {
+  private static byte[] removeFiltration(final PngMode pngMode, final int width, final int height, final byte[] filteredPngRaster) {
     final int scanLineWidth = pngMode.calcBytesPerScanline(width);
-    final byte[] result = new byte[(scanLineWidth - 1) * height];
+    final int bpp = pngMode.getBytesPerPixel();
+
+    final int bytesPerRasterLine = scanLineWidth - 1;
+
+    final byte[] restoredRaster = new byte[bytesPerRasterLine * height];
     for (int y = 0; y < height; y++) {
-      final int srcLineStartOffset = y * scanLineWidth;
-      final int targetLineStartOffset = y * (scanLineWidth - 1);
-      final int scanLineFilter = unpackedData[srcLineStartOffset] & 0xFF;
+      final int filteredLineOffset = y * scanLineWidth;
+      final int restoredLineOffset = y * bytesPerRasterLine;
+      final int scanLineFilter = filteredPngRaster[filteredLineOffset] & 0xFF;
+
       switch (scanLineFilter) {
         // https://www.w3.org/TR/2003/REC-PNG-20031110/#9Filters
         case 0: {
-          // NONE
-          System.arraycopy(unpackedData, srcLineStartOffset + 1, result, targetLineStartOffset, scanLineWidth - 1);
+          System.arraycopy(filteredPngRaster, filteredLineOffset + 1, restoredRaster, restoredLineOffset, bytesPerRasterLine);
         }
         break;
         case 1: {
           // SUB
+          System.arraycopy(filteredPngRaster, filteredLineOffset + 1, restoredRaster, restoredLineOffset, bytesPerRasterLine);
+          for (int x = 0; x < bytesPerRasterLine; x++) {
+            final int reconPos = restoredLineOffset + x;
+            final int a = x < bpp ? 0 : restoredRaster[reconPos - bpp] & 0xFF;
+            restoredRaster[reconPos] = (byte) (restoredRaster[reconPos] + a);
+          }
         }
         break;
         case 2: {
           // UP
+          if (y == 0) {
+            System.arraycopy(filteredPngRaster, filteredLineOffset + 1, restoredRaster, restoredLineOffset, bytesPerRasterLine);
+          } else {
+            for (int x = 0; x < bytesPerRasterLine; x++) {
+              final int reconPos = restoredLineOffset + x;
+              final int b = restoredRaster[reconPos - bytesPerRasterLine] & 0xFF;
+              restoredRaster[reconPos] = (byte) (filteredPngRaster[filteredLineOffset + x + 1] + b);
+            }
+          }
         }
         break;
         case 3: {
           // AVERAGE
+          for (int x = 0; x < bytesPerRasterLine; x++) {
+            final int reconOffset = restoredLineOffset + x;
+            final int a = x < bpp ? 0 : restoredRaster[reconOffset - bpp] & 0xFF;
+            final int b = y == 0 ? 0 : restoredRaster[reconOffset - bytesPerRasterLine] & 0xFF;
+            restoredRaster[reconOffset] = (byte) ((filteredPngRaster[filteredLineOffset + 1 + x] & 0xFF) + ((a + b) >> 1));
+          }
         }
         break;
         case 4: {
           // PAETH
+          for (int x = 0; x < bytesPerRasterLine; x++) {
+            final int reconPos = restoredLineOffset + x;
+            final int a = x < bpp ? 0 : restoredRaster[reconPos - bpp] & 0xFF;
+            final int b = y == 0 ? 0 : restoredRaster[reconPos - bytesPerRasterLine] & 0xFF;
+            final int c = x < bpp || y == 0 ? 0 : restoredRaster[reconPos - bytesPerRasterLine - bpp] & 0xFF;
+            restoredRaster[reconPos] = (byte) ((filteredPngRaster[filteredLineOffset + 1 + x] & 0xFF) + paethPredictor(a, b, c));
+          }
         }
         break;
         default:
           throw new IllegalArgumentException("Unexpected filter: " + scanLineFilter);
       }
     }
-    return result;
+    return restoredRaster;
+  }
+
+  private static int paethPredictor(int a, int b, int c) {
+    final int p = a + b - c;
+    final int pa = Math.abs(p - a);
+    final int pb = Math.abs(p - b);
+    final int pc = Math.abs(a + b - c - c);
+
+    if (pa <= pb && pa <= pc) {
+      return a;
+    } else if (pb <= pc) {
+      return b;
+    } else return c;
   }
 
   private static void addArrayCell(final byte[] array, final int index, final int value) {
@@ -378,29 +423,29 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
   }
 
   private void writeRgbFrameIDAT(final AGifWriter writer, final IhdrChunk ihdrChunk, final byte[] rgb2indexTable, final byte[] rgbPalette, final byte[] unpackedData, final FctlChunk fctl) throws IOException {
-    writer.addFrame(0, 0, ihdrChunk.width, ihdrChunk.height, fctl.getDuration(), replaceRgbByIndexes(ensureRgb(ihdrChunk.mode, ihdrChunk.width, ihdrChunk.height, rgbPalette, restoreFiltration(ihdrChunk.mode, ihdrChunk.width, ihdrChunk.height, unpackedData)), rgb2indexTable));
+    writer.addFrame(fctl.asGifDisposalMode(), 0, 0, ihdrChunk.width, ihdrChunk.height, fctl.getDuration(), replaceRgbByIndexes(ensureRgb(ihdrChunk.mode, ihdrChunk.width, ihdrChunk.height, rgbPalette, removeFiltration(ihdrChunk.mode, ihdrChunk.width, ihdrChunk.height, unpackedData)), rgb2indexTable));
   }
 
   private void writeRgbFrameFDAT(final AGifWriter writer, final IhdrChunk ihdrChunk, final byte[] rgb2indexTable, final byte[] rgbPalette, final byte[] unpackedData, final FctlChunk fctl) throws IOException {
-    writer.addFrame(fctl.x, fctl.y, fctl.width, fctl.height, fctl.getDuration(), replaceRgbByIndexes(ensureRgb(ihdrChunk.mode, fctl.width, fctl.height, rgbPalette, restoreFiltration(ihdrChunk.mode, fctl.width, fctl.height, unpackedData)), rgb2indexTable));
+    writer.addFrame(fctl.asGifDisposalMode(), fctl.x, fctl.y, fctl.width, fctl.height, fctl.getDuration(), replaceRgbByIndexes(ensureRgb(ihdrChunk.mode, fctl.width, fctl.height, rgbPalette, removeFiltration(ihdrChunk.mode, fctl.width, fctl.height, unpackedData)), rgb2indexTable));
   }
 
   private void writeRgbFrameDitheringIDAT(final AGifWriter writer, final IhdrChunk ihdrChunk, final byte[] rgbPalette, final boolean preciseRgb, final byte[] unpackedData,
                                           final FctlChunk fctl) throws IOException {
-    writer.addFrame(0, 0, ihdrChunk.width, ihdrChunk.height, fctl.getDuration(), convertRgbToIndexesDithering(ihdrChunk.width, ihdrChunk.height, rgbPalette, preciseRgb, ensureRgb(ihdrChunk.mode, ihdrChunk.width, ihdrChunk.height, rgbPalette, restoreFiltration(ihdrChunk.mode, ihdrChunk.width, ihdrChunk.height, unpackedData))));
+    writer.addFrame(fctl.asGifDisposalMode(), 0, 0, ihdrChunk.width, ihdrChunk.height, fctl.getDuration(), convertRgbToIndexesDithering(ihdrChunk.width, ihdrChunk.height, rgbPalette, preciseRgb, ensureRgb(ihdrChunk.mode, ihdrChunk.width, ihdrChunk.height, rgbPalette, removeFiltration(ihdrChunk.mode, ihdrChunk.width, ihdrChunk.height, unpackedData))));
   }
 
   private void writeRgbFrameDitheringFDAT(final AGifWriter writer, final IhdrChunk ihdrChunk, final byte[] rgbPalette, final boolean preciseRgb, final byte[] unpackedData,
                                           final FctlChunk fctl) throws IOException {
-    writer.addFrame(fctl.x, fctl.y, fctl.width, fctl.height, fctl.getDuration(), convertRgbToIndexesDithering(fctl.width, fctl.height, rgbPalette, preciseRgb, ensureRgb(ihdrChunk.mode, fctl.width, fctl.height, rgbPalette, restoreFiltration(ihdrChunk.mode, fctl.width, fctl.height, unpackedData))));
+    writer.addFrame(fctl.asGifDisposalMode(), fctl.x, fctl.y, fctl.width, fctl.height, fctl.getDuration(), convertRgbToIndexesDithering(fctl.width, fctl.height, rgbPalette, preciseRgb, ensureRgb(ihdrChunk.mode, fctl.width, fctl.height, rgbPalette, removeFiltration(ihdrChunk.mode, fctl.width, fctl.height, unpackedData))));
   }
 
   private void writeIndexedFrameIDAT(final AGifWriter writer, final IhdrChunk ihdrChunk, final byte[] unpackedData, final FctlChunk fctl) throws IOException {
-    writer.addFrame(0, 0, ihdrChunk.width, ihdrChunk.height, fctl.getDuration(), restoreFiltration(ihdrChunk.mode, ihdrChunk.width, ihdrChunk.height, unpackedData));
+    writer.addFrame(fctl.asGifDisposalMode(), 0, 0, ihdrChunk.width, ihdrChunk.height, fctl.getDuration(), removeFiltration(ihdrChunk.mode, ihdrChunk.width, ihdrChunk.height, unpackedData));
   }
 
   private void writeIndexedFrameFDAT(final AGifWriter writer, final IhdrChunk ihdrChunk, final byte[] unpackedData, final FctlChunk fctl) throws IOException {
-    writer.addFrame(fctl.x, fctl.y, fctl.width, fctl.height, fctl.getDuration(), restoreFiltration(ihdrChunk.mode, fctl.width, fctl.height, unpackedData));
+    writer.addFrame(fctl.asGifDisposalMode(), fctl.x, fctl.y, fctl.width, fctl.height, fctl.getDuration(), removeFiltration(ihdrChunk.mode, fctl.width, fctl.height, unpackedData));
   }
 
   private int calcExpectedRasterDataSize(final IhdrChunk ihdrChunk, final FctlChunk fctlChunk, final PngChunk dataChunk) {
@@ -555,6 +600,7 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
             case "IHDR": {
               ihdrChunk = new IhdrChunk(nextChunk);
               fctlChunk = new FctlChunk(ihdrChunk.width, ihdrChunk.height);
+              LOGGER.info("Detected IHDR: " + ihdrChunk);
             }
             break;
           }
@@ -628,6 +674,11 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
       }
     }
 
+    @Override
+    public String toString() {
+      return "IhdrChunk(width=" + this.width + ",height=" + this.height + ",bitDepth=" + bitDepth + ",colorType=" + this.colorType + ",compression=" + this.compression + ",filter=" + this.filter + ",interlace=" + this.interlace + ')';
+    }
+
   }
 
   private static class FctlChunk {
@@ -649,7 +700,7 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
       this.y = 0;
       this.delayNum = 1;
       this.delayDen = 100;
-      this.disposeOp = 0;
+      this.disposeOp = -1;
       this.blendOp = 0;
     }
 
@@ -664,6 +715,19 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
         this.delayDen = in.readUnsignedShort();
         this.disposeOp = in.readUnsignedByte();
         this.blendOp = in.readUnsignedByte();
+      }
+    }
+
+    public AGifWriter.DisposalMode asGifDisposalMode() {
+      switch (this.disposeOp) {
+        case 0:
+          return AGifWriter.DisposalMode.DO_NOT_DISPOSE;
+        case 1:
+          return AGifWriter.DisposalMode.OVERWRITE_BY_BACKGROUND_COLOR;
+        case 2:
+          return AGifWriter.DisposalMode.OVERWRITE_WITH_PREVIOUS_GRAPHICS;
+        default:
+          return AGifWriter.DisposalMode.NOT_SPECIFIED;
       }
     }
 
@@ -688,6 +752,11 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
       in.readFully(this.data);
       counter.addAndGet(dataLength);
       var crc = readInt(in, counter);
+    }
+
+    @Override
+    public String toString() {
+      return "PngChunk(name=" + this.name + ",data=" + this.data.length + ')';
     }
   }
 }

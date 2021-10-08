@@ -9,11 +9,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 @SuppressWarnings("unused")
 public final class AGifWriter {
 
-  private static final int DISPOSAL_NOT_SPECIFIED = 0;
-  private static final int DISPOSAL_DO_NOT_DISPOSE = 1;
-  private static final int DISPOSAL_OVERWRITE_BY_BACKGROUND_COLOR = 2;
-  private static final int DISPOSAL_OVERWRITE_WITH_PREVIOUS_GRAPHICS = 4;
-
   private final OutputStream outputStream;
   private final byte[] globalRgbPalette;
   private final int logicalImageWidth;
@@ -23,6 +18,20 @@ public final class AGifWriter {
   private final int backgroundColorIndex;
 
   private boolean ended = false;
+
+  private static int globalPaletteSize(final int numberOfPaletteItems) {
+    if (numberOfPaletteItems > 256 || numberOfPaletteItems <= 0)
+      throw new IllegalArgumentException("Must be in interval 1..256");
+
+    int acc = 1;
+    int n = 0;
+    while (acc < numberOfPaletteItems) {
+      acc <<= 1;
+      n++;
+    }
+
+    return n - 1;
+  }
 
   public AGifWriter(
           final OutputStream outputStream,
@@ -43,18 +52,31 @@ public final class AGifWriter {
     this.globalRgbPalette = Arrays.copyOf(globalRgbPalette.clone(), globalPaletteItems * 3);
   }
 
-  private static int globalPaletteSize(int paletteColors) {
-    if (paletteColors > 256 || paletteColors <= 0) throw new IllegalArgumentException("Must be in interval 1..256");
-
-    if (paletteColors == 256) return 7;
-    if (paletteColors >= 128) return 6;
-    if (paletteColors >= 64) return 5;
-    if (paletteColors >= 32) return 4;
-    if (paletteColors >= 16) return 3;
-    if (paletteColors >= 8) return 2;
-    if (paletteColors >= 4) return 1;
-
-    return 0;
+  public void addFrame(
+          final DisposalMode disposalMode,
+          final int x,
+          final int y,
+          final int width,
+          final int height,
+          final Duration delay,
+          final byte[] pixelIndexes
+  ) throws IOException {
+    this.assertNotEnded();
+    final int frame = this.frameCounter.getAndIncrement();
+    if (frame == 0) {
+      writeString("GIF89a");
+      writeLogicalScreenDescriptor(this.logicalImageWidth, this.logicalImageHeight, this.backgroundColorIndex, this.globalRgbPalette.length / 3);
+      writePalette(this.globalRgbPalette);
+      if (this.repeat >= 0) {
+        writeNetscapeExt(this.repeat);
+      }
+      writeGraphicCtrlExt(delay, disposalMode.getMode());
+    } else {
+      writeGraphicCtrlExt(delay, disposalMode.getMode());
+    }
+    writeImageDesc(x, y, width, height);
+    new GifLzwCompressor(this.outputStream, width, height, pixelIndexes)
+            .encode();
   }
 
   private void writeLogicalScreenDescriptor(
@@ -123,30 +145,20 @@ public final class AGifWriter {
     return this.globalRgbPalette;
   }
 
-  public void addFrame(
-          final int x,
-          final int y,
-          final int width,
-          final int height,
-          final Duration delay,
-          final byte[] pixelIndexes
-  ) throws IOException {
-    this.assertNotEnded();
-    final int frame = this.frameCounter.getAndIncrement();
-    if (frame == 0) {
-      writeString("GIF89a");
-      writeLogicalScreenDescriptor(this.logicalImageWidth, this.logicalImageHeight, this.backgroundColorIndex, this.globalRgbPalette.length / 3);
-      writePalette(this.globalRgbPalette);
-      if (this.repeat >= 0) {
-        writeNetscapeExt(this.repeat);
-      }
-      writeGraphicCtrlExt(delay, DISPOSAL_NOT_SPECIFIED);
-    } else {
-      writeGraphicCtrlExt(delay, DISPOSAL_DO_NOT_DISPOSE);
+  public enum DisposalMode {
+    NOT_SPECIFIED(0),
+    DO_NOT_DISPOSE(1),
+    OVERWRITE_BY_BACKGROUND_COLOR(2),
+    OVERWRITE_WITH_PREVIOUS_GRAPHICS(4);
+    private final int mode;
+
+    DisposalMode(final int mode) {
+      this.mode = mode;
     }
-    writeImageDesc(x, y, width, height);
-    new GifLzwCompressor(this.outputStream, width, height, pixelIndexes)
-            .encode();
+
+    public int getMode() {
+      return this.mode;
+    }
   }
 
   private void assertNotEnded() {
