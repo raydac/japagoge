@@ -6,41 +6,53 @@ public enum PngMode {
     rgb[rgbOffset++] = level;
     rgb[rgbOffset++] = level;
     rgb[rgbOffset] = level;
+    return 0xFF;
   }),
+
   MODE_GRAYSCALE_2(1, 1, 2, (samples, rgb, palette, rgbOffset) -> {
     final byte level = (byte) (Math.min(0xFF, (0x100 / 4) * (samples & 3L) * 85));
     rgb[rgbOffset++] = level;
     rgb[rgbOffset++] = level;
     rgb[rgbOffset] = level;
+    return 0xFF;
   }),
+
   MODE_GRAYSCALE_4(1, 1, 4, (samples, rgb, palette, rgbOffset) -> {
     final byte level = (byte) (Math.min(0xFF, (0x100 / 16) * (samples & 0x0FL) * 85));
     rgb[rgbOffset++] = level;
     rgb[rgbOffset++] = level;
     rgb[rgbOffset] = level;
+    return 0xFF;
   }),
+
   MODE_GRAYSCALE_8(1, 1, 8, (samples, rgb, palette, rgbOffset) -> {
     final byte level = (byte) (samples & 0xFFL);
     rgb[rgbOffset++] = level;
     rgb[rgbOffset++] = level;
     rgb[rgbOffset] = level;
+    return 0xFF;
   }),
+
   MODE_GRAYSCALE_16(2, 1, 16, (samples, rgb, palette, rgbOffset) -> {
     final byte level = (byte) ((samples >> 8) & 0xFFL);
     rgb[rgbOffset++] = level;
     rgb[rgbOffset++] = level;
     rgb[rgbOffset] = level;
+    return 0xFF;
   }),
 
   MODE_RGB_8(3, 3, 8, (samples, rgb, palette, rgbOffset) -> {
     rgb[rgbOffset++] = (byte) (samples >> 16);
     rgb[rgbOffset++] = (byte) (samples >> 8);
     rgb[rgbOffset] = (byte) samples;
+    return 0xFF;
   }),
+
   MODE_RGB_16(6, 3, 16, (samples, rgb, palette, rgbOffset) -> {
     rgb[rgbOffset++] = (byte) (samples >> 40);
     rgb[rgbOffset++] = (byte) (samples >> 24);
     rgb[rgbOffset] = (byte) (samples >> 8);
+    return 0xFF;
   }),
 
   MODE_INDEX_1(1, 1, 1, (samples, rgb, palette, rgbOffset) -> {
@@ -48,24 +60,31 @@ public enum PngMode {
     rgb[rgbOffset++] = palette[paletteIndex++];
     rgb[rgbOffset++] = palette[paletteIndex++];
     rgb[rgbOffset] = palette[paletteIndex];
+    return -1;
   }),
+
   MODE_INDEX_2(1, 1, 2, (samples, rgb, palette, rgbOffset) -> {
     int paletteIndex = ((int) samples & 0x03) * 3;
     rgb[rgbOffset++] = palette[paletteIndex++];
     rgb[rgbOffset++] = palette[paletteIndex++];
     rgb[rgbOffset] = palette[paletteIndex];
+    return -1;
   }),
+
   MODE_INDEX_4(1, 1, 4, (samples, rgb, palette, rgbOffset) -> {
     int paletteIndex = ((int) samples & 0x0F) * 3;
     rgb[rgbOffset++] = palette[paletteIndex++];
     rgb[rgbOffset++] = palette[paletteIndex++];
     rgb[rgbOffset] = palette[paletteIndex];
+    return -1;
   }),
+
   MODE_INDEX_8(1, 1, 8, (samples, rgb, palette, rgbOffset) -> {
     int paletteIndex = ((int) samples & 0xFF) * 3;
     rgb[rgbOffset++] = palette[paletteIndex++];
     rgb[rgbOffset++] = palette[paletteIndex++];
     rgb[rgbOffset] = palette[paletteIndex];
+    return -1;
   }),
 
   MODE_GRAYSCALE_ALPHA_8(2, 2, 8, (samples, rgb, palette, rgbOffset) -> {
@@ -75,7 +94,9 @@ public enum PngMode {
     rgb[rgbOffset++] = l;
     rgb[rgbOffset++] = l;
     rgb[rgbOffset] = l;
+    return alpha;
   }),
+
   MODE_GRAYSCALE_ALPHA_16(3, 2, 16, (samples, rgb, palette, rgbOffset) -> {
     int level = (int) (samples >> 24) & 0xFF;
     int alpha = (int) (samples >> 8) & 0xFF;
@@ -83,6 +104,7 @@ public enum PngMode {
     rgb[rgbOffset++] = l;
     rgb[rgbOffset++] = l;
     rgb[rgbOffset] = l;
+    return alpha;
   }),
 
   MODE_RGB_ALPHA_8(4, 4, 8, (samples, rgb, palette, rgbOffset) -> {
@@ -94,7 +116,9 @@ public enum PngMode {
     rgb[rgbOffset++] = (byte) Math.round(r * alpha);
     rgb[rgbOffset++] = (byte) Math.round(g * alpha);
     rgb[rgbOffset] = (byte) Math.round(b * alpha);
+    return a;
   }),
+
   MODE_RGB_ALPHA_16(7, 4, 16, (samples, rgb, palette, rgbOffset) -> {
     final int a = (int) (samples >> 8) & 0xFF;
     final int r = (int) (samples >> 56) & 0xFF;
@@ -104,6 +128,7 @@ public enum PngMode {
     rgb[rgbOffset++] = (byte) Math.round(r * alpha);
     rgb[rgbOffset++] = (byte) Math.round(g * alpha);
     rgb[rgbOffset] = (byte) Math.round(b * alpha);
+    return a;
   });
 
   private final int samples;
@@ -116,10 +141,6 @@ public enum PngMode {
     this.samples = samples;
     this.bitsPerSample = bitsPerPixel;
     this.samplesToRgbProcessor = samplesToRgb;
-  }
-
-  public int getBytesPerPixel() {
-    return this.bytesPerPixel;
   }
 
   public static PngMode find(final int colorType, final int bitDepth) {
@@ -190,8 +211,12 @@ public enum PngMode {
     }
   }
 
-  public void samplesToRgb(final long samples, final byte[] rgb, final byte[] optionalRgbPalette, final int rgbOffset) {
-    this.samplesToRgbProcessor.apply(samples, rgb, optionalRgbPalette, rgbOffset);
+  public int getBytesPerPixel() {
+    return this.bytesPerPixel;
+  }
+
+  public int applySamplesAndGetAlpha(final long samples, final byte[] rgb, final byte[] optionalRgbPalette, final int rgbOffset) {
+    return this.samplesToRgbProcessor.apply(samples, rgb, optionalRgbPalette, rgbOffset);
   }
 
   public int getSamples() {
@@ -221,6 +246,6 @@ public enum PngMode {
 
   @FunctionalInterface
   private interface SamplesToRgb {
-    void apply(long samples, byte[] rgb, byte[] optionalRgbPalette, int rgbOffset);
+    int apply(long samples, byte[] rgb, byte[] optionalRgbPalette, int rgbOffset);
   }
 }

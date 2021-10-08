@@ -79,7 +79,6 @@ public class JapagogeFrame extends JFrame {
     this.getRootPane().putClientProperty("Window.shadow", Boolean.FALSE);
     this.getRootPane().getRootPane().putClientProperty("apple.awt.draggableWindowBackground", Boolean.FALSE);
 
-
     final Dimension initialSize = new Dimension(320, 256);
 
     this.setUndecorated(true);
@@ -300,7 +299,7 @@ public class JapagogeFrame extends JFrame {
         this.setForeground(COLOR_SELECT_POSITION);
         this.getContentPane().setBackground(COLOR_SELECT_POSITION);
         this.setShape(this.makeArea(bounds.width, bounds.height, true));
-        this.statisticWindow.setVisible(this.showCapturingAreaMetrics);
+        SwingUtilities.invokeLater(() -> this.statisticWindow.setVisible(this.showCapturingAreaMetrics));
         this.validate();
       }
       break;

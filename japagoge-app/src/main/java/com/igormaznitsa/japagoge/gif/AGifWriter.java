@@ -59,10 +59,15 @@ public final class AGifWriter {
           final int width,
           final int height,
           final Duration delay,
+          final int transparentColorIndex,
           final byte[] pixelIndexes
   ) throws IOException {
     this.assertNotEnded();
     final int frame = this.frameCounter.getAndIncrement();
+
+    if (transparentColorIndex >= 0 && transparentColorIndex >= (this.globalRgbPalette.length / 3))
+      throw new IllegalArgumentException("Transparent color index is not in global palette");
+
     if (frame == 0) {
       writeString("GIF89a");
       writeLogicalScreenDescriptor(this.logicalImageWidth, this.logicalImageHeight, this.backgroundColorIndex, this.globalRgbPalette.length / 3);
@@ -70,9 +75,9 @@ public final class AGifWriter {
       if (this.repeat >= 0) {
         writeNetscapeExt(this.repeat);
       }
-      writeGraphicCtrlExt(delay, disposalMode.getMode());
+      writeGraphicCtrlExt(delay, disposalMode.getMode(), transparentColorIndex);
     } else {
-      writeGraphicCtrlExt(delay, disposalMode.getMode());
+      writeGraphicCtrlExt(delay, disposalMode.getMode(), transparentColorIndex);
     }
     writeImageDesc(x, y, width, height);
     new GifLzwCompressor(this.outputStream, width, height, pixelIndexes)
@@ -105,14 +110,14 @@ public final class AGifWriter {
     }
   }
 
-  private void writeGraphicCtrlExt(final Duration delay, final int disposalMethod) throws IOException {
+  private void writeGraphicCtrlExt(final Duration delay, final int disposalMethod, final int transparentColorIndex) throws IOException {
     this.outputStream.write(0x21);
     this.outputStream.write(0xF9);
     this.outputStream.write(0x04);
 
-    this.outputStream.write((disposalMethod & 7) << 2);
+    this.outputStream.write(((disposalMethod & 7) << 2) | (transparentColorIndex < 0 ? 0 : 1));
     writeShort(Math.round(delay.toMillis() / 10.0f));
-    this.outputStream.write(0);
+    this.outputStream.write(Math.max(transparentColorIndex, 0));
 
     this.outputStream.write(0);
   }
