@@ -22,6 +22,8 @@ public final class AGifWriter {
   private final int repeat;
   private final int backgroundColorIndex;
 
+  private boolean ended = false;
+
   public AGifWriter(
           final OutputStream outputStream,
           final int logicalImageWidth,
@@ -129,6 +131,7 @@ public final class AGifWriter {
           final Duration delay,
           final byte[] pixelIndexes
   ) throws IOException {
+    this.assertNotEnded();
     final int frame = this.frameCounter.getAndIncrement();
     if (frame == 0) {
       writeString("GIF89a");
@@ -144,7 +147,16 @@ public final class AGifWriter {
     writeImageDesc(x, y, width, height);
     new GifLzwCompressor(this.outputStream, width, height, pixelIndexes)
             .encode();
-    this.outputStream.flush();
+  }
+
+  private void assertNotEnded() {
+    if (this.ended) throw new IllegalStateException("Already ended");
+  }
+
+  public void end() throws IOException {
+    this.assertNotEnded();
+    this.ended = true;
+    this.outputStream.write(0x3B);
   }
 }
 
