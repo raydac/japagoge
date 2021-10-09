@@ -693,7 +693,7 @@ public class JapagogeFrame extends JFrame {
 
   @SuppressWarnings("SameParameterValue")
   private void drawTitleText(final Graphics2D gfx, final String text) {
-    final Rectangle freeArea = new Rectangle(this.areaButtonRecordStop.x + this.areaButtonRecordStop.width, 0, areaButtonSettings.x - this.areaButtonRecordStop.x - this.areaButtonRecordStop.width, TITLE_HEIGHT);
+    final Rectangle freeArea = new Rectangle(this.areaButtonRecordStop.x + this.areaButtonRecordStop.width, 0, areaButtonConvert.x - this.areaButtonRecordStop.x - this.areaButtonRecordStop.width, TITLE_HEIGHT);
 
     final Font font = this.getFont();
     final FontMetrics fontMetrics = this.getFontMetrics(font);
