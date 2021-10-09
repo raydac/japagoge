@@ -21,7 +21,7 @@ public final class PaletteUtils {
   }
 
   public static int[] makeGrayscaleRgb256() {
-    return IntStream.range(0, 256).map(y -> (y << 16) | (y << 8) << 8).toArray();
+    return IntStream.range(0, 256).map(y -> (y << 16) | (y << 8) | y).toArray();
   }
 
   public static int findClosestIndex(final int r, final int g, final int b, final byte[] rgbPalette) {

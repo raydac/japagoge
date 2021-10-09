@@ -5,6 +5,13 @@ import com.igormaznitsa.japagoge.utils.PaletteUtils;
 import java.util.Optional;
 
 public class GrayscaleFilter implements ColorFilter {
+
+  private final int[] palette;
+
+  public GrayscaleFilter() {
+    this.palette = PaletteUtils.makeGrayscaleRgb256();
+  }
+
   @Override
   public boolean isMonochrome() {
     return true;
@@ -12,14 +19,17 @@ public class GrayscaleFilter implements ColorFilter {
 
   @Override
   public Optional<int[]> getPalette() {
-    return Optional.empty();
+    return Optional.of(this.palette);
   }
 
   @Override
-  public int doFiltering(final int rgb) {
+  public int filterRgb(final int rgb) {
     final int r = (rgb >> 16) & 0xFF;
     final int g = (rgb >> 8) & 0xFF;
     final int b = rgb & 0xFF;
-    return PaletteUtils.toY(r, g, b);
+
+    final int y = PaletteUtils.toY(r, g, b);
+
+    return (y << 16) | (y << 8) | y;
   }
 }

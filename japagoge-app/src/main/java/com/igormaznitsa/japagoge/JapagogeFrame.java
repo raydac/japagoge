@@ -1,5 +1,6 @@
 package com.igormaznitsa.japagoge;
 
+import com.igormaznitsa.japagoge.filters.ColorFilter;
 import com.igormaznitsa.japagoge.mouse.MouseInfoProviderFactory;
 import com.igormaznitsa.japagoge.utils.ClipboardUtils;
 import com.igormaznitsa.japagoge.utils.Palette256;
@@ -331,7 +332,8 @@ public class JapagogeFrame extends JFrame {
           final boolean accurateRgb,
           final boolean dithering,
           final int[] globalRgb256palette,
-          final boolean placeLinkToClipboard
+          final boolean placeLinkToClipboard,
+          final ColorFilter forceColorFilter
   ) {
     LOGGER.info("Converting APNG file into GIF: " + pngFile + " -> " + gifFile);
     var converter = new APngToGifConvertingWorker(
@@ -339,7 +341,8 @@ public class JapagogeFrame extends JFrame {
             gifFile,
             accurateRgb,
             dithering,
-            globalRgb256palette
+            globalRgb256palette,
+            forceColorFilter
     );
     converter.execute();
     try {
@@ -431,7 +434,8 @@ public class JapagogeFrame extends JFrame {
                             JapagogeConfig.getInstance().isAccurateRgb(),
                             JapagogeConfig.getInstance().isDithering(),
                             currentCapturer.makeGlobalRgb256Palette(),
-                            true);
+                            true,
+                            null);
                   } else {
                     LOGGER.info("Just moving APNG file: " + tempFile);
                     try {
@@ -645,7 +649,8 @@ public class JapagogeFrame extends JFrame {
                       JapagogeConfig.getInstance().isAccurateRgb(),
                       JapagogeConfig.getInstance().isDithering(),
                       palette.getPalette().orElseGet(PaletteUtils::makeGrayscaleRgb256),
-                      false
+                      false,
+                      JapagogeConfig.getInstance().getFilter().get()
               );
             }
           }

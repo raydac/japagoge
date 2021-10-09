@@ -65,7 +65,7 @@ public final class APngWriter {
         resultBuffer[imgPos++] = 0;
       }
 
-      argb = filter.doFiltering(argb);
+      argb = filter.filterRgb(argb);
 
       final int r = (argb >> 16) & 0xFF;
       final int g = (argb >> 8) & 0xFF;
@@ -122,7 +122,7 @@ public final class APngWriter {
       if (imgPos % scanLineBytes == 0) {
         resultBuffer[imgPos++] = 0;
       }
-      resultBuffer[imgPos++] = (byte) filter.doFiltering(argb);
+      resultBuffer[imgPos++] = (byte) filter.filterRgb(argb);
     }
     return resultBuffer;
   }
