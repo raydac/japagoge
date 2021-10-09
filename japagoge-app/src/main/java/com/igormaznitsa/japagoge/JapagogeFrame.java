@@ -66,7 +66,6 @@ public class JapagogeFrame extends JFrame {
     drawStopButton = !drawStopButton;
     repaint();
   });
-  private File conversionInFolder = null;
 
   public JapagogeFrame(final GraphicsConfiguration gc) {
     super("Japagoge", gc);
@@ -281,41 +280,13 @@ public class JapagogeFrame extends JFrame {
     this.statisticWindow.setLocation(mainWindowBounds.x + (mainWindowBounds.width - this.statisticWindow.getWidth()) / 2, mainWindowBounds.y + TITLE_HEIGHT + (mainWindowBounds.height - TITLE_HEIGHT - this.statisticWindow.getHeight()) / 2);
   }
 
-  private void updateLook() {
-    var bounds = this.getBounds();
-    switch (this.state.get()) {
-      case RECORDING: {
-        this.statisticWindow.setVisible(false);
-        this.setOpacity(0.3f);
-        this.setBackground(COLOR_RECORDING);
-        this.setForeground(COLOR_RECORDING);
-        this.getContentPane().setBackground(COLOR_RECORDING);
-        this.setShape(this.makeArea(bounds.width, bounds.height, false));
-      }
-      break;
-      case SELECT_POSITION: {
-        this.setOpacity(1.0f);
-        this.setBackground(COLOR_SELECT_POSITION);
-        this.setForeground(COLOR_SELECT_POSITION);
-        this.getContentPane().setBackground(COLOR_SELECT_POSITION);
-        this.setShape(this.makeArea(bounds.width, bounds.height, true));
-        SwingUtilities.invokeLater(() -> this.statisticWindow.setVisible(this.showCapturingAreaMetrics));
-        this.validate();
-      }
-      break;
-      case SAVING_RESULT: {
-        this.statisticWindow.setVisible(false);
-        this.setOpacity(1.0f);
-        this.setBackground(COLOR_SAVING_RESULT);
-        this.setForeground(COLOR_SAVING_RESULT);
-        this.getContentPane().setBackground(COLOR_SAVING_RESULT);
-        this.setShape(this.makeArea(bounds.width, bounds.height, true));
-      }
-      break;
+  private static String extractNameWithoutExtenstion(final File file) {
+    String name = file.getName();
+    int index = name.lastIndexOf('.');
+    if (index > 0) {
+      name = name.substring(0, index);
     }
-    this.setBounds(bounds);
-    this.revalidate();
-    this.repaint();
+    return name;
   }
 
   private void startRecording() {
@@ -576,10 +547,47 @@ public class JapagogeFrame extends JFrame {
     }
   }
 
+  private void updateLook() {
+    var bounds = this.getBounds();
+    switch (this.state.get()) {
+      case RECORDING: {
+        this.statisticWindow.setVisible(false);
+        this.setOpacity(0.3f);
+        this.setBackground(COLOR_RECORDING);
+        this.setForeground(COLOR_RECORDING);
+        this.getContentPane().setBackground(COLOR_RECORDING);
+        this.setShape(this.makeArea(bounds.width, bounds.height, false));
+      }
+      break;
+      case SELECT_POSITION: {
+        this.setOpacity(1.0f);
+        this.setBackground(COLOR_SELECT_POSITION);
+        this.setForeground(COLOR_SELECT_POSITION);
+        this.getContentPane().setBackground(COLOR_SELECT_POSITION);
+        this.setShape(this.makeArea(bounds.width, bounds.height, true));
+        this.statisticWindow.setVisible(this.showCapturingAreaMetrics);
+        this.validate();
+      }
+      break;
+      case SAVING_RESULT: {
+        this.statisticWindow.setVisible(false);
+        this.setOpacity(1.0f);
+        this.setBackground(COLOR_SAVING_RESULT);
+        this.setForeground(COLOR_SAVING_RESULT);
+        this.getContentPane().setBackground(COLOR_SAVING_RESULT);
+        this.setShape(this.makeArea(bounds.width, bounds.height, true));
+      }
+      break;
+    }
+    this.setBounds(bounds);
+    this.revalidate();
+    this.repaint();
+  }
+
   private void onButtonConvert() {
     if (this.state.get() == State.SELECT_POSITION) {
       LOGGER.info("Conversion activated");
-      final JFileChooser sourceFIleChooser = new JFileChooser(conversionInFolder);
+      final JFileChooser sourceFIleChooser = new JFileChooser(JapagogeConfig.getInstance().getTargetFolder());
       sourceFIleChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
       sourceFIleChooser.setMultiSelectionEnabled(false);
       sourceFIleChooser.setAcceptAllFileFilterUsed(false);
@@ -601,7 +609,6 @@ public class JapagogeFrame extends JFrame {
 
       if (sourceFIleChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
         final File sourceFile = sourceFIleChooser.getSelectedFile();
-        this.conversionInFolder = sourceFile.getParentFile();
 
         LOGGER.info("Selected source file: " + sourceFile);
         if (sourceFile.isFile()) {
@@ -610,6 +617,7 @@ public class JapagogeFrame extends JFrame {
           targetFileChooser.setMultiSelectionEnabled(false);
           targetFileChooser.setAcceptAllFileFilterUsed(false);
           targetFileChooser.setDialogTitle("Target GIF file");
+          targetFileChooser.setSelectedFile(new File(extractNameWithoutExtenstion(sourceFile) + ".gif"));
           targetFileChooser.addChoosableFileFilter(new FileFilter() {
             @Override
             public boolean accept(final File f) {

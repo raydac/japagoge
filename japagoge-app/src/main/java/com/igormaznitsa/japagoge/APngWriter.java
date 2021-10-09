@@ -9,6 +9,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -383,7 +384,7 @@ public final class APngWriter {
     }
   }
 
-  public synchronized void start(final int width, final int height) throws IOException {
+  public synchronized void start(final String productName, final int width, final int height) throws IOException {
     if (this.state != State.CREATED) throw new IllegalStateException("State: " + this.state);
     this.state = State.STARTED;
 
@@ -419,8 +420,10 @@ public final class APngWriter {
     if (palette.isPresent()) {
       this.writePtleChunk(palette.orElseThrow());
     }
-
     this.writeAcTLChunk(0, 0);
+    if (productName != null) {
+      this.writeTextChunk("Software", productName);
+    }
   }
 
   private void writeIEND() throws IOException {
@@ -454,6 +457,15 @@ public final class APngWriter {
       this.put(c >> 8);
       this.put(c);
     }
+    this.putInt(this.calcCrcForBufferedChunk());
+    this.flushAndClearBuffer();
+  }
+
+  private void writeTextChunk(final String key, final String value) throws IOException {
+    final byte[] textBytes = (key + '\u0000' + value).getBytes(StandardCharsets.US_ASCII);
+    this.putInt(textBytes.length);
+    this.putText("tEXt");
+    this.put(textBytes);
     this.putInt(this.calcCrcForBufferedChunk());
     this.flushAndClearBuffer();
   }

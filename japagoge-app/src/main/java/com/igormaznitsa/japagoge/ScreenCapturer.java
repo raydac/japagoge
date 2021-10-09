@@ -34,6 +34,7 @@ public final class ScreenCapturer {
   private final MouseInfoProvider mouseInfoProvider;
   private final Palette256 palette;
   private final boolean forceWholeFrame;
+  private volatile boolean stopped;
   private APngWriter.Statistics pngStatistics;
 
   public ScreenCapturer(
@@ -70,7 +71,9 @@ public final class ScreenCapturer {
     final TimerTask newTimerTask = new TimerTask() {
       @Override
       public void run() {
-        doCapture();
+        if (!stopped) {
+          doCapture();
+        }
       }
     };
 
@@ -114,7 +117,7 @@ public final class ScreenCapturer {
       final APngWriter writer = this.apngWriter.get();
       if (writer != null) {
         if (writer.getState() == APngWriter.State.CREATED) {
-          writer.start(image.getWidth(), image.getHeight());
+          writer.start("JAPAGOGE", image.getWidth(), image.getHeight());
         }
         writer.addFrame(image, this.forceWholeFrame, this.delayBetweenFrames);
       }
@@ -145,6 +148,7 @@ public final class ScreenCapturer {
   public void stop(final int loops) {
     var startedTimerTask = this.timerTask.getAndSet(null);
     if (startedTimerTask != null) {
+      stopped = true;
       startedTimerTask.cancel();
     }
     var apngWriter = this.apngWriter.getAndSet(null);

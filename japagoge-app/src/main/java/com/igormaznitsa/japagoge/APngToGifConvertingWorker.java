@@ -8,8 +8,10 @@ import com.igormaznitsa.japagoge.utils.PngMode;
 import javax.swing.*;
 import java.awt.*;
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -496,7 +498,8 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
       int transparentPaletteIndex = -1;
 
       AGifWriter.DisposalMode disposalMode = AGifWriter.DisposalMode.NOT_SPECIFIED;
-      AGifWriter.DisposalMode nextDisposalMode = AGifWriter.DisposalMode.NOT_SPECIFIED;
+
+      boolean japagogeProduced = false;
 
       try (final OutputStream output = new BufferedOutputStream(new FileOutputStream(this.target))) {
         mainLoop:
@@ -516,6 +519,26 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
               }
               if (foundIndex >= 0) {
                 transparentPaletteIndex = foundIndex;
+              }
+            }
+            break;
+            case "tEXt": {
+              final String text = new String(nextChunk.data, StandardCharsets.US_ASCII).toLowerCase(Locale.ENGLISH);
+              if (text.startsWith("software") && text.endsWith("japagoge")) {
+                japagogeProduced = true;
+              }
+            }
+            break;
+            case "bKGD": {
+              if (nextChunk.data.length == 1) {
+                transparentPaletteIndex = nextChunk.data[0] & 0xFF;
+              } else if (nextChunk.data.length == 3 && workRgbPalette != null) {
+                transparentPaletteIndex = PaletteUtils.findClosestIndex(
+                        nextChunk.data[0] & 0xFF,
+                        nextChunk.data[1] & 0xFF,
+                        nextChunk.data[2] & 0xFF,
+                        workRgbPalette
+                );
               }
             }
             break;
@@ -611,7 +634,24 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
                   }
                   break;
                 }
-                disposalMode = nextDisposalMode;
+                if (japagogeProduced) {
+                  disposalMode = AGifWriter.DisposalMode.DO_NOT_DISPOSE;
+                } else {
+                  switch (fctlChunk.disposeOp) {
+                    case 0:
+                      disposalMode = AGifWriter.DisposalMode.DO_NOT_DISPOSE;
+                      break;
+                    case 1:
+                      disposalMode = AGifWriter.DisposalMode.OVERWRITE_BY_BACKGROUND_COLOR;
+                      break;
+                    case 2:
+                      disposalMode = AGifWriter.DisposalMode.OVERWRITE_WITH_PREVIOUS_GRAPHICS;
+                      break;
+                    default:
+                      disposalMode = AGifWriter.DisposalMode.NOT_SPECIFIED;
+                      break;
+                  }
+                }
               }
 
               notifyUpdateForSizeChange();
@@ -628,7 +668,6 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
             break;
             case "fcTL": {
               fctlChunk = new FctlChunk(nextChunk);
-              nextDisposalMode = fctlChunk.asGifDisposalMode();
             }
             break;
             case "IEND": {
@@ -752,19 +791,6 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
         this.delayDen = in.readUnsignedShort();
         this.disposeOp = in.readUnsignedByte();
         this.blendOp = in.readUnsignedByte();
-      }
-    }
-
-    public AGifWriter.DisposalMode asGifDisposalMode() {
-      switch (this.disposeOp) {
-        case 0:
-          return AGifWriter.DisposalMode.DO_NOT_DISPOSE;
-        case 1:
-          return AGifWriter.DisposalMode.OVERWRITE_BY_BACKGROUND_COLOR;
-        case 2:
-          return AGifWriter.DisposalMode.OVERWRITE_WITH_PREVIOUS_GRAPHICS;
-        default:
-          return AGifWriter.DisposalMode.NOT_SPECIFIED;
       }
     }
 
