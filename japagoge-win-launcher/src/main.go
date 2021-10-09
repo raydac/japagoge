@@ -57,7 +57,7 @@ func main() {
 	path, err := os.Executable()
 	if err == nil {
 		base_folder := filepath.Dir(path)
-		cmd := exec.Command(base_folder+JDK_PATH, "-Dsun.java2d.opengl=true", "-jar", base_folder+JAR_FILE)
+		cmd := exec.Command(base_folder+JDK_PATH, "-jar", base_folder+JAR_FILE)
 		fmt.Printf("Application starting...\n")
 		err = cmd.Start()
 		if err != nil {
