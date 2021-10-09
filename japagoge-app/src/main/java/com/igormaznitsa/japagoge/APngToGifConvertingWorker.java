@@ -525,6 +525,7 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
             case "tEXt": {
               final String text = new String(nextChunk.data, StandardCharsets.US_ASCII).toLowerCase(Locale.ENGLISH);
               if (text.startsWith("software") && text.endsWith("japagoge")) {
+                LOGGER.info("Detected JAPAGOGE producer record in PNG");
                 japagogeProduced = true;
               }
             }
