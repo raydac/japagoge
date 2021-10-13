@@ -35,11 +35,11 @@ conversion and some extra features.
 
 | OS                                           |  Download link                                                                                                                                                                                | 
 | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| ![Windows](assets/icons/win64x64.png)        | __[Archive for Windows x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.1/japagoge-2.1.1-windows-jdk-amd64.zip)__             |
-| ![OSX](assets/icons/macos64x64.png)          | __[Archive for OSX x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.1/japagoge-2.1.1-macos-jdk-amd64.zip)__                   |
-| ![OSX Arm64](assets/icons/macosarm64x64.png) | __[Archive for OSX Arm64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.1/japagoge-2.1.1-macos-jdk-aarch64.zip)__                 |
-| ![Linux](assets/icons/linux64x64.png)        | __[Archive for Linux x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.1/japagoge-2.1.1-linux-jdk-amd64.tar.gz)__              |
-| ![Java](assets/icons/java64x64.png)          | __[Cross-platform JAR file](https://github.com/raydac/japagoge/releases/download/2.1.1/japagoge-2.1.1.jar)__                                     | 
+| ![Windows](assets/icons/win64x64.png)        | __[Archive for Windows x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.1/japagoge-app-2.1.1-windows-jdk-amd64.zip)__             |
+| ![OSX](assets/icons/macos64x64.png)          | __[Archive for OSX x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.1/japagoge-app-2.1.1-macos-jdk-amd64.zip)__                   |
+| ![OSX Arm64](assets/icons/macosarm64x64.png) | __[Archive for OSX Arm64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.1/japagoge-app-2.1.1-macos-jdk-aarch64.zip)__                 |
+| ![Linux](assets/icons/linux64x64.png)        | __[Archive for Linux x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.1/japagoge-app-2.1.1-linux-jdk-amd64.tar.gz)__              |
+| ![Java](assets/icons/java64x64.png)          | __[Cross-platform JAR file](https://github.com/raydac/japagoge/releases/download/2.1.1/japagoge-app-2.1.1.jar)__                                     | 
 
 ## How to use the utility?
 
