@@ -1,3 +1,7 @@
+- 2.1.1 (13-okt-2021)
+  - added way to convert already saved APNG into GIF with current options
+  - refactoring and minor bugfix
+
 - 2.1.0 (24-sep-2021)
   - improved grabbing of mouse pointer under Linux and Windows
   - added optional indication of capturing area coordinates
