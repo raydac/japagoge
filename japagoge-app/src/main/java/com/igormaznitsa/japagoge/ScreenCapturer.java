@@ -1,11 +1,14 @@
 package com.igormaznitsa.japagoge;
 
 import com.igormaznitsa.japagoge.filters.RgbPixelFilter;
+import com.igormaznitsa.japagoge.grabbers.ScreenAreaGrabber;
+import com.igormaznitsa.japagoge.grabbers.ScreenAreaGrabberFactory;
 import com.igormaznitsa.japagoge.mouse.MouseInfoProvider;
 import com.igormaznitsa.japagoge.utils.Palette256;
 import com.igormaznitsa.japagoge.utils.PaletteUtils;
 
 import java.awt.*;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -23,7 +26,7 @@ public final class ScreenCapturer {
   private static final Logger LOGGER = Logger.getLogger("ScreenCapturer");
 
   private static final Timer internalTimer = new Timer("capture-timer", true);
-  private final Robot robot;
+  private final ScreenAreaGrabber screenAreaGrabber;
   private final Rectangle screenArea;
   private final File targetFile;
   private final Duration delayBetweenFrames;
@@ -50,7 +53,7 @@ public final class ScreenCapturer {
   ) throws AWTException {
     this.forceWholeFrame = forceWholeFrame;
     this.palette = palette;
-    this.robot = new Robot(device);
+    this.screenAreaGrabber = ScreenAreaGrabberFactory.getInstance().makeGrabber(device);
     this.filter = filter;
     this.mouseInfoProvider = mouseInfoProvider;
     this.screenArea = Objects.requireNonNull(screenArea);
@@ -98,7 +101,7 @@ public final class ScreenCapturer {
 
   private void doCapture() {
     try {
-      var image = this.robot.createScreenCapture(this.screenArea);
+      final BufferedImage image = this.screenAreaGrabber.grabAsRgb(this.screenArea);
 
       if (this.mouseInfoProvider != null) {
         var mouseLocation = this.mouseInfoProvider.getMousePointerLocation();
@@ -117,7 +120,7 @@ public final class ScreenCapturer {
       final APngWriter writer = this.apngWriter.get();
       if (writer != null) {
         if (writer.getState() == APngWriter.State.CREATED) {
-          writer.start("JAPAGOGE", image.getWidth(), image.getHeight());
+          writer.start("JAPAGOGE", image.getWidth(null), image.getHeight(null));
         }
         writer.addFrame(image, this.forceWholeFrame, this.delayBetweenFrames);
       }
@@ -146,31 +149,39 @@ public final class ScreenCapturer {
   }
 
   public void stop(final int loops) {
-    var startedTimerTask = this.timerTask.getAndSet(null);
-    if (startedTimerTask != null) {
-      stopped = true;
-      startedTimerTask.cancel();
-    }
-    var apngWriter = this.apngWriter.getAndSet(null);
-    if (apngWriter != null) {
-      try {
-        final APngWriter.Statistics statistics = apngWriter.close(loops);
-        if (statistics == null) {
-          LOGGER.severe("No write data");
-          this.pngStatistics = null;
-        } else {
-          this.pngStatistics = statistics;
-          LOGGER.info(String.format("Image(%s) %dx%d, buffer %d bytes, %d frames, length %d bytes",
-                  this.filter.name(),
-                  statistics.width,
-                  statistics.height,
-                  statistics.bufferSize,
-                  statistics.frames,
-                  statistics.size
-          ));
+    try {
+      var startedTimerTask = this.timerTask.getAndSet(null);
+      if (startedTimerTask != null) {
+        stopped = true;
+        startedTimerTask.cancel();
+      }
+      var apngWriter = this.apngWriter.getAndSet(null);
+      if (apngWriter != null) {
+        try {
+          final APngWriter.Statistics statistics = apngWriter.close(loops);
+          if (statistics == null) {
+            LOGGER.severe("No write data");
+            this.pngStatistics = null;
+          } else {
+            this.pngStatistics = statistics;
+            LOGGER.info(String.format("Image(%s) %dx%d, buffer %d bytes, %d frames, length %d bytes",
+                    this.filter.name(),
+                    statistics.width,
+                    statistics.height,
+                    statistics.bufferSize,
+                    statistics.frames,
+                    statistics.size
+            ));
+          }
+        } catch (Exception ex) {
+          LOGGER.log(Level.SEVERE, "Error during close writer", ex);
         }
+      }
+    } finally {
+      try {
+        this.screenAreaGrabber.close();
       } catch (Exception ex) {
-        LOGGER.log(Level.SEVERE, "Error during close writer", ex);
+        LOGGER.log(Level.SEVERE, "Error during screen area grabber cloe", ex);
       }
     }
   }

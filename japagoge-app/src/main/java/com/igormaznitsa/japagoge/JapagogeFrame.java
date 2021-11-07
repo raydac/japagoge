@@ -543,7 +543,9 @@ public class JapagogeFrame extends JFrame {
   }
 
   private Rectangle findScreeCaptureArea() {
-    final Rectangle bounds = this.getBounds();
+    final Rectangle bounds = this.getGraphicsConfiguration().getBounds();
+
+    //final Rectangle bounds = Toolkit.getDefaultToolkit().getS this.getBounds();
     bounds.setBounds(bounds.x + BORDER_SIZE, bounds.y + TITLE_HEIGHT, bounds.width - BORDER_SIZE * 2, bounds.height - BORDER_SIZE - TITLE_HEIGHT);
     return bounds;
   }

@@ -13,6 +13,21 @@ public final class SystemUtils {
     return Toolkit.getDefaultToolkit().getScreenResolution() >= 100;
   }
 
+  public static BufferedImage ensureBufferedImage(final Image image, final int targetType) {
+    if (image == null) return null;
+    if (image instanceof BufferedImage && ((BufferedImage) image).getType() == targetType) {
+      return (BufferedImage) image;
+    }
+    final BufferedImage result = new BufferedImage(image.getWidth(null), image.getHeight(null), targetType);
+    final Graphics2D gfx = result.createGraphics();
+    try {
+      gfx.drawImage(image, 0, 0, null);
+    } finally {
+      gfx.dispose();
+    }
+    return result;
+  }
+
   public static Image imageX2(final Image image) {
     if (image == null) return null;
     final BufferedImage result = new BufferedImage(image.getWidth(null) * 2, image.getHeight(null) * 2, BufferedImage.TYPE_INT_ARGB);
