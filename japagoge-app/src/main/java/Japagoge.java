@@ -6,6 +6,8 @@ import java.awt.*;
 public class Japagoge {
 
   public static void main(final String... args) {
+    System.setProperty("sun.java2d.dpiaware", "true");
+
     SwingUtilities.invokeLater(() -> {
       try {
         UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());

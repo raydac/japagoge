@@ -3,6 +3,7 @@ package com.igormaznitsa.japagoge.utils;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.lang.reflect.Field;
+import java.util.stream.Stream;
 
 public final class SystemUtils {
   private SystemUtils() {
@@ -11,6 +12,15 @@ public final class SystemUtils {
 
   public static boolean isHiDpi() {
     return Toolkit.getDefaultToolkit().getScreenResolution() >= 100;
+  }
+
+  public static Dimension findScreenSize() {
+    final Rectangle rectangle = new Rectangle(0, 0, 0, 0);
+    Stream.of(GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices())
+            .forEach(x -> {
+              rectangle.add(x.getDefaultConfiguration().getBounds());
+            });
+    return new Dimension(rectangle.width, rectangle.height);
   }
 
   public static BufferedImage ensureBufferedImage(final Image image, final int targetType) {
