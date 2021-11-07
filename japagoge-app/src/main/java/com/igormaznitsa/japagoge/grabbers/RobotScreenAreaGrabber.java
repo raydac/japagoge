@@ -19,8 +19,8 @@ class RobotScreenAreaGrabber implements ScreenAreaGrabber {
 
   @Override
   public BufferedImage grabAsRgb(final Rectangle area) {
-    var imageList = this.robot.createMultiResolutionScreenCapture(area);
-    return SystemUtils.ensureBufferedImage(imageList.getResolutionVariant(area.width, area.height), BufferedImage.TYPE_INT_RGB);
+    var image = this.robot.createScreenCapture(area);
+    return SystemUtils.ensureBufferedImage(image, BufferedImage.TYPE_INT_RGB);
   }
 
   @Override
