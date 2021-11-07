@@ -4,6 +4,7 @@ import javax.swing.*;
 import java.awt.*;
 
 public class Japagoge {
+
   public static void main(final String... args) {
     SwingUtilities.invokeLater(() -> {
       try {
@@ -17,8 +18,10 @@ public class Japagoge {
         var window = new JapagogeFrame(screen);
         window.setVisible(true);
       } catch (Exception ex) {
+        ex.printStackTrace();
         JOptionPane.showMessageDialog(null, "Can't create frame", "Error", JOptionPane.ERROR_MESSAGE);
       }
     });
   }
+
 }
