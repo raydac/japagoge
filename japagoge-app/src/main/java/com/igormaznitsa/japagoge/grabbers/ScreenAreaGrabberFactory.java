@@ -1,5 +1,7 @@
 package com.igormaznitsa.japagoge.grabbers;
 
+import org.apache.commons.lang3.SystemUtils;
+
 import java.awt.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -28,9 +30,10 @@ public final class ScreenAreaGrabberFactory {
 
   public ScreenAreaGrabber makeGrabber(final GraphicsDevice device) {
     ScreenAreaGrabber result = null;
-//    if (SystemUtils.IS_OS_LINUX) {
-//      result = tryMakeGrabber("com.igormaznitsa.japagoge.grabbers.X11ScreenAreaGrabber", device);
-//    }
+    if (SystemUtils.IS_OS_LINUX || SystemUtils.IS_OS_SOLARIS) {
+      LOGGER.info("Detected potential X11 system");
+      result = tryMakeGrabber("com.igormaznitsa.japagoge.grabbers.X11ScreenAreaGrabber", device);
+    }
     return result == null ? new RobotScreenAreaGrabber(device) : result;
   }
 
