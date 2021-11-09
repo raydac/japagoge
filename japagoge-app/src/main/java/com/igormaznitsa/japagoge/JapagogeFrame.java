@@ -37,20 +37,20 @@ public class JapagogeFrame extends JFrame {
 
   private static final Logger LOGGER = Logger.getLogger("JapagogeFrame");
 
-  private static final int BORDER_SIZE = isHiDpi() ? 10 : 5;
-  private static final int TITLE_HEIGHT = isHiDpi() ? 72 : 36;
+  private final int borderSize;
+  private final int titleHeight;
 
   private static final Color COLOR_SELECT_POSITION = Color.GREEN;
   private static final Color COLOR_RECORDING = Color.CYAN;
   private static final Color COLOR_SAVING_RESULT = Color.YELLOW;
   private final ComponentResizer resizer;
   private final AtomicReference<ScreenCapturer> currentScreenCapturer = new AtomicReference<>();
-  private final Image imageConvert = loadIcon("button-convert.png");
-  private final Image imageClose = loadIcon("button-close.png");
-  private final Image imageSettings = loadIcon("button-settings.png");
-  private final Image imageRecord = loadIcon("button-record.png");
-  private final Image imageStop = loadIcon("button-stop.png");
-  private final Image imageHourglassIcon = loadIcon("hourglass48x48.png");
+  private final Image imageConvert;
+  private final Image imageClose;
+  private final Image imageSettings;
+  private final Image imageRecord;
+  private final Image imageStop;
+  private final Image imageHourglassIcon;
   private final Rectangle areaButtonConvert = new Rectangle();
   private final Rectangle areaButtonClose = new Rectangle();
   private final Rectangle areaButtonSettings = new Rectangle();
@@ -71,7 +71,19 @@ public class JapagogeFrame extends JFrame {
 
   public JapagogeFrame(final GraphicsConfiguration gc) {
     super("Japagoge", gc);
-    this.setIconImage(loadIcon("appico.png"));
+
+    this.borderSize = isHiDpi(gc) ? 10 : 5;
+    this.titleHeight = isHiDpi(gc) ? 72 : 36;
+
+    this.imageConvert = loadIcon(gc, "button-convert.png");
+    this.imageClose = loadIcon(gc, "button-close.png");
+    this.imageSettings = loadIcon(gc, "button-settings.png");
+    this.imageRecord = loadIcon(gc, "button-record.png");
+    this.imageStop = loadIcon(gc, "button-stop.png");
+    this.imageHourglassIcon = loadIcon(gc, "hourglass48x48.png");
+
+
+    this.setIconImage(loadIcon(gc, "appico.png"));
 
     SystemUtils.setApplicationTaskbarTitle(this.getIconImage(), this.getTitle(), null);
     Font uiManagerFont = UIManager.getFont("InternalFrame.titleFont");
@@ -79,12 +91,12 @@ public class JapagogeFrame extends JFrame {
       uiManagerFont = new Font(Font.SANS_SERIF, Font.BOLD, 12);
     }
 
-    this.setFont(isHiDpi() ? fontX2(uiManagerFont) : uiManagerFont);
+    this.setFont(isHiDpi(gc) ? fontX2(uiManagerFont) : uiManagerFont);
 
     this.getRootPane().putClientProperty("Window.shadow", Boolean.FALSE);
     this.getRootPane().getRootPane().putClientProperty("apple.awt.draggableWindowBackground", Boolean.FALSE);
 
-    final Dimension initialSize = isHiDpi() ? new Dimension(640, 512) : new Dimension(320, 256);
+    final Dimension initialSize = isHiDpi(gc) ? new Dimension(640, 512) : new Dimension(320, 256);
 
     this.setUndecorated(true);
     this.setBackground(Color.ORANGE);
@@ -93,9 +105,9 @@ public class JapagogeFrame extends JFrame {
     this.setFocusableWindowState(false);
     this.setFocusable(false);
 
-    this.resizer = new ComponentResizer(new Insets(0, BORDER_SIZE, BORDER_SIZE, BORDER_SIZE));
+    this.resizer = new ComponentResizer(new Insets(0, borderSize, borderSize, borderSize));
     this.resizer.registerComponent(this);
-    this.resizer.setMinimumSize(new Dimension(imageRecord.getWidth(null), TITLE_HEIGHT * 2));
+    this.resizer.setMinimumSize(new Dimension(imageRecord.getWidth(null), titleHeight * 2));
     this.resizer.setMaximumSize(new Dimension(4096, 4096));
     this.resizer.setSnapSize(new Dimension(1, 1));
 
@@ -156,7 +168,7 @@ public class JapagogeFrame extends JFrame {
           var screenPoint = new Point(componentPoint);
           SwingUtilities.convertPointToScreen(screenPoint, JapagogeFrame.this);
           lastMousePressedTitleScreenPoint = screenPoint;
-          if (componentPoint.y > TITLE_HEIGHT) {
+          if (componentPoint.y > titleHeight) {
             lastMousePressedTitleScreenPoint = null;
           }
         }
@@ -173,7 +185,7 @@ public class JapagogeFrame extends JFrame {
       public void mouseMoved(final MouseEvent e) {
         if (!e.isConsumed() && resizer.isEnabled()) {
           var newMouseScreenPoint = new Point(e.getPoint());
-          if (newMouseScreenPoint.getY() < TITLE_HEIGHT) {
+          if (newMouseScreenPoint.getY() < titleHeight) {
             if (areaButtonClose.contains(newMouseScreenPoint)
                     || areaButtonSettings.contains(newMouseScreenPoint)
                     || areaButtonConvert.contains(newMouseScreenPoint)
@@ -219,7 +231,7 @@ public class JapagogeFrame extends JFrame {
     this.statisticWindow.getContentPane().setForeground(COLOR_SELECT_POSITION);
     this.statisticWindow.getContentPane().setLayout(new BoxLayout(this.statisticWindow.getContentPane(), BoxLayout.Y_AXIS));
 
-    final Font labelFont = new Font(Font.MONOSPACED, Font.BOLD, isHiDpi() ? 28 : 14);
+    final Font labelFont = new Font(Font.MONOSPACED, Font.BOLD, isHiDpi(gc) ? 28 : 14);
 
     this.labelStatX = new JLabel(" X= ");
     this.labelStatX.setFont(labelFont);
@@ -251,9 +263,9 @@ public class JapagogeFrame extends JFrame {
     this.setState(State.SELECT_POSITION);
   }
 
-  private static Image loadIcon(final String resourceName) {
+  private static Image loadIcon(final GraphicsConfiguration gc, final String resourceName) {
     try (final InputStream in = Objects.requireNonNull(JapagogeFrame.class.getResourceAsStream("/icons/" + resourceName))) {
-      return isHiDpi() ? imageX2(ImageIO.read(in)) : ImageIO.read(in);
+      return isHiDpi(gc) ? imageX2(ImageIO.read(in)) : ImageIO.read(in);
     } catch (Exception ex) {
       throw new Error("Can't load resource image: " + resourceName, ex);
     }
@@ -283,7 +295,7 @@ public class JapagogeFrame extends JFrame {
     this.labelStatWidth.setText(" W=" + capturingArea.width + ' ');
     this.labelStatHeight.setText(" H=" + capturingArea.height + ' ');
     this.statisticWindow.pack();
-    this.statisticWindow.setLocation(mainWindowBounds.x + (mainWindowBounds.width - this.statisticWindow.getWidth()) / 2, mainWindowBounds.y + TITLE_HEIGHT + (mainWindowBounds.height - TITLE_HEIGHT - this.statisticWindow.getHeight()) / 2);
+    this.statisticWindow.setLocation(mainWindowBounds.x + (mainWindowBounds.width - this.statisticWindow.getWidth()) / 2, mainWindowBounds.y + titleHeight + (mainWindowBounds.height - titleHeight - this.statisticWindow.getHeight()) / 2);
   }
 
   private static String extractNameWithoutExtenstion(final File file) {
@@ -518,9 +530,9 @@ public class JapagogeFrame extends JFrame {
 
   private Area makeArea(final int width, final int height, final boolean cross) {
     var result = new Area(new Rectangle(0, 0, width, height));
-    result.subtract(new Area(new Rectangle(BORDER_SIZE, BORDER_SIZE, width - (BORDER_SIZE * 2), height - (BORDER_SIZE * 2))));
+    result.subtract(new Area(new Rectangle(borderSize, borderSize, width - (borderSize * 2), height - (borderSize * 2))));
 
-    final int titleHeight = TITLE_HEIGHT;
+    final int titleHeight = this.titleHeight;
 
     result.add(new Area(new Rectangle(0, 0, width, titleHeight)));
 
@@ -532,19 +544,19 @@ public class JapagogeFrame extends JFrame {
     final int gapBetweenButtons = 4;
 
     int buttonStartX = width - this.imageSettings.getWidth(null) - this.imageClose.getWidth(null) - this.imageConvert.getWidth(null) - gapBetweenButtons * 3;
-    this.areaButtonConvert.setBounds(buttonStartX, (TITLE_HEIGHT - this.imageConvert.getHeight(null)) / 2, this.imageConvert.getWidth(null), this.imageConvert.getHeight(null));
+    this.areaButtonConvert.setBounds(buttonStartX, (this.titleHeight - this.imageConvert.getHeight(null)) / 2, this.imageConvert.getWidth(null), this.imageConvert.getHeight(null));
     buttonStartX += this.areaButtonConvert.width + gapBetweenButtons;
-    this.areaButtonSettings.setBounds(buttonStartX, (TITLE_HEIGHT - this.imageSettings.getHeight(null)) / 2, this.imageSettings.getWidth(null), this.imageSettings.getHeight(null));
+    this.areaButtonSettings.setBounds(buttonStartX, (this.titleHeight - this.imageSettings.getHeight(null)) / 2, this.imageSettings.getWidth(null), this.imageSettings.getHeight(null));
     buttonStartX += this.areaButtonSettings.width + gapBetweenButtons;
-    this.areaButtonClose.setBounds(buttonStartX, (TITLE_HEIGHT - this.imageClose.getHeight(null)) / 2, this.imageClose.getWidth(null), this.imageClose.getHeight(null));
-    this.areaButtonRecordStop.setBounds(BORDER_SIZE, (TITLE_HEIGHT - this.imageRecord.getHeight(null)) / 2, this.imageRecord.getWidth(null), this.imageRecord.getHeight(null));
+    this.areaButtonClose.setBounds(buttonStartX, (this.titleHeight - this.imageClose.getHeight(null)) / 2, this.imageClose.getWidth(null), this.imageClose.getHeight(null));
+    this.areaButtonRecordStop.setBounds(borderSize, (this.titleHeight - this.imageRecord.getHeight(null)) / 2, this.imageRecord.getWidth(null), this.imageRecord.getHeight(null));
 
     return result;
   }
 
   private Rectangle findScreeCaptureArea() {
     final Rectangle bounds = this.getBounds();
-    bounds.setBounds(bounds.x + BORDER_SIZE, bounds.y + TITLE_HEIGHT, bounds.width - BORDER_SIZE * 2, bounds.height - BORDER_SIZE - TITLE_HEIGHT);
+    bounds.setBounds(bounds.x + borderSize, bounds.y + titleHeight, bounds.width - borderSize * 2, bounds.height - borderSize - titleHeight);
     return bounds;
   }
 
@@ -698,7 +710,7 @@ public class JapagogeFrame extends JFrame {
 
   @SuppressWarnings("SameParameterValue")
   private void drawTitleText(final Graphics2D gfx, final String text) {
-    final Rectangle freeArea = new Rectangle(this.areaButtonRecordStop.x + this.areaButtonRecordStop.width, 0, areaButtonConvert.x - this.areaButtonRecordStop.x - this.areaButtonRecordStop.width, TITLE_HEIGHT);
+    final Rectangle freeArea = new Rectangle(this.areaButtonRecordStop.x + this.areaButtonRecordStop.width, 0, areaButtonConvert.x - this.areaButtonRecordStop.x - this.areaButtonRecordStop.width, titleHeight);
 
     final Font font = this.getFont();
     final FontMetrics fontMetrics = this.getFontMetrics(font);

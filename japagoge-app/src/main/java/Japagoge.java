@@ -6,7 +6,8 @@ import java.awt.*;
 public class Japagoge {
 
   public static void main(final String... args) {
-    System.setProperty("sun.java2d.dpiaware", "true");
+    System.setProperty("sun.java2d.dpiaware", "false");
+    System.setProperty("sun.java2d.uiScale", "1");
 
     SwingUtilities.invokeLater(() -> {
       try {
