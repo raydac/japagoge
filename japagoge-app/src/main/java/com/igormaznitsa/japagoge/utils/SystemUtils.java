@@ -13,7 +13,7 @@ public final class SystemUtils {
   public static boolean isHiDpi(final GraphicsConfiguration gc) {
     final double displayWidth = gc.getDevice().getDisplayMode().getWidth();
     final double displayBoundsWidth = gc.getDevice().getDefaultConfiguration().getBounds().width;
-    return displayBoundsWidth / displayWidth >= 1.5d;
+    return displayBoundsWidth / displayWidth >= 1.5d || displayBoundsWidth > 3000;
   }
 
   public static Dimension findScreenSize() {
