@@ -72,8 +72,8 @@ public class JapagogeFrame extends JFrame {
   public JapagogeFrame(final GraphicsConfiguration gc) {
     super("Japagoge", gc);
 
-    this.borderSize = isHiDpi(gc) ? 10 : 5;
-    this.titleHeight = isHiDpi(gc) ? 72 : 36;
+    this.borderSize = isBigRes(gc) ? 10 : 5;
+    this.titleHeight = isBigRes(gc) ? 72 : 36;
 
     this.imageConvert = loadIcon(gc, "button-convert.png");
     this.imageClose = loadIcon(gc, "button-close.png");
@@ -91,12 +91,12 @@ public class JapagogeFrame extends JFrame {
       uiManagerFont = new Font(Font.SANS_SERIF, Font.BOLD, 12);
     }
 
-    this.setFont(isHiDpi(gc) ? fontX2(uiManagerFont) : uiManagerFont);
+    this.setFont(isBigRes(gc) ? fontX2(uiManagerFont) : uiManagerFont);
 
     this.getRootPane().putClientProperty("Window.shadow", Boolean.FALSE);
     this.getRootPane().getRootPane().putClientProperty("apple.awt.draggableWindowBackground", Boolean.FALSE);
 
-    final Dimension initialSize = isHiDpi(gc) ? new Dimension(640, 512) : new Dimension(320, 256);
+    final Dimension initialSize = isBigRes(gc) ? new Dimension(640, 512) : new Dimension(320, 256);
 
     this.setUndecorated(true);
     this.setBackground(Color.ORANGE);
@@ -231,7 +231,7 @@ public class JapagogeFrame extends JFrame {
     this.statisticWindow.getContentPane().setForeground(COLOR_SELECT_POSITION);
     this.statisticWindow.getContentPane().setLayout(new BoxLayout(this.statisticWindow.getContentPane(), BoxLayout.Y_AXIS));
 
-    final Font labelFont = new Font(Font.MONOSPACED, Font.BOLD, isHiDpi(gc) ? 28 : 14);
+    final Font labelFont = new Font(Font.MONOSPACED, Font.BOLD, isBigRes(gc) ? 28 : 14);
 
     this.labelStatX = new JLabel(" X= ");
     this.labelStatX.setFont(labelFont);
@@ -265,7 +265,7 @@ public class JapagogeFrame extends JFrame {
 
   private static Image loadIcon(final GraphicsConfiguration gc, final String resourceName) {
     try (final InputStream in = Objects.requireNonNull(JapagogeFrame.class.getResourceAsStream("/icons/" + resourceName))) {
-      return isHiDpi(gc) ? imageX2(ImageIO.read(in)) : ImageIO.read(in);
+      return isBigRes(gc) ? imageX2(ImageIO.read(in)) : ImageIO.read(in);
     } catch (Exception ex) {
       throw new Error("Can't load resource image: " + resourceName, ex);
     }

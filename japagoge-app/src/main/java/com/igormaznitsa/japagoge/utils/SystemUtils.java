@@ -10,7 +10,7 @@ public final class SystemUtils {
 
   }
 
-  public static boolean isHiDpi(final GraphicsConfiguration gc) {
+  public static boolean isBigRes(final GraphicsConfiguration gc) {
     final double displayWidth = gc.getDevice().getDisplayMode().getWidth();
     final double displayBoundsWidth = gc.getDevice().getDefaultConfiguration().getBounds().width;
     return displayBoundsWidth / displayWidth >= 1.5d || displayBoundsWidth > 3000;
