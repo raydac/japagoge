@@ -9,19 +9,15 @@
 
 ## Changelog
 
+- __2.1.2 (12-nov-2021)__
+  - improved support of 4k monitors
+  - capture logic under X11 replaced by self-written one because Robot works not well
+
 - __2.1.1 (13-okt-2021)__
   - added way to convert already saved APNG into GIF with current options
   - refactoring and minor bugfix
 
-- __2.1.0 (24-sep-2021)__
-  - improved grabbing of mouse pointer under Linux and Windows
-  - added optional indication of capturing area coordinates
-  - improved settings panel
-  - added more 256-color fixed palettes
-  - added support of dithering for GIF export
-  - reworked UI
-  - refactoring
-  - embedded JDK updated to 17+35
+[Full changelog](changelog.txt)
 
 ## Pre-word
 
@@ -35,11 +31,11 @@ conversion and some extra features.
 
 | OS                                           |  Download link                                                                                                                                                                                | 
 | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| ![Windows](assets/icons/win64x64.png)        | __[Archive for Windows x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.1/japagoge-app-2.1.1-windows-jdk-amd64.zip)__             |
-| ![OSX](assets/icons/macos64x64.png)          | __[Archive for OSX x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.1/japagoge-app-2.1.1-macos-jdk-amd64.zip)__                   |
-| ![OSX Arm64](assets/icons/macosarm64x64.png) | __[Archive for OSX Arm64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.1/japagoge-app-2.1.1-macos-jdk-aarch64.zip)__                 |
-| ![Linux](assets/icons/linux64x64.png)        | __[Archive for Linux x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.1/japagoge-app-2.1.1-linux-jdk-amd64.tar.gz)__              |
-| ![Java](assets/icons/java64x64.png)          | __[Cross-platform JAR file](https://github.com/raydac/japagoge/releases/download/2.1.1/japagoge-app-2.1.1.jar)__                                     | 
+| ![Windows](assets/icons/win64x64.png)        | __[Archive for Windows x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.2/japagoge-app-2.1.2-windows-jdk-amd64.zip)__             |
+| ![OSX](assets/icons/macos64x64.png)          | __[Archive for OSX x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.2/japagoge-app-2.1.2-macos-jdk-amd64.zip)__                   |
+| ![OSX Arm64](assets/icons/macosarm64x64.png) | __[Archive for OSX Arm64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.2/japagoge-app-2.1.2-macos-jdk-aarch64.zip)__                 |
+| ![Linux](assets/icons/linux64x64.png)        | __[Archive for Linux x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.2/japagoge-app-2.1.2-linux-jdk-amd64.tar.gz)__              |
+| ![Java](assets/icons/java64x64.png)          | __[Cross-platform JAR file](https://github.com/raydac/japagoge/releases/download/2.1.2/japagoge-app-2.1.2.jar)__                                     | 
 
 ## How to use the utility?
 

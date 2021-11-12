@@ -1,3 +1,7 @@
+- 2.1.2 (12-nov-2021)
+  - improved support of 4k monitors
+  - capture logic under X11 replaced by self-written one because Robot works not well
+
 - 2.1.1 (13-okt-2021)
   - added way to convert already saved APNG into GIF with current options
   - refactoring and minor bugfix
