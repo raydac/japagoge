@@ -6,7 +6,7 @@
   <parent>
     <groupId>com.igormaznitsa</groupId>
     <artifactId>japagoge-pom</artifactId>
-    <version>2.1.2</version>
+    <version>2.1.3-SNAPSHOT</version>
   </parent>
 
   <artifactId>japagoge-app</artifactId>
@@ -21,7 +21,7 @@
   <properties>
     <embedded.jdk.provider>BELLSOFT</embedded.jdk.provider>
     <embedded.jdk.type>jdk</embedded.jdk.type>
-    <embedded.jdk.version>17+35</embedded.jdk.version>
+    <embedded.jdk.version>17.0.2+9</embedded.jdk.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <java.version>11</java.version>
@@ -73,7 +73,7 @@
           <plugin>
             <groupId>com.igormaznitsa</groupId>
             <artifactId>mvn-jlink-wrapper</artifactId>
-            <version>1.1.0</version>
+            <version>1.1.1</version>
             <executions>
               <execution>
                 <id>cache-work-jdk</id>
@@ -495,6 +495,24 @@
       </plugins>
     </pluginManagement>
     <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <version>3.0.0</version>
+        <executions>
+          <execution>
+            <id>no-duplicate-declared-dependencies</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <banDuplicatePomDependencyVersions/>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>
