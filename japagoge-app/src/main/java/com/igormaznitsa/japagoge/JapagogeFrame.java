@@ -33,7 +33,7 @@ import static com.igormaznitsa.japagoge.utils.SystemUtils.*;
 @SuppressWarnings("unused")
 public class JapagogeFrame extends JFrame {
 
-  private static final String VERSION = "v 2.1.2";
+  private static final String VERSION = "v 2.1.3";
 
   private static final Logger LOGGER = Logger.getLogger("JapagogeFrame");
 

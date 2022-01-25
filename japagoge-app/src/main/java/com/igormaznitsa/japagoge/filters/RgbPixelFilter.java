@@ -4,7 +4,8 @@ public enum RgbPixelFilter {
   RGB(new NoneFilter()),
   GRAYSCALE(new GrayscaleFilter()),
   AMBER(new AmberFilter()),
-  GREEN(new GreenFilter());
+  GREEN(new GreenFilter()),
+  BLACK_WHITE(new BlackWhiteFilter());
   private final ColorFilter filter;
 
   RgbPixelFilter(final ColorFilter filter) {

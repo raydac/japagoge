@@ -14,7 +14,7 @@ public final class NoneFilter implements ColorFilter {
   }
 
   @Override
-  public int filterRgb(int rgb) {
+  public int filterRgb(int rgb, int pass) {
     return rgb;
   }
 }

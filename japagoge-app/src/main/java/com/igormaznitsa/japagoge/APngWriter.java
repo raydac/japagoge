@@ -59,25 +59,31 @@ public final class APngWriter {
     }
     final int scanLineBytes = (imageWidth * 3) + 1;
 
-    int imgPos = 0;
-    for (int argb : data) {
-      if (imgPos % scanLineBytes == 0) {
-        resultBuffer[imgPos++] = 0;
+    for (int pass = 0; pass < filter.getPasses(); pass++) {
+      int imgPos = 0;
+      for (int argb : data) {
+        if (imgPos % scanLineBytes == 0) {
+          resultBuffer[imgPos++] = 0;
+        }
+
+        argb = filter.filterRgb(argb, pass);
+
+        if (filter.isPassImageUpdate(pass)) {
+          final int r = (argb >> 16) & 0xFF;
+          final int g = (argb >> 8) & 0xFF;
+          final int b = argb & 0xFF;
+
+          if (colorStatistics != null) {
+            colorStatistics.update(r, g, b);
+          }
+
+          resultBuffer[imgPos++] = (byte) r;
+          resultBuffer[imgPos++] = (byte) g;
+          resultBuffer[imgPos++] = (byte) b;
+        } else {
+          imgPos += 3;
+        }
       }
-
-      argb = filter.filterRgb(argb);
-
-      final int r = (argb >> 16) & 0xFF;
-      final int g = (argb >> 8) & 0xFF;
-      final int b = argb & 0xFF;
-
-      if (colorStatistics != null) {
-        colorStatistics.update(r, g, b);
-      }
-
-      resultBuffer[imgPos++] = (byte) r;
-      resultBuffer[imgPos++] = (byte) g;
-      resultBuffer[imgPos++] = (byte) b;
     }
     return resultBuffer;
   }
@@ -117,12 +123,20 @@ public final class APngWriter {
     }
     final int scanLineBytes = imageWidth + 1;
 
-    int imgPos = 0;
-    for (final int argb : data) {
-      if (imgPos % scanLineBytes == 0) {
-        resultBuffer[imgPos++] = 0;
+    for (int pass = 0; pass < filter.getPasses(); pass++) {
+      int imgPos = 0;
+      for (final int argb : data) {
+        if (imgPos % scanLineBytes == 0) {
+          resultBuffer[imgPos++] = 0;
+        }
+
+        final byte filteredData = (byte) filter.filterRgb(argb, pass);
+        if (filter.isPassImageUpdate(pass)) {
+          resultBuffer[imgPos++] = filteredData;
+        } else {
+          imgPos++;
+        }
       }
-      resultBuffer[imgPos++] = (byte) filter.filterRgb(argb);
     }
     return resultBuffer;
   }

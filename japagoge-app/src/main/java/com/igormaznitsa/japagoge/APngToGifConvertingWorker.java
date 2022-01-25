@@ -117,58 +117,64 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
     int rgbOffset = 0;
     final int bitsItemLength = pngMode.getBitsPerSample() * pngMode.getSamples();
 
-    for (int y = 0; y < height; y++) {
-      int srcOffset = y * bytesPerLine;
+    colorFilter.reset();
 
-      long samplesAccumulator = 0L;
-      int restBitsNumber = bitsItemLength;
+    for (int pass = 0; pass < colorFilter.getPasses(); pass++) {
+      for (int y = 0; y < height; y++) {
+        int srcOffset = y * bytesPerLine;
 
-      int bufferedBitsNumber = 0;
-      int bufferedByte = 0;
-      for (int x = 0; x < width; ) {
-        if (bufferedBitsNumber == 0) {
-          bufferedByte = unpackedNormalizedRaster[srcOffset++];
-          bufferedBitsNumber = 8;
-        }
-        int bitsToRead = Math.min(bufferedBitsNumber, restBitsNumber);
+        long samplesAccumulator = 0L;
+        int restBitsNumber = bitsItemLength;
 
-        while (bitsToRead > 0) {
-          samplesAccumulator = (samplesAccumulator << 1) | ((bufferedByte & 0x80) == 0 ? 0 : 1);
-          bufferedByte <<= 1;
-          restBitsNumber--;
-          bitsToRead--;
-          bufferedBitsNumber--;
-        }
+        int bufferedBitsNumber = 0;
+        int bufferedByte = 0;
+        for (int x = 0; x < width; ) {
+          if (bufferedBitsNumber == 0) {
+            bufferedByte = unpackedNormalizedRaster[srcOffset++];
+            bufferedBitsNumber = 8;
+          }
+          int bitsToRead = Math.min(bufferedBitsNumber, restBitsNumber);
 
-        if (restBitsNumber == 0) {
-          final int alpha = pngMode.applySamplesAndGetAlpha(samplesAccumulator, rgbArray, rgbPalette, rgbOffset);
-
-          int r = rgbArray[rgbOffset] & 0xFF;
-          int g = rgbArray[rgbOffset + 1] & 0xFF;
-          int b = rgbArray[rgbOffset + 2] & 0xFF;
-
-          final int filteredRgb = colorFilter.filterRgb((r << 16) | (g << 8) | b);
-
-          r = (filteredRgb >> 16) & 0xFF;
-          g = (filteredRgb >> 8) & 0xFF;
-          b = filteredRgb & 0xFF;
-
-          rgbArray[rgbOffset] = (byte) r;
-          rgbArray[rgbOffset + 1] = (byte) g;
-          rgbArray[rgbOffset + 2] = (byte) b;
-
-          if (alpha >= 0 && alpha < 255 && alpha < lastAlpha) {
-            lastAlpha = alpha;
-            foundTransparentPaletteColor = PaletteUtils.findClosestIndex(r, g, b, rgbPalette);
+          while (bitsToRead > 0) {
+            samplesAccumulator = (samplesAccumulator << 1) | ((bufferedByte & 0x80) == 0 ? 0 : 1);
+            bufferedByte <<= 1;
+            restBitsNumber--;
+            bitsToRead--;
+            bufferedBitsNumber--;
           }
 
-          restBitsNumber = bitsItemLength;
-          rgbOffset += 3;
-          samplesAccumulator = 0L;
-          x++;
+          if (restBitsNumber == 0) {
+            final int alpha = pngMode.applySamplesAndGetAlpha(samplesAccumulator, rgbArray, rgbPalette, rgbOffset);
+
+            int r = rgbArray[rgbOffset] & 0xFF;
+            int g = rgbArray[rgbOffset + 1] & 0xFF;
+            int b = rgbArray[rgbOffset + 2] & 0xFF;
+
+            final int filteredRgb = colorFilter.filterRgb((r << 16) | (g << 8) | b, pass);
+
+            if (colorFilter.isPassImageUpdate(pass)) {
+              r = (filteredRgb >> 16) & 0xFF;
+              g = (filteredRgb >> 8) & 0xFF;
+              b = filteredRgb & 0xFF;
+
+              rgbArray[rgbOffset] = (byte) r;
+              rgbArray[rgbOffset + 1] = (byte) g;
+              rgbArray[rgbOffset + 2] = (byte) b;
+            }
+
+            if (alpha >= 0 && alpha < 255 && alpha < lastAlpha) {
+              lastAlpha = alpha;
+              foundTransparentPaletteColor = PaletteUtils.findClosestIndex(r, g, b, rgbPalette);
+            }
+
+            restBitsNumber = bitsItemLength;
+            rgbOffset += 3;
+            samplesAccumulator = 0L;
+            x++;
+          }
         }
+        result = rgbArray;
       }
-      result = rgbArray;
     }
     return Pair.of(foundTransparentPaletteColor, result);
   }

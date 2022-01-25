@@ -23,7 +23,7 @@ public class GrayscaleFilter implements ColorFilter {
   }
 
   @Override
-  public int filterRgb(final int rgb) {
+  public int filterRgb(final int rgb, final int pass) {
     final int r = (rgb >> 16) & 0xFF;
     final int g = (rgb >> 8) & 0xFF;
     final int b = rgb & 0xFF;

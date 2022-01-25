@@ -24,6 +24,10 @@ public final class PaletteUtils {
     return IntStream.range(0, 256).map(y -> (y << 16) | (y << 8) | y).toArray();
   }
 
+  public static int[] makeBlackWhiteRgb256() {
+    return IntStream.range(0, 256).map(y -> y < 128 ? 0 : 0xFFFFFF).toArray();
+  }
+
   public static int findClosestIndex(final int r, final int g, final int b, final byte[] rgbPalette) {
     final int paletteItems = rgbPalette.length / 3;
     float distance = Float.MAX_VALUE;

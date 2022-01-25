@@ -9,6 +9,10 @@
 
 ## Changelog
 
+- __2.1.3 (SNAPSHOT)__
+  - added Black and White filter
+  - embedded JDK updated to 17.0.2+9
+
 - __2.1.2 (12-nov-2021)__
   - improved support of 4k monitors
   - capture logic under X11 replaced by self-written one because Robot works not well

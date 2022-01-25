@@ -1,5 +1,6 @@
 package com.igormaznitsa.japagoge;
 
+import com.igormaznitsa.japagoge.filters.ColorFilter;
 import com.igormaznitsa.japagoge.filters.RgbPixelFilter;
 import com.igormaznitsa.japagoge.utils.Palette256;
 
@@ -8,9 +9,10 @@ import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.net.URI;
-import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import static java.util.Objects.requireNonNull;
 
 public class PreferencesPanel extends JPanel {
 
@@ -32,7 +34,7 @@ public class PreferencesPanel extends JPanel {
 
   public PreferencesPanel(final JapagogeConfig.JapagogeConfigData data) {
     super(new GridBagLayout());
-    this.data = Objects.requireNonNull(data);
+    this.data = requireNonNull(data);
 
     this.textTempFolder = new JTextField(data.getTenpFolder());
     this.textTempFolder.setToolTipText("Folder to keep intermediate results of recording, default if empty");
@@ -55,6 +57,8 @@ public class PreferencesPanel extends JPanel {
     this.comboBoxFilter = new JComboBox<>(RgbPixelFilter.values());
     this.comboBoxFilter.setToolTipText("Select color filter for recording");
     this.comboBoxFilter.setSelectedItem(data.getFilter());
+    this.comboBoxFilter.addActionListener(e ->
+            this.onFilterChange(((RgbPixelFilter) requireNonNull(this.comboBoxFilter.getSelectedItem())).get()));
 
     this.comboBoxPaletteForGifRgb = new JComboBox<>(Palette256.values());
     this.comboBoxPaletteForGifRgb.setToolTipText("Pre-defined palette for GIF conversion");
@@ -131,6 +135,12 @@ public class PreferencesPanel extends JPanel {
       } catch (Exception e) {
         LOGGER.log(Level.SEVERE, "Error during link browsing activation", e);
       }
+    }
+  }
+
+  private void onFilterChange(final ColorFilter colorFilter) {
+    if (!this.checkBoxForceWholeFrame.isSelected()) {
+      this.checkBoxForceWholeFrame.setSelected(colorFilter.isWholeFrameRequired());
     }
   }
 
