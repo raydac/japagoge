@@ -72,18 +72,20 @@ public class JapagogeFrame extends JFrame {
   public JapagogeFrame(final GraphicsConfiguration gc) {
     super("Japagoge", gc);
 
-    this.borderSize = isBigRes(gc) ? 10 : 5;
-    this.titleHeight = isBigRes(gc) ? 72 : 36;
+    final boolean bigRes = isBigRes(gc);
 
-    this.imageConvert = loadIcon(gc, "button-convert.png");
-    this.imageClose = loadIcon(gc, "button-close.png");
-    this.imageSettings = loadIcon(gc, "button-settings.png");
-    this.imageRecord = loadIcon(gc, "button-record.png");
-    this.imageStop = loadIcon(gc, "button-stop.png");
-    this.imageHourglassIcon = loadIcon(gc, "hourglass48x48.png");
+    this.borderSize = bigRes ? 10 : 5;
+    this.titleHeight = bigRes ? 72 : 36;
+
+    this.imageConvert = loadIcon("button-convert.png", bigRes);
+    this.imageClose = loadIcon("button-close.png", bigRes);
+    this.imageSettings = loadIcon("button-settings.png", bigRes);
+    this.imageRecord = loadIcon("button-record.png", bigRes);
+    this.imageStop = loadIcon("button-stop.png", bigRes);
+    this.imageHourglassIcon = loadIcon("hourglass48x48.png", bigRes);
 
 
-    this.setIconImage(loadIcon(gc, "appico.png"));
+    this.setIconImage(loadIcon("appico.png", bigRes));
 
     SystemUtils.setApplicationTaskbarTitle(this.getIconImage(), this.getTitle(), null);
     Font uiManagerFont = UIManager.getFont("InternalFrame.titleFont");
@@ -91,12 +93,12 @@ public class JapagogeFrame extends JFrame {
       uiManagerFont = new Font(Font.SANS_SERIF, Font.BOLD, 12);
     }
 
-    this.setFont(isBigRes(gc) ? fontX2(uiManagerFont) : uiManagerFont);
+    this.setFont(bigRes ? fontX2(uiManagerFont) : uiManagerFont);
 
     this.getRootPane().putClientProperty("Window.shadow", Boolean.FALSE);
     this.getRootPane().getRootPane().putClientProperty("apple.awt.draggableWindowBackground", Boolean.FALSE);
 
-    final Dimension initialSize = isBigRes(gc) ? new Dimension(640, 512) : new Dimension(320, 256);
+    final Dimension initialSize = bigRes ? new Dimension(640, 512) : new Dimension(320, 256);
 
     this.setUndecorated(true);
     this.setBackground(Color.ORANGE);
@@ -231,7 +233,7 @@ public class JapagogeFrame extends JFrame {
     this.statisticWindow.getContentPane().setForeground(COLOR_SELECT_POSITION);
     this.statisticWindow.getContentPane().setLayout(new BoxLayout(this.statisticWindow.getContentPane(), BoxLayout.Y_AXIS));
 
-    final Font labelFont = new Font(Font.MONOSPACED, Font.BOLD, isBigRes(gc) ? 28 : 14);
+    final Font labelFont = new Font(Font.MONOSPACED, Font.BOLD, bigRes ? 28 : 14);
 
     this.labelStatX = new JLabel(" X= ");
     this.labelStatX.setFont(labelFont);
@@ -263,9 +265,9 @@ public class JapagogeFrame extends JFrame {
     this.setState(State.SELECT_POSITION);
   }
 
-  private static Image loadIcon(final GraphicsConfiguration gc, final String resourceName) {
+  private static Image loadIcon(final String resourceName, final boolean bigRes) {
     try (final InputStream in = Objects.requireNonNull(JapagogeFrame.class.getResourceAsStream("/icons/" + resourceName))) {
-      return isBigRes(gc) ? imageX2(ImageIO.read(in)) : ImageIO.read(in);
+      return bigRes ? imageX2(ImageIO.read(in)) : ImageIO.read(in);
     } catch (Exception ex) {
       throw new Error("Can't load resource image: " + resourceName, ex);
     }
@@ -676,8 +678,6 @@ public class JapagogeFrame extends JFrame {
         }
       }
     }
-
-
   }
 
   private File ensureExtension(final File file, final String extension) {

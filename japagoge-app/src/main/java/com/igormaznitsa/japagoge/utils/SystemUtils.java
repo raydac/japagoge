@@ -10,6 +10,7 @@ public final class SystemUtils {
 
   }
 
+  // Warning! Can take several seconds under linux!
   public static boolean isBigRes(final GraphicsConfiguration gc) {
     final double displayWidth = gc.getDevice().getDisplayMode().getWidth();
     final double displayBoundsWidth = gc.getDevice().getDefaultConfiguration().getBounds().width;
