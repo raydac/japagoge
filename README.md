@@ -9,7 +9,7 @@
 
 ## Changelog
 
-- 2.1.3 (SNAPSHOT)
+- __2.1.3 (SNAPSHOT)__
   - refactoring to decrease time of start under Linux
   - added old black white LCD mobile phone filter
   - added Black and White color filter
