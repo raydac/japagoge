@@ -125,7 +125,7 @@
                   <string>msa</string>
                 </CFBundleURLTypes>
                 <JVMVersion>9+</JVMVersion>
-                <JVMMainClassName>com.igormaznitsa.pdfimgremover.Application</JVMMainClassName>
+                <JVMMainClassName>Japagoge</JVMMainClassName>
               </plist>
               <dmg>
                 <generate>true</generate>
