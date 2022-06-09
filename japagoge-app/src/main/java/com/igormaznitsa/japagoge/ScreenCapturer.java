@@ -6,8 +6,12 @@ import com.igormaznitsa.japagoge.grabbers.ScreenAreaGrabberFactory;
 import com.igormaznitsa.japagoge.mouse.MouseInfoProvider;
 import com.igormaznitsa.japagoge.utils.Palette256;
 import com.igormaznitsa.japagoge.utils.PaletteUtils;
-
-import java.awt.*;
+import java.awt.AWTException;
+import java.awt.Dimension;
+import java.awt.Graphics2D;
+import java.awt.GraphicsDevice;
+import java.awt.Point;
+import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -88,7 +92,7 @@ public final class ScreenCapturer {
         LOGGER.log(Level.SEVERE, "Can't gen file channel", ex);
         throw new Error(ex);
       }
-      var newWriter = new APngWriter(fileChannel, this.filter);
+      APngWriter newWriter = new APngWriter(fileChannel, this.filter);
 
       if (!this.apngWriter.compareAndSet(null, newWriter)) {
         throw new Error("Unexpected state");
@@ -104,13 +108,16 @@ public final class ScreenCapturer {
       final BufferedImage image = this.screenAreaGrabber.grabAsRgb(this.screenArea);
 
       if (this.mouseInfoProvider != null) {
-        var mouseLocation = this.mouseInfoProvider.getMousePointerLocation();
-        var mousePointer = this.mouseInfoProvider.getMousePointerIcon();
-        var pointerRectangle = new Rectangle(mousePointer.toHot(mouseLocation), new Dimension(mousePointer.getWidth(), mousePointer.getHeight()));
+        Point mouseLocation = this.mouseInfoProvider.getMousePointerLocation();
+        com.igormaznitsa.japagoge.mouse.MousePointerIcon mousePointer =
+            this.mouseInfoProvider.getMousePointerIcon();
+        Rectangle pointerRectangle = new Rectangle(mousePointer.toHot(mouseLocation),
+            new Dimension(mousePointer.getWidth(), mousePointer.getHeight()));
         if (this.screenArea.intersects(pointerRectangle)) {
-          var gfx = image.createGraphics();
+          Graphics2D gfx = image.createGraphics();
           try {
-            gfx.drawImage(mousePointer.getImage(), mouseLocation.x - this.screenArea.x, mouseLocation.y - this.screenArea.y, null);
+            gfx.drawImage(mousePointer.getImage(), mouseLocation.x - this.screenArea.x,
+                mouseLocation.y - this.screenArea.y, null);
           } finally {
             gfx.dispose();
           }
@@ -150,12 +157,12 @@ public final class ScreenCapturer {
 
   public void stop(final int loops) {
     try {
-      var startedTimerTask = this.timerTask.getAndSet(null);
+      TimerTask startedTimerTask = this.timerTask.getAndSet(null);
       if (startedTimerTask != null) {
         stopped = true;
         startedTimerTask.cancel();
       }
-      var apngWriter = this.apngWriter.getAndSet(null);
+      APngWriter apngWriter = this.apngWriter.getAndSet(null);
       if (apngWriter != null) {
         try {
           final APngWriter.Statistics statistics = apngWriter.close(loops);

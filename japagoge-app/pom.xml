@@ -28,8 +28,8 @@
     <app.name>${project.build.finalName}</app.name>
     <executable.jar>false</executable.jar>
     <jna.version>5.11.0</jna.version>
-    <maven.compiler.source>11</maven.compiler.source>
-    <maven.compiler.target>11</maven.compiler.target>
+    <maven.compiler.source>9</maven.compiler.source>
+    <maven.compiler.target>9</maven.compiler.target>
   </properties>
 
   <issueManagement>
@@ -112,6 +112,36 @@
       </dependencies>
       <build>
         <plugins>
+          <plugin>
+            <groupId>de.perdian.maven.plugins</groupId>
+            <artifactId>macosappbundler-maven-plugin</artifactId>
+            <version>1.17.1</version>
+            <configuration>
+              <plist>
+                <CFBundleIconFile>appico.icns</CFBundleIconFile>
+                <CFBundleDisplayName>Japagoge APNG recorder</CFBundleDisplayName>
+                <CFBundleDevelopmentRegion>English</CFBundleDevelopmentRegion>
+                <CFBundleURLTypes>
+                  <string>msa</string>
+                </CFBundleURLTypes>
+                <JVMVersion>9+</JVMVersion>
+                <JVMMainClassName>com.igormaznitsa.pdfimgremover.Application</JVMMainClassName>
+              </plist>
+              <dmg>
+                <generate>true</generate>
+                <autoFallback>true</autoFallback>
+              </dmg>
+            </configuration>
+            <executions>
+              <execution>
+                <id>make-macos-bundle</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>bundle</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
           <plugin>
             <groupId>com.igormaznitsa</groupId>
             <artifactId>mvn-jlink-wrapper</artifactId>

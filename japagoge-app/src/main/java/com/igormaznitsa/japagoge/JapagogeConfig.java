@@ -2,7 +2,6 @@ package com.igormaznitsa.japagoge;
 
 import com.igormaznitsa.japagoge.filters.RgbPixelFilter;
 import com.igormaznitsa.japagoge.utils.Palette256;
-
 import java.io.File;
 import java.util.Locale;
 import java.util.prefs.Preferences;
@@ -129,7 +128,7 @@ public class JapagogeConfig {
   }
 
   public File getTargetFolder() {
-    var path = this.preferences.get(Key.FOLDER_PATH.name(), null);
+    String path = this.preferences.get(Key.FOLDER_PATH.name(), null);
     try {
       return new File(path);
     } catch (Exception ex) {
@@ -141,7 +140,7 @@ public class JapagogeConfig {
     if (folder == null) {
       this.preferences.remove(Key.FOLDER_PATH.name());
     } else {
-      var path = folder.isFile() ? folder.getParentFile() : folder;
+      File path = folder.isFile() ? folder.getParentFile() : folder;
       if (path == null) {
         this.preferences.remove(Key.FOLDER_PATH.name());
       } else {

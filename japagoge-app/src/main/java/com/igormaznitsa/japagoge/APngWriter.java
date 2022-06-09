@@ -2,7 +2,6 @@ package com.igormaznitsa.japagoge;
 
 import com.igormaznitsa.japagoge.filters.ColorFilter;
 import com.igormaznitsa.japagoge.filters.RgbPixelFilter;
-
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
 import java.io.ByteArrayOutputStream;
@@ -88,23 +87,52 @@ public final class APngWriter {
     return resultBuffer;
   }
 
-  private static byte[] compress(final byte[] data) throws IOException {
-    final Deflater deflater = new Deflater(9);
-    var outBuffer = new ByteArrayOutputStream(data.length / 2);
-    var deflatesStream = new DeflaterOutputStream(outBuffer, deflater, 0x2000, false);
-    deflatesStream.write(data);
-    deflatesStream.finish();
-    deflatesStream.flush();
-    deflatesStream.close();
-    return outBuffer.toByteArray();
+  public synchronized Statistics close(final int loopCount) throws IOException {
+    if (this.state == State.CLOSED) {
+      throw new IllegalStateException("Already closed");
+    }
+    final State oldState = this.state;
+    this.state = State.CLOSED;
+    if (oldState == State.CREATED) {
+      return null;
+    }
+
+    if (this.lastFoundDifference != null) {
+      this.saveSingleFrame(this.lastFoundDifference, this.accumulatedFrameDuration);
+    }
+
+    try {
+      this.writeIEND();
+
+      int actlStartOffset = OFFSET_ACTL_NO_PALETTE;
+
+      final Optional<int[]> palette = this.filter.getPalette();
+      if (palette.isPresent()) {
+        actlStartOffset += palette.orElseThrow(
+            () -> new IllegalStateException("Palette must be provided")).length * 3 + 12;
+      }
+
+      this.fileChannel.position(actlStartOffset);
+      this.writeAcTLChunk(this.frameCounter, loopCount);
+      return new Statistics(this.colorStatistics, this.chunkBuffer.length, this.frameCounter,
+          this.width, this.height, this.fileChannel.size());
+    } finally {
+      try {
+        this.fileChannel.close();
+      } finally {
+        this.imageDataBufferLast = null;
+        this.imageDataBufferTemp = null;
+        this.chunkBuffer = null;
+      }
+    }
   }
 
   private static short[] getTimeFraction(final Duration delay) {
     final long milliseconds = delay.toMillis();
     if (milliseconds == 0L) {
-      return new short[]{0, 0};
+      return new short[] {0, 0};
     } else {
-      return new short[]{(short) milliseconds, (short) 1000};
+      return new short[] {(short) milliseconds, (short) 1000};
     }
   }
 
@@ -348,7 +376,7 @@ public final class APngWriter {
     this.putInt(this.calcCrcForBufferedChunk());
     this.flushAndClearBuffer();
 
-    var compressedData = compress(portion.data);
+    byte[] compressedData = compress(portion.data);
 
     if (this.frameCounter == 1) {
       this.putInt(compressedData.length);
@@ -364,42 +392,23 @@ public final class APngWriter {
     this.flushAndClearBuffer();
   }
 
-  public synchronized Statistics close(final int loopCount) throws IOException {
-    if (this.state == State.CLOSED) throw new IllegalStateException("Already closed");
-    final State oldState = this.state;
-    this.state = State.CLOSED;
-    if (oldState == State.CREATED) return null;
-
-    if (this.lastFoundDifference != null) {
-      this.saveSingleFrame(this.lastFoundDifference, this.accumulatedFrameDuration);
-    }
-
-    try {
-      this.writeIEND();
-
-      int actlStartOffset = OFFSET_ACTL_NO_PALETTE;
-
-      final Optional<int[]> palette = this.filter.getPalette();
-      if (palette.isPresent()) {
-        actlStartOffset += palette.orElseThrow().length * 3 + 12;
-      }
-
-      this.fileChannel.position(actlStartOffset);
-      this.writeAcTLChunk(this.frameCounter, loopCount);
-      return new Statistics(this.colorStatistics, this.chunkBuffer.length, this.frameCounter, this.width, this.height, this.fileChannel.size());
-    } finally {
-      try {
-        this.fileChannel.close();
-      } finally {
-        this.imageDataBufferLast = null;
-        this.imageDataBufferTemp = null;
-        this.chunkBuffer = null;
-      }
-    }
+  private static byte[] compress(final byte[] data) throws IOException {
+    final Deflater deflater = new Deflater(9);
+    ByteArrayOutputStream outBuffer = new ByteArrayOutputStream(data.length / 2);
+    DeflaterOutputStream
+        deflatesStream = new DeflaterOutputStream(outBuffer, deflater, 0x2000, false);
+    deflatesStream.write(data);
+    deflatesStream.finish();
+    deflatesStream.flush();
+    deflatesStream.close();
+    return outBuffer.toByteArray();
   }
 
-  public synchronized void start(final String productName, final int width, final int height) throws IOException {
-    if (this.state != State.CREATED) throw new IllegalStateException("State: " + this.state);
+  public synchronized void start(final String productName, final int width, final int height)
+      throws IOException {
+    if (this.state != State.CREATED) {
+      throw new IllegalStateException("State: " + this.state);
+    }
     this.state = State.STARTED;
 
     this.width = width;
@@ -432,7 +441,8 @@ public final class APngWriter {
     this.flushAndClearBuffer();
 
     if (palette.isPresent()) {
-      this.writePtleChunk(palette.orElseThrow());
+      this.writePtleChunk(
+          palette.orElseThrow(() -> new IllegalStateException("Palette must be provided")));
     }
     this.writeAcTLChunk(0, 0);
     if (productName != null) {

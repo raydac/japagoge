@@ -1,7 +1,9 @@
 import com.igormaznitsa.japagoge.JapagogeFrame;
-
-import javax.swing.*;
-import java.awt.*;
+import java.awt.GraphicsConfiguration;
+import java.awt.GraphicsEnvironment;
+import javax.swing.JOptionPane;
+import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
 
 public class Japagoge {
 
@@ -13,13 +15,16 @@ public class Japagoge {
         // do nothing
       }
 
-      var screen = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice().getDefaultConfiguration();
+      GraphicsConfiguration
+          screen = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice()
+          .getDefaultConfiguration();
       try {
-        var window = new JapagogeFrame(screen);
+        JapagogeFrame window = new JapagogeFrame(screen);
         window.setVisible(true);
       } catch (Exception ex) {
         ex.printStackTrace();
-        JOptionPane.showMessageDialog(null, "Can't create frame", "Error", JOptionPane.ERROR_MESSAGE);
+        JOptionPane.showMessageDialog(null, "Can't create frame", "Error",
+            JOptionPane.ERROR_MESSAGE);
       }
     });
   }

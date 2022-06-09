@@ -1,11 +1,19 @@
 package com.igormaznitsa.japagoge.utils;
 
-import java.awt.datatransfer.*;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.ClipboardOwner;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.Transferable;
+import java.awt.datatransfer.UnsupportedFlavorException;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
 
 public class FileTransferable implements ClipboardOwner, Transferable {
   private static final DataFlavor DATA_FLAVOR_ARRAY_PNG;
@@ -35,7 +43,7 @@ public class FileTransferable implements ClipboardOwner, Transferable {
     flavorsList.add(DataFlavor.javaFileListFlavor);
 
     if (this.file.isFile() && this.file.length() <= MAX_SIZE_FOR_FILE_PLACE_IN_CLIPBOARD) {
-      var name = file.getName().toLowerCase(Locale.ENGLISH);
+      String name = file.getName().toLowerCase(Locale.ENGLISH);
       final DataFlavor imageFlavor;
       if (name.endsWith(".png")) {
         imageFlavor = DATA_FLAVOR_ARRAY_PNG;

@@ -25,7 +25,10 @@ public enum Palette256 {
       this.rgbPalette = null;
     } else {
       final int[] rgb = new int[256];
-      try (final Scanner in = new Scanner(Objects.requireNonNull(Palette256.class.getResourceAsStream("/palettes/" + paletteName)), StandardCharsets.UTF_8)) {
+      try (final Scanner in = new Scanner(
+          Objects.requireNonNull(Palette256.class.getResourceAsStream("/palettes/" + paletteName)),
+          StandardCharsets.UTF_8.name())
+      ) {
         int index = 0;
         while (in.hasNext()) {
           final String next = in.next().trim().toLowerCase(Locale.ENGLISH);
@@ -33,7 +36,9 @@ public enum Palette256 {
             rgb[index++] = Integer.parseInt(next, 16);
           }
         }
-        if (index > 256) throw new Error("Palette has more than 256 colors: " + paletteName);
+        if (index > 256) {
+          throw new Error("Palette has more than 256 colors: " + paletteName);
+        }
       }
       this.rgbPalette = rgb;
     }

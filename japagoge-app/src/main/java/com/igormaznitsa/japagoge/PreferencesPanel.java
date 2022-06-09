@@ -1,18 +1,27 @@
 package com.igormaznitsa.japagoge;
 
+import static java.util.Objects.requireNonNull;
+
 import com.igormaznitsa.japagoge.filters.ColorFilter;
 import com.igormaznitsa.japagoge.filters.RgbPixelFilter;
 import com.igormaznitsa.japagoge.utils.Palette256;
-
-import javax.swing.*;
-import java.awt.*;
+import java.awt.Cursor;
+import java.awt.Desktop;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.net.URI;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
-import static java.util.Objects.requireNonNull;
+import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JSpinner;
+import javax.swing.JTextField;
+import javax.swing.SpinnerNumberModel;
 
 public class PreferencesPanel extends JPanel {
 
@@ -114,7 +123,8 @@ public class PreferencesPanel extends JPanel {
     gblLeft.gridwidth = 2;
     gblLeft.anchor = GridBagConstraints.CENTER;
 
-    var linkLabel = new JLabel("<html><a href=\"#\">https://github.com/raydac/japagoge</a></html>");
+    JLabel linkLabel =
+        new JLabel("<html><a href=\"#\">https://github.com/raydac/japagoge</a></html>");
     linkLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
     linkLabel.setToolTipText("The project home page where you can find some help and new versions");
     linkLabel.addMouseListener(new MouseAdapter() {
@@ -128,7 +138,7 @@ public class PreferencesPanel extends JPanel {
   }
 
   private static void openWebpage(final URI uri) {
-    var desktop = Desktop.isDesktopSupported() ? Desktop.getDesktop() : null;
+    Desktop desktop = Desktop.isDesktopSupported() ? Desktop.getDesktop() : null;
     if (desktop != null && desktop.isSupported(Desktop.Action.BROWSE)) {
       try {
         desktop.browse(uri);

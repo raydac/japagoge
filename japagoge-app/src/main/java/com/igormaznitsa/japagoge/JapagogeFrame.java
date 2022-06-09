@@ -1,17 +1,35 @@
 package com.igormaznitsa.japagoge;
 
+import static com.igormaznitsa.japagoge.utils.SystemUtils.fontX2;
+import static com.igormaznitsa.japagoge.utils.SystemUtils.imageX2;
+import static com.igormaznitsa.japagoge.utils.SystemUtils.isBigRes;
+
 import com.igormaznitsa.japagoge.filters.ColorFilter;
 import com.igormaznitsa.japagoge.mouse.MouseInfoProviderFactory;
 import com.igormaznitsa.japagoge.utils.ClipboardUtils;
 import com.igormaznitsa.japagoge.utils.Palette256;
 import com.igormaznitsa.japagoge.utils.PaletteUtils;
 import com.igormaznitsa.japagoge.utils.SystemUtils;
-
-import javax.imageio.ImageIO;
-import javax.swing.*;
-import javax.swing.filechooser.FileFilter;
-import java.awt.*;
-import java.awt.event.*;
+import java.awt.AWTException;
+import java.awt.Color;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.GraphicsConfiguration;
+import java.awt.Image;
+import java.awt.Insets;
+import java.awt.Point;
+import java.awt.Polygon;
+import java.awt.Rectangle;
+import java.awt.Shape;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseMotionAdapter;
 import java.awt.geom.Area;
 import java.awt.geom.Rectangle2D;
 import java.io.File;
@@ -27,8 +45,18 @@ import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
-import static com.igormaznitsa.japagoge.utils.SystemUtils.*;
+import javax.imageio.ImageIO;
+import javax.swing.BoxLayout;
+import javax.swing.ImageIcon;
+import javax.swing.JFileChooser;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JWindow;
+import javax.swing.SwingUtilities;
+import javax.swing.Timer;
+import javax.swing.UIManager;
+import javax.swing.filechooser.FileFilter;
 
 @SuppressWarnings("unused")
 public class JapagogeFrame extends JFrame {
@@ -130,7 +158,7 @@ public class JapagogeFrame extends JFrame {
         if (!e.isConsumed()) {
           lastMousePressedTitleScreenPoint = null;
           final State currentState = state.get();
-          var componentPoint = e.getPoint();
+          Point componentPoint = e.getPoint();
           switch (currentState) {
             case SELECT_POSITION: {
               if (areaButtonRecordStop.contains(componentPoint)) {
@@ -166,8 +194,8 @@ public class JapagogeFrame extends JFrame {
       @Override
       public void mousePressed(final MouseEvent e) {
         if (!e.isConsumed()) {
-          var componentPoint = e.getPoint();
-          var screenPoint = new Point(componentPoint);
+          Point componentPoint = e.getPoint();
+          Point screenPoint = new Point(componentPoint);
           SwingUtilities.convertPointToScreen(screenPoint, JapagogeFrame.this);
           lastMousePressedTitleScreenPoint = screenPoint;
           if (componentPoint.y > titleHeight) {
@@ -184,33 +212,15 @@ public class JapagogeFrame extends JFrame {
 
     this.addMouseMotionListener(new MouseMotionAdapter() {
       @Override
-      public void mouseMoved(final MouseEvent e) {
-        if (!e.isConsumed() && resizer.isEnabled()) {
-          var newMouseScreenPoint = new Point(e.getPoint());
-          if (newMouseScreenPoint.getY() < titleHeight) {
-            if (areaButtonClose.contains(newMouseScreenPoint)
-                    || areaButtonSettings.contains(newMouseScreenPoint)
-                    || areaButtonConvert.contains(newMouseScreenPoint)
-                    || areaButtonRecordStop.contains(newMouseScreenPoint)) {
-              setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-            } else {
-              setCursor(Cursor.getDefaultCursor());
-            }
-          }
-          e.consume();
-        }
-      }
-
-      @Override
       public void mouseDragged(final MouseEvent e) {
         if (!e.isConsumed() && lastMousePressedTitleScreenPoint != null && resizer.isEnabled()) {
-          var newMouseScreenPoint = new Point(e.getPoint());
+          Point newMouseScreenPoint = new Point(e.getPoint());
           SwingUtilities.convertPointToScreen(newMouseScreenPoint, JapagogeFrame.this);
 
-          var dx = newMouseScreenPoint.x - lastMousePressedTitleScreenPoint.x;
-          var dy = newMouseScreenPoint.y - lastMousePressedTitleScreenPoint.y;
+          int dx = newMouseScreenPoint.x - lastMousePressedTitleScreenPoint.x;
+          int dy = newMouseScreenPoint.y - lastMousePressedTitleScreenPoint.y;
 
-          var windowLocation = JapagogeFrame.this.getLocation();
+          Point windowLocation = JapagogeFrame.this.getLocation();
           windowLocation.move(windowLocation.x + dx, windowLocation.y + dy);
           JapagogeFrame.this.setLocation(windowLocation);
 
@@ -218,6 +228,24 @@ public class JapagogeFrame extends JFrame {
 
           validate();
 
+          e.consume();
+        }
+      }
+
+      @Override
+      public void mouseMoved(final MouseEvent e) {
+        if (!e.isConsumed() && resizer.isEnabled()) {
+          Point newMouseScreenPoint = new Point(e.getPoint());
+          if (newMouseScreenPoint.getY() < titleHeight) {
+            if (areaButtonClose.contains(newMouseScreenPoint)
+                || areaButtonSettings.contains(newMouseScreenPoint)
+                || areaButtonConvert.contains(newMouseScreenPoint)
+                || areaButtonRecordStop.contains(newMouseScreenPoint)) {
+              setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            } else {
+              setCursor(Cursor.getDefaultCursor());
+            }
+          }
           e.consume();
         }
       }
@@ -340,68 +368,86 @@ public class JapagogeFrame extends JFrame {
         SwingUtilities.invokeLater(newScreenCapturer::start);
       }
     } catch (AWTException ex) {
-      JOptionPane.showMessageDialog(this, "Looks like it is impossible capture screen in your OS!", "Error", JOptionPane.ERROR_MESSAGE);
+      JOptionPane.showMessageDialog(this, "Looks like it is impossible capture screen in your OS!",
+          "Error", JOptionPane.ERROR_MESSAGE);
       System.exit(1);
     }
   }
 
-  private void doVisualConversionPngToGif(
-          final File pngFile,
-          final File gifFile,
-          final boolean accurateRgb,
-          final boolean dithering,
-          final int[] globalRgb256palette,
-          final boolean placeLinkToClipboard,
-          final ColorFilter forceColorFilter
-  ) {
-    LOGGER.info("Converting APNG file into GIF: " + pngFile + " -> " + gifFile);
-    var converter = new APngToGifConvertingWorker(
-            pngFile,
-            gifFile,
-            accurateRgb,
-            dithering,
-            globalRgb256palette,
-            forceColorFilter
-    );
-    converter.execute();
-    try {
-      JOptionPane.showOptionDialog(
-              this,
-              APngToGifConvertingWorker.makePanelFor(converter),
-              "Converting into GIF (might take a while)",
-              JOptionPane.DEFAULT_OPTION,
-              JOptionPane.PLAIN_MESSAGE,
-              new ImageIcon(this.imageHourglassIcon),
-              new Object[]{"Cancel"},
-              null);
-      if (placeLinkToClipboard)
-        ClipboardUtils.placeFileLinks(gifFile);
-    } finally {
-      converter.dispose();
+  private void updateLook() {
+    Rectangle bounds = this.getBounds();
+    switch (this.state.get()) {
+      case RECORDING: {
+        this.statisticWindow.setVisible(false);
+        this.setOpacity(0.3f);
+        this.setBackground(COLOR_RECORDING);
+        this.setForeground(COLOR_RECORDING);
+        this.getContentPane().setBackground(COLOR_RECORDING);
+        this.setShape(this.makeArea(bounds.width, bounds.height, false));
+      }
+      break;
+      case SELECT_POSITION: {
+        this.setOpacity(1.0f);
+        this.setBackground(COLOR_SELECT_POSITION);
+        this.setForeground(COLOR_SELECT_POSITION);
+        this.getContentPane().setBackground(COLOR_SELECT_POSITION);
+        this.setShape(this.makeArea(bounds.width, bounds.height, true));
+        this.statisticWindow.setVisible(this.showCapturingAreaMetrics);
+        this.validate();
+      }
+      break;
+      case SAVING_RESULT: {
+        this.statisticWindow.setVisible(false);
+        this.setOpacity(1.0f);
+        this.setBackground(COLOR_SAVING_RESULT);
+        this.setForeground(COLOR_SAVING_RESULT);
+        this.getContentPane().setBackground(COLOR_SAVING_RESULT);
+        this.setShape(this.makeArea(bounds.width, bounds.height, true));
+      }
+      break;
     }
+    this.setBounds(bounds);
+    this.revalidate();
+    this.repaint();
+  }
+
+  private void onButtonSettings() {
+    JapagogeConfig.JapagogeConfigData data = new JapagogeConfig.JapagogeConfigData();
+    PreferencesPanel panel = new PreferencesPanel(data);
+    if (JOptionPane.showConfirmDialog(this, panel, "Settings", JOptionPane.OK_CANCEL_OPTION,
+        JOptionPane.PLAIN_MESSAGE) == JOptionPane.OK_OPTION) {
+      panel.fillData();
+      data.save();
+    }
+    this.showCapturingAreaMetrics = data.isShowBoundsInfo();
+    this.statisticWindow.setVisible(this.showCapturingAreaMetrics);
+    repaint();
   }
 
   private void stopRecording() {
     try {
-      var currentCapturer = this.currentScreenCapturer.getAndSet(null);
+      ScreenCapturer currentCapturer = this.currentScreenCapturer.getAndSet(null);
       if (currentCapturer != null) {
         currentCapturer.stop(JapagogeConfig.getInstance().getLoops());
         this.setState(State.SAVING_RESULT);
 
         if (currentCapturer.hasStatistics()) {
           SwingUtilities.invokeLater(() -> {
-            var targetFile = this.makeTargetFile(JapagogeConfig.getInstance().getTargetFolder(), currentCapturer.getFilter().name(), "png");
-            var tempFile = currentCapturer.getTargetFile();
+            File targetFile = this.makeTargetFile(JapagogeConfig.getInstance().getTargetFolder(),
+                currentCapturer.getFilter().name(), "png");
+            File tempFile = currentCapturer.getTargetFile();
             try {
-              var fileChooser = new JFileChooser(JapagogeConfig.getInstance().getTargetFolder());
+              JFileChooser fileChooser =
+                  new JFileChooser(JapagogeConfig.getInstance().getTargetFolder());
               fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
               fileChooser.setSelectedFile(targetFile);
               fileChooser.setAcceptAllFileFilterUsed(false);
 
-              var apngFilter = new FileFilter() {
+              FileFilter apngFilter = new FileFilter() {
                 @Override
                 public boolean accept(final File f) {
-                  return f.isDirectory() || f.getName().toLowerCase(Locale.ENGLISH).endsWith(".png");
+                  return f.isDirectory() ||
+                      f.getName().toLowerCase(Locale.ENGLISH).endsWith(".png");
                 }
 
                 @Override
@@ -410,10 +456,11 @@ public class JapagogeFrame extends JFrame {
                 }
               };
 
-              var gifFilter = new FileFilter() {
+              FileFilter gifFilter = new FileFilter() {
                 @Override
                 public boolean accept(final File f) {
-                  return f.isDirectory() || f.getName().toLowerCase(Locale.ENGLISH).endsWith(".gif");
+                  return f.isDirectory() ||
+                      f.getName().toLowerCase(Locale.ENGLISH).endsWith(".gif");
                 }
 
                 @Override
@@ -429,7 +476,7 @@ public class JapagogeFrame extends JFrame {
               fileChooser.setDialogTitle("Save record");
 
               fileChooser.addPropertyChangeListener(JFileChooser.FILE_FILTER_CHANGED_PROPERTY, evt -> {
-                var selectedFilter = (FileFilter) evt.getNewValue();
+                FileFilter selectedFilter = (FileFilter) evt.getNewValue();
                 final String extension;
                 if (selectedFilter == gifFilter) {
                   extension = "gif";
@@ -439,11 +486,11 @@ public class JapagogeFrame extends JFrame {
                 fileChooser.setSelectedFile(this.makeTargetFile(fileChooser.getCurrentDirectory(), currentCapturer.getFilter().name(), extension));
               });
               if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
-                var selectedFile = fileChooser.getSelectedFile();
+                File selectedFile = fileChooser.getSelectedFile();
 
                 if (this.ensureOverwrite(selectedFile)) {
 
-                  var selectedFilter = fileChooser.getFileFilter();
+                  FileFilter selectedFilter = fileChooser.getFileFilter();
                   JapagogeConfig.getInstance().setTargetFolder(selectedFile.getParentFile());
 
                   if (selectedFilter == gifFilter) {
@@ -508,30 +555,8 @@ public class JapagogeFrame extends JFrame {
     }
   }
 
-  private File makeTargetFile(final File parentFolder, final String filter, final String extension) {
-    var dateFormat = new SimpleDateFormat("yyyyMMdd_HHmmss");
-    return new File(parentFolder, "record-" + filter.toLowerCase(Locale.ENGLISH) + '-' + dateFormat.format(new Date()) + '.' + extension);
-  }
-
-  private File makeTempRecordFile() throws IOException {
-    final String tempFolderPath = JapagogeConfig.getInstance().getTempFolder();
-    final File tempFolder = tempFolderPath.isBlank() ? null : new File(tempFolderPath);
-    if (tempFolder != null) {
-      if (!tempFolder.isDirectory()) {
-        throw new IOException("Can't find temp folder: " + tempFolder);
-      }
-      if (!tempFolder.canRead()) {
-        throw new IOException("Can't read temp folder: " + tempFolder);
-      }
-      if (!tempFolder.canWrite()) {
-        throw new IOException("Can't write temp folder: " + tempFolder);
-      }
-    }
-    return File.createTempFile(".japagoge-record", ".png", tempFolder);
-  }
-
   private Area makeArea(final int width, final int height, final boolean cross) {
-    var result = new Area(new Rectangle(0, 0, width, height));
+    Area result = new Area(new Rectangle(0, 0, width, height));
     result.subtract(new Area(new Rectangle(borderSize, borderSize, width - (borderSize * 2), height - (borderSize * 2))));
 
     final int titleHeight = this.titleHeight;
@@ -546,19 +571,73 @@ public class JapagogeFrame extends JFrame {
     final int gapBetweenButtons = 4;
 
     int buttonStartX = width - this.imageSettings.getWidth(null) - this.imageClose.getWidth(null) - this.imageConvert.getWidth(null) - gapBetweenButtons * 3;
-    this.areaButtonConvert.setBounds(buttonStartX, (this.titleHeight - this.imageConvert.getHeight(null)) / 2, this.imageConvert.getWidth(null), this.imageConvert.getHeight(null));
+    this.areaButtonConvert.setBounds(buttonStartX,
+        (this.titleHeight - this.imageConvert.getHeight(null)) / 2,
+        this.imageConvert.getWidth(null), this.imageConvert.getHeight(null));
     buttonStartX += this.areaButtonConvert.width + gapBetweenButtons;
-    this.areaButtonSettings.setBounds(buttonStartX, (this.titleHeight - this.imageSettings.getHeight(null)) / 2, this.imageSettings.getWidth(null), this.imageSettings.getHeight(null));
+    this.areaButtonSettings.setBounds(buttonStartX,
+        (this.titleHeight - this.imageSettings.getHeight(null)) / 2,
+        this.imageSettings.getWidth(null), this.imageSettings.getHeight(null));
     buttonStartX += this.areaButtonSettings.width + gapBetweenButtons;
-    this.areaButtonClose.setBounds(buttonStartX, (this.titleHeight - this.imageClose.getHeight(null)) / 2, this.imageClose.getWidth(null), this.imageClose.getHeight(null));
-    this.areaButtonRecordStop.setBounds(borderSize, (this.titleHeight - this.imageRecord.getHeight(null)) / 2, this.imageRecord.getWidth(null), this.imageRecord.getHeight(null));
+    this.areaButtonClose.setBounds(buttonStartX,
+        (this.titleHeight - this.imageClose.getHeight(null)) / 2, this.imageClose.getWidth(null),
+        this.imageClose.getHeight(null));
+    this.areaButtonRecordStop.setBounds(borderSize,
+        (this.titleHeight - this.imageRecord.getHeight(null)) / 2, this.imageRecord.getWidth(null),
+        this.imageRecord.getHeight(null));
 
     return result;
   }
 
+  private File makeTargetFile(final File parentFolder, final String filter,
+                              final String extension) {
+    SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd_HHmmss");
+    return new File(parentFolder,
+        "record-" + filter.toLowerCase(Locale.ENGLISH) + '-' + dateFormat.format(new Date()) + '.' +
+            extension);
+  }
+
+  private void doVisualConversionPngToGif(
+      final File pngFile,
+      final File gifFile,
+      final boolean accurateRgb,
+      final boolean dithering,
+      final int[] globalRgb256palette,
+      final boolean placeLinkToClipboard,
+      final ColorFilter forceColorFilter
+  ) {
+    LOGGER.info("Converting APNG file into GIF: " + pngFile + " -> " + gifFile);
+    APngToGifConvertingWorker converter = new APngToGifConvertingWorker(
+        pngFile,
+        gifFile,
+        accurateRgb,
+        dithering,
+        globalRgb256palette,
+        forceColorFilter
+    );
+    converter.execute();
+    try {
+      JOptionPane.showOptionDialog(
+          this,
+          APngToGifConvertingWorker.makePanelFor(converter),
+          "Converting into GIF (might take a while)",
+          JOptionPane.DEFAULT_OPTION,
+          JOptionPane.PLAIN_MESSAGE,
+          new ImageIcon(this.imageHourglassIcon),
+          new Object[] {"Cancel"},
+          null);
+      if (placeLinkToClipboard) {
+        ClipboardUtils.placeFileLinks(gifFile);
+      }
+    } finally {
+      converter.dispose();
+    }
+  }
+
   private Rectangle findScreeCaptureArea() {
     final Rectangle bounds = this.getBounds();
-    bounds.setBounds(bounds.x + borderSize, bounds.y + titleHeight, bounds.width - borderSize * 2, bounds.height - borderSize - titleHeight);
+    bounds.setBounds(bounds.x + borderSize, bounds.y + titleHeight, bounds.width - borderSize * 2,
+        bounds.height - borderSize - titleHeight);
     return bounds;
   }
 
@@ -570,41 +649,21 @@ public class JapagogeFrame extends JFrame {
     }
   }
 
-  private void updateLook() {
-    var bounds = this.getBounds();
-    switch (this.state.get()) {
-      case RECORDING: {
-        this.statisticWindow.setVisible(false);
-        this.setOpacity(0.3f);
-        this.setBackground(COLOR_RECORDING);
-        this.setForeground(COLOR_RECORDING);
-        this.getContentPane().setBackground(COLOR_RECORDING);
-        this.setShape(this.makeArea(bounds.width, bounds.height, false));
+  private File makeTempRecordFile() throws IOException {
+    final String tempFolderPath = JapagogeConfig.getInstance().getTempFolder();
+    final File tempFolder = isBlank(tempFolderPath) ? null : new File(tempFolderPath);
+    if (tempFolder != null) {
+      if (!tempFolder.isDirectory()) {
+        throw new IOException("Can't find temp folder: " + tempFolder);
       }
-      break;
-      case SELECT_POSITION: {
-        this.setOpacity(1.0f);
-        this.setBackground(COLOR_SELECT_POSITION);
-        this.setForeground(COLOR_SELECT_POSITION);
-        this.getContentPane().setBackground(COLOR_SELECT_POSITION);
-        this.setShape(this.makeArea(bounds.width, bounds.height, true));
-        this.statisticWindow.setVisible(this.showCapturingAreaMetrics);
-        this.validate();
+      if (!tempFolder.canRead()) {
+        throw new IOException("Can't read temp folder: " + tempFolder);
       }
-      break;
-      case SAVING_RESULT: {
-        this.statisticWindow.setVisible(false);
-        this.setOpacity(1.0f);
-        this.setBackground(COLOR_SAVING_RESULT);
-        this.setForeground(COLOR_SAVING_RESULT);
-        this.getContentPane().setBackground(COLOR_SAVING_RESULT);
-        this.setShape(this.makeArea(bounds.width, bounds.height, true));
+      if (!tempFolder.canWrite()) {
+        throw new IOException("Can't write temp folder: " + tempFolder);
       }
-      break;
     }
-    this.setBounds(bounds);
-    this.revalidate();
-    this.repaint();
+    return File.createTempFile(".japagoge-record", ".png", tempFolder);
   }
 
   private void onButtonConvert() {
@@ -691,26 +750,22 @@ public class JapagogeFrame extends JFrame {
   private boolean ensureOverwrite(final File file) {
     boolean ok = true;
     if (file.isFile()) {
-      ok = JOptionPane.showConfirmDialog(this, "File " + file.getName() + " exists, overwrite it?", "Overwrite file?", JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION;
+      ok = JOptionPane.showConfirmDialog(this, "File " + file.getName() + " exists, overwrite it?",
+          "Overwrite file?", JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION;
     }
     return ok;
   }
 
-  private void onButtonSettings() {
-    var data = new JapagogeConfig.JapagogeConfigData();
-    var panel = new PreferencesPanel(data);
-    if (JOptionPane.showConfirmDialog(this, panel, "Settings", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE) == JOptionPane.OK_OPTION) {
-      panel.fillData();
-      data.save();
-    }
-    this.showCapturingAreaMetrics = data.isShowBoundsInfo();
-    this.statisticWindow.setVisible(this.showCapturingAreaMetrics);
-    repaint();
+  private static boolean isBlank(final String str) {
+    return str == null || str.trim().isEmpty();
   }
 
   @SuppressWarnings("SameParameterValue")
   private void drawTitleText(final Graphics2D gfx, final String text) {
-    final Rectangle freeArea = new Rectangle(this.areaButtonRecordStop.x + this.areaButtonRecordStop.width, 0, areaButtonConvert.x - this.areaButtonRecordStop.x - this.areaButtonRecordStop.width, titleHeight);
+    final Rectangle freeArea =
+        new Rectangle(this.areaButtonRecordStop.x + this.areaButtonRecordStop.width, 0,
+            areaButtonConvert.x - this.areaButtonRecordStop.x - this.areaButtonRecordStop.width,
+            titleHeight);
 
     final Font font = this.getFont();
     final FontMetrics fontMetrics = this.getFontMetrics(font);
@@ -727,7 +782,7 @@ public class JapagogeFrame extends JFrame {
   @Override
   public void paint(final Graphics g) {
     final Graphics2D gfx = (Graphics2D) g;
-    var bounds = this.getBounds();
+    Rectangle bounds = this.getBounds();
     gfx.setColor(this.getBackground());
     gfx.fillRect(0, 0, bounds.width, bounds.height);
     switch (this.state.get()) {

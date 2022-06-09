@@ -6,10 +6,19 @@ import com.igormaznitsa.japagoge.gif.AGifWriter;
 import com.igormaznitsa.japagoge.utils.Pair;
 import com.igormaznitsa.japagoge.utils.PaletteUtils;
 import com.igormaznitsa.japagoge.utils.PngMode;
-
-import javax.swing.*;
-import java.awt.*;
-import java.io.*;
+import java.awt.BorderLayout;
+import java.awt.Dimension;
+import java.awt.Window;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
@@ -24,6 +33,11 @@ import java.util.logging.Logger;
 import java.util.stream.IntStream;
 import java.util.zip.DataFormatException;
 import java.util.zip.Inflater;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JProgressBar;
+import javax.swing.SwingUtilities;
+import javax.swing.SwingWorker;
 
 @SuppressWarnings("unused")
 public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
@@ -89,7 +103,7 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
         progressBar.setIndeterminate(false);
       }
       if (p > 100 || p < 0) {
-        var window = SwingUtilities.windowForComponent(panel);
+        Window window = SwingUtilities.windowForComponent(panel);
         if (window != null) {
           if (p == Integer.MIN_VALUE) {
             JOptionPane.showMessageDialog(window, "Error during conversion, may be wrong image format!", "Error", JOptionPane.ERROR_MESSAGE);
@@ -839,7 +853,7 @@ public class APngToGifConvertingWorker extends SwingWorker<File, Integer> {
       this.data = new byte[dataLength];
       in.readFully(this.data);
       counter.addAndGet(dataLength);
-      var crc = readInt(in, counter);
+      int crc = readInt(in, counter);
     }
 
     @Override
