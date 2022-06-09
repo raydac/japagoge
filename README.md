@@ -9,9 +9,11 @@
 
 ## Changelog
 
-- __2.1.3 (SNAPSHOT)__
-  - added Black and White filter
-  - embedded JDK updated to 17.0.2+9
+- 2.1.3 (SNAPSHOT)
+  - refactoring to decrease time of start under Linux
+  - added old black white LCD mobile phone filter
+  - added Black and White color filter
+  - embedded JDK updated to 17.0.3.1+2
 
 - __2.1.2 (12-nov-2021)__
   - improved support of 4k monitors
