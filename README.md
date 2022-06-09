@@ -3,13 +3,13 @@
 # Japagoge (PNG and GIF screen recorder)
 
 [![License Apache 2.0](https://img.shields.io/badge/license-Apache%20License%202.0-green.svg)](http://www.apache.org/licenses/LICENSE-2.0)
-[![Java 11+](https://img.shields.io/badge/java-11%2b-green.svg)](https://bell-sw.com/pages/downloads/#/java-11-lts)
+[![Java 9+](https://img.shields.io/badge/java-9%2b-green.svg)](https://bell-sw.com/pages/downloads/#/java-11-lts)
 [![PayPal donation](https://img.shields.io/badge/donation-PayPal-cyan.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=AHWJHJFBAWGL2)
 [![YooMoney donation](https://img.shields.io/badge/donation-Yoo.money-blue.svg)](https://yoomoney.ru/to/41001158080699)
 
 ## Changelog
 
-- __2.1.3 (SNAPSHOT)__
+- __2.1.3 (09-jun-2022)__
   - added SH and DMG files into publishing 
   - minimal JDK version 9+ 
   - refactoring to decrease time of start under Linux
@@ -37,13 +37,13 @@ conversion and some extra features.
 
 ## Pre-built
 
-| OS                                           |  Download link                                                                                                                                                                                | 
-| -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| ![Windows](assets/icons/win64x64.png)        | __[Archive for Windows x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.2/japagoge-app-2.1.2-windows-jdk-amd64.zip)__             |
-| ![OSX](assets/icons/macos64x64.png)          | __[Archive for OSX x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.2/japagoge-app-2.1.2-macos-jdk-amd64.zip)__                   |
-| ![OSX Arm64](assets/icons/macosarm64x64.png) | __[Archive for OSX Arm64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.2/japagoge-app-2.1.2-macos-jdk-aarch64.zip)__                 |
-| ![Linux](assets/icons/linux64x64.png)        | __[Archive for Linux x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.2/japagoge-app-2.1.2-linux-jdk-amd64.tar.gz)__              |
-| ![Java](assets/icons/java64x64.png)          | __[Cross-platform JAR file](https://github.com/raydac/japagoge/releases/download/2.1.2/japagoge-app-2.1.2.jar)__                                     | 
+| OS                                           | Download link                                                                                                                                     | 
+| -------------------------------------------- |---------------------------------------------------------------------------------------------------------------------------------------------------|
+| ![Windows](assets/icons/win64x64.png)        | __[Archive for Windows x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.3/japagoge-app-2.1.3-windows-jdk-amd64.zip)__ |
+| ![OSX](assets/icons/macos64x64.png)          | __[Archive for OSX x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.3/japagoge-app-2.1.3-macos-jdk-amd64.zip)__       |
+| ![OSX Arm64](assets/icons/macosarm64x64.png) | __[Archive for OSX Arm64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.3/japagoge-app-2.1.3-macos-jdk-aarch64.zip)__   |
+| ![Linux](assets/icons/linux64x64.png)        | __[Archive for Linux x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.3/japagoge-app-2.1.3-linux-jdk-amd64.tar.gz)__  |
+| ![Java](assets/icons/java64x64.png)          | __[Cross-platform JAR file](https://github.com/raydac/japagoge/releases/download/2.1.3/japagoge-app-2.1.3.jar)__                                  | 
 
 ## How to use the utility?
 
