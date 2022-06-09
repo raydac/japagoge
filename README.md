@@ -10,6 +10,8 @@
 ## Changelog
 
 - __2.1.3 (SNAPSHOT)__
+  - added SH and DMG files into publishing 
+  - minimal JDK version 9+ 
   - refactoring to decrease time of start under Linux
   - added old black white LCD mobile phone filter
   - added Black and White color filter
