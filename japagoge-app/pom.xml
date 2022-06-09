@@ -58,6 +58,48 @@
 
   <profiles>
     <profile>
+      <id>makesh</id>
+      <activation>
+        <os>
+          <family>unix</family>
+        </os>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <version>3.0.0</version>
+            <executions>
+              <execution>
+                <id>make-sh</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <executable>cat</executable>
+                  <commandlineArgs>${basedir}${file.separator}stub.sh.txt ${project.build.directory}${file.separator}${app.name}.jar</commandlineArgs>
+                  <outputFile>${project.build.directory}${file.separator}${app.name}.sh</outputFile>
+                </configuration>
+              </execution>
+              <execution>
+                <id>make-executable</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <executable>chmod</executable>
+                  <commandlineArgs>+x ${project.build.directory}${file.separator}${app.name}.sh</commandlineArgs>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
       <id>publish</id>
       <dependencies>
         <dependency>

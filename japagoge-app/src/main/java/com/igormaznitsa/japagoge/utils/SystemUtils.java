@@ -80,8 +80,9 @@ public final class SystemUtils {
     try {
       final Field awtAppClassNameField =
               toolkit.getClass().getDeclaredField("awtAppClassName");
-      awtAppClassNameField.setAccessible(true);
-      awtAppClassNameField.set(toolkit, title);
+      if (awtAppClassNameField.trySetAccessible()) {
+        awtAppClassNameField.set(toolkit, title);
+      }
     } catch (Exception ex) {
       // just ignoring
     }
