@@ -61,7 +61,7 @@ import javax.swing.filechooser.FileFilter;
 @SuppressWarnings("unused")
 public class JapagogeFrame extends JFrame {
 
-  private static final String VERSION = "v 2.1.3";
+  private static final String VERSION = "v 2.1.4";
 
   private static final Logger LOGGER = Logger.getLogger("JapagogeFrame");
 
