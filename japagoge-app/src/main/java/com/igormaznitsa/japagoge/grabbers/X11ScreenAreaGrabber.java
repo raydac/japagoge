@@ -2,8 +2,8 @@ package com.igormaznitsa.japagoge.grabbers;
 
 import com.sun.jna.NativeLong;
 import com.sun.jna.Pointer;
-
-import java.awt.*;
+import java.awt.GraphicsDevice;
+import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -45,7 +45,7 @@ class X11ScreenAreaGrabber implements ScreenAreaGrabber {
       System.arraycopy(imageRgb, 0, rgbArray, 0, imageRgb.length);
       return result;
     } finally {
-      this.x11Grab.XFree(image.getPointer());
+      this.x11Grab.XFree(pImage);
     }
   }
 
