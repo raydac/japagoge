@@ -27,7 +27,7 @@
     <java.version>11</java.version>
     <app.name>${project.build.finalName}</app.name>
     <executable.jar>false</executable.jar>
-    <jna.version>5.11.0</jna.version>
+    <jna.version>5.12.1</jna.version>
     <maven.compiler.source>9</maven.compiler.source>
     <maven.compiler.target>9</maven.compiler.target>
   </properties>
