@@ -87,6 +87,14 @@ public class JapagogeConfig {
     this.preferences.putBoolean(Key.FORCE_WHOLE_FRAME.name(), flag);
   }
 
+  public boolean isForceJavaRobotGrabber() {
+    return this.preferences.getBoolean(Key.FORCE_JAVA_ROBOT.name(), false);
+  }
+
+  public void setForceJavaRobotGrabber(final boolean flag) {
+    this.preferences.putBoolean(Key.FORCE_JAVA_ROBOT.name(), flag);
+  }
+
   public boolean isAccurateRgb() {
     return this.preferences.getBoolean(Key.ACCURATE_RGB.name(), false);
   }
@@ -160,6 +168,7 @@ public class JapagogeConfig {
   private enum Key {
     TEMP_FOLDER,
     FORCE_WHOLE_FRAME,
+    FORCE_JAVA_ROBOT,
     SHOW_BOUNDS_INFO,
     CAPTURE_DELAY,
     FRAME_DELAY,
@@ -175,6 +184,7 @@ public class JapagogeConfig {
   public static class JapagogeConfigData {
     private String tenpFolder;
     private boolean pointer;
+    private boolean forceJavaRobotGrabber;
     private boolean forceWholeFrame;
     private boolean showBoundsInfo;
     private boolean dithering;
@@ -187,6 +197,7 @@ public class JapagogeConfig {
     private int loops;
 
     public JapagogeConfigData() {
+      this.forceJavaRobotGrabber = getInstance().isForceJavaRobotGrabber();
       this.tenpFolder = getInstance().getTempFolder();
       this.accurateRgb = getInstance().isAccurateRgb();
       this.dithering = getInstance().isDithering();
@@ -239,6 +250,14 @@ public class JapagogeConfig {
 
     public void setGifPaletteForRgb(final Palette256 palette) {
       this.gifPaletteForRgb = palette == null ? Palette256.AUTO : palette;
+    }
+
+    public boolean isForceJavaRobotGrabber() {
+      return this.forceJavaRobotGrabber;
+    }
+
+    public void setForceJavaRobotGrabber(final boolean value) {
+      this.forceJavaRobotGrabber = value;
     }
 
     public boolean isPointer() {
@@ -298,6 +317,7 @@ public class JapagogeConfig {
     }
 
     public void save() {
+      getInstance().setForceJavaRobotGrabber(this.forceJavaRobotGrabber);
       getInstance().setTempFolder(this.tenpFolder);
       getInstance().setGifPaletteForRgb(this.gifPaletteForRgb);
       getInstance().setPointer(this.pointer);

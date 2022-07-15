@@ -45,19 +45,21 @@ public final class ScreenCapturer {
   private APngWriter.Statistics pngStatistics;
 
   public ScreenCapturer(
-          final GraphicsDevice device,
-          final Rectangle screenArea,
-          final File targetFile,
-          final MouseInfoProvider mouseInfoProvider,
-          final RgbPixelFilter filter,
-          final boolean forceWholeFrame,
-          final Palette256 palette,
-          final Duration delayBetweenCaptures,
-          final Duration delayBetweenFrames
+      final GraphicsDevice device,
+      final Rectangle screenArea,
+      final File targetFile,
+      final MouseInfoProvider mouseInfoProvider,
+      final RgbPixelFilter filter,
+      final boolean forceWholeFrame,
+      final boolean forceJavaRobotGrabber,
+      final Palette256 palette,
+      final Duration delayBetweenCaptures,
+      final Duration delayBetweenFrames
   ) throws AWTException {
     this.forceWholeFrame = forceWholeFrame;
     this.palette = palette;
-    this.screenAreaGrabber = ScreenAreaGrabberFactory.getInstance().makeGrabber(device);
+    this.screenAreaGrabber = forceJavaRobotGrabber ? ScreenAreaGrabberFactory.getInstance()
+        .makeJavaRobotGrabber(device) : ScreenAreaGrabberFactory.getInstance().makeGrabber(device);
     this.filter = filter;
     this.mouseInfoProvider = mouseInfoProvider;
     this.screenArea = Objects.requireNonNull(screenArea);

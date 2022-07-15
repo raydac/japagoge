@@ -33,6 +33,7 @@ public class PreferencesPanel extends JPanel {
   private final JCheckBox checkBoxPointer;
   private final JCheckBox checkBoxShowBoundsInfo;
   private final JCheckBox checkBoxForceWholeFrame;
+  private final JCheckBox checkBoxForceJavaRonotGrabber;
   private final JCheckBox checkBoxAccurateRgb;
   private final JCheckBox checkBoxDithering;
   private final JComboBox<RgbPixelFilter> comboBoxFilter;
@@ -61,13 +62,18 @@ public class PreferencesPanel extends JPanel {
     this.checkBoxShowBoundsInfo.setToolTipText("Show coordinates of capturing area");
 
     this.checkBoxForceWholeFrame = new JCheckBox(null, null, data.isForceWholeFrame());
-    this.checkBoxForceWholeFrame.setToolTipText("Disable size optimization, helps for quality of dithering GIF");
+    this.checkBoxForceWholeFrame.setToolTipText(
+        "Disable size optimization, helps for quality of dithering GIF");
+
+    this.checkBoxForceJavaRonotGrabber = new JCheckBox(null, null, data.isForceJavaRobotGrabber());
+    this.checkBoxForceJavaRonotGrabber.setToolTipText("Force use of Java robot screen grabber");
 
     this.comboBoxFilter = new JComboBox<>(RgbPixelFilter.values());
     this.comboBoxFilter.setToolTipText("Select color filter for recording");
     this.comboBoxFilter.setSelectedItem(data.getFilter());
     this.comboBoxFilter.addActionListener(e ->
-            this.onFilterChange(((RgbPixelFilter) requireNonNull(this.comboBoxFilter.getSelectedItem())).get()));
+        this.onFilterChange(
+            ((RgbPixelFilter) requireNonNull(this.comboBoxFilter.getSelectedItem())).get()));
 
     this.comboBoxPaletteForGifRgb = new JComboBox<>(Palette256.values());
     this.comboBoxPaletteForGifRgb.setToolTipText("Pre-defined palette for GIF conversion");
@@ -120,6 +126,9 @@ public class PreferencesPanel extends JPanel {
     this.add(new JLabel("Force whole frame: "), gblLeft);
     this.add(this.checkBoxForceWholeFrame, gblRight);
 
+    this.add(new JLabel("Force Java robot grabber: "), gblLeft);
+    this.add(this.checkBoxForceJavaRonotGrabber, gblRight);
+
     gblLeft.gridwidth = 2;
     gblLeft.anchor = GridBagConstraints.CENTER;
 
@@ -159,6 +168,7 @@ public class PreferencesPanel extends JPanel {
     this.data.setPointer(this.checkBoxPointer.isSelected());
     this.data.setShowBoundsInfo(this.checkBoxShowBoundsInfo.isSelected());
     this.data.setForceWholeFrame(this.checkBoxForceWholeFrame.isSelected());
+    this.data.setForceJavaRobotGrabber(this.checkBoxForceJavaRonotGrabber.isSelected());
     this.data.setAccurateRgb(this.checkBoxAccurateRgb.isSelected());
     this.data.setDithering(this.checkBoxDithering.isSelected());
     this.data.setFilter((RgbPixelFilter) this.comboBoxFilter.getSelectedItem());

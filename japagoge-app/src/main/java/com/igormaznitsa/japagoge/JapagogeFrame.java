@@ -354,15 +354,17 @@ public class JapagogeFrame extends JFrame {
 
     try {
       final ScreenCapturer newScreenCapturer = new ScreenCapturer(
-              this.getGraphicsConfiguration().getDevice(),
-              this.findScreeCaptureArea(),
-              tempFile,
-              JapagogeConfig.getInstance().isPointer() ? MouseInfoProviderFactory.getInstance().makeProvider() : null,
-              JapagogeConfig.getInstance().getFilter(),
-              JapagogeConfig.getInstance().isForceWholeFrame(),
-              JapagogeConfig.getInstance().getGifPaletteForRgb(),
-              Duration.ofMillis(JapagogeConfig.getInstance().getCaptureDelay()),
-              Duration.ofMillis(JapagogeConfig.getInstance().getFrameDelay())
+          this.getGraphicsConfiguration().getDevice(),
+          this.findScreeCaptureArea(),
+          tempFile,
+          JapagogeConfig.getInstance().isPointer() ?
+              MouseInfoProviderFactory.getInstance().makeProvider() : null,
+          JapagogeConfig.getInstance().getFilter(),
+          JapagogeConfig.getInstance().isForceWholeFrame(),
+          JapagogeConfig.getInstance().isForceJavaRobotGrabber(),
+          JapagogeConfig.getInstance().getGifPaletteForRgb(),
+          Duration.ofMillis(JapagogeConfig.getInstance().getCaptureDelay()),
+          Duration.ofMillis(JapagogeConfig.getInstance().getFrameDelay())
       );
       if (this.currentScreenCapturer.compareAndSet(null, newScreenCapturer)) {
         SwingUtilities.invokeLater(newScreenCapturer::start);

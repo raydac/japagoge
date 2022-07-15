@@ -1,10 +1,9 @@
 package com.igormaznitsa.japagoge.grabbers;
 
-import org.apache.commons.lang3.SystemUtils;
-
-import java.awt.*;
+import java.awt.GraphicsDevice;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.apache.commons.lang3.SystemUtils;
 
 public final class ScreenAreaGrabberFactory {
   private static final ScreenAreaGrabberFactory INSTANCE = new ScreenAreaGrabberFactory();
@@ -21,13 +20,19 @@ public final class ScreenAreaGrabberFactory {
     return INSTANCE;
   }
 
-  private static ScreenAreaGrabber tryMakeGrabber(final String className, final GraphicsDevice device) {
+  private static ScreenAreaGrabber tryMakeGrabber(final String className,
+                                                  final GraphicsDevice device) {
     try {
-      return (ScreenAreaGrabber) Class.forName(className).getDeclaredConstructor(GraphicsDevice.class).newInstance(device);
+      return (ScreenAreaGrabber) Class.forName(className)
+          .getDeclaredConstructor(GraphicsDevice.class).newInstance(device);
     } catch (Exception ex) {
       LOGGER.log(Level.SEVERE, "Can't load class " + className + " for error", ex);
     }
     return null;
+  }
+
+  public ScreenAreaGrabber makeJavaRobotGrabber(final GraphicsDevice device) {
+    return new RobotScreenAreaGrabber(device);
   }
 
   public ScreenAreaGrabber makeGrabber(final GraphicsDevice device) {
