@@ -2,13 +2,18 @@ package com.igormaznitsa.japagoge.grabbers;
 
 import com.sun.jna.NativeLong;
 import com.sun.jna.Pointer;
+import com.sun.jna.platform.unix.X11;
 import java.awt.GraphicsDevice;
 import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 class X11ScreenAreaGrabber implements ScreenAreaGrabber {
+
+  private static final Logger LOGGER = Logger.getLogger(X11ScreenAreaGrabber.class.getName());
 
   private static final int ZPixmap = 2;
   private final NativeLong allPlanes;
@@ -29,6 +34,24 @@ class X11ScreenAreaGrabber implements ScreenAreaGrabber {
     this.window = x11Grab.XRootWindow(this.display, this.screen);
     this.colorMap = x11Grab.XDefaultColormap(this.display, this.screen);
     this.colorPoint = new X11GrabLib.XColor.ByReference();
+
+    X11.INSTANCE.XSetErrorHandler((display, errorEvent) -> {
+      final byte[] text = new byte[256];
+      X11.INSTANCE.XGetErrorText(display, errorEvent.error_code & 0xFF, text, text.length);
+      LOGGER.log(Level.SEVERE, "X11 error (" + extractZString(text) + "): " + errorEvent);
+      return 0;
+    });
+  }
+
+  private static String extractZString(final byte[] buffer) {
+    final StringBuilder result = new StringBuilder();
+    for (final byte b : buffer) {
+      if (b == 0) {
+        break;
+      }
+      result.append((char) (b & 0xFF));
+    }
+    return result.toString();
   }
 
   @Override
@@ -36,28 +59,37 @@ class X11ScreenAreaGrabber implements ScreenAreaGrabber {
     if (this.closed.get()) {
       throw new IllegalStateException("Already closed");
     }
-    final Pointer pImage = this.x11Grab.XGetImage(this.display, this.window, area.x, area.y, area.width, area.height, this.allPlanes, ZPixmap);
-    final XImage image = new XImage(pImage);
-    try {
-      final BufferedImage result = new BufferedImage(area.width, area.height, BufferedImage.TYPE_INT_RGB);
-      final int[] imageRgb = this.extractRgbData(pImage, image);
-      final int[] rgbArray = ((DataBufferInt) result.getRaster().getDataBuffer()).getData();
-      System.arraycopy(imageRgb, 0, rgbArray, 0, imageRgb.length);
-      return result;
-    } finally {
-      this.x11Grab.XFree(pImage);
+    final Pointer pImage =
+        this.x11Grab.XGetImage(this.display, this.window, area.x, area.y, area.width, area.height,
+            this.allPlanes, ZPixmap);
+    if (pImage == Pointer.NULL) {
+      throw new NullPointerException("XGetImage returns NULL");
+    } else {
+      final XImage image = new XImage(pImage);
+      try {
+        final BufferedImage result =
+            new BufferedImage(area.width, area.height, BufferedImage.TYPE_INT_RGB);
+        final int[] imageRgb = this.extractRgbData(pImage, image);
+        final int[] rgbArray = ((DataBufferInt) result.getRaster().getDataBuffer()).getData();
+        System.arraycopy(imageRgb, 0, rgbArray, 0, imageRgb.length);
+        return result;
+      } finally {
+        this.x11Grab.XFree(pImage);
+      }
     }
   }
 
   private int[] extractRgbData(final Pointer pImage, final XImage xImage) {
     final int[] result;
     final boolean invertedByteOrder = xImage.byte_order == XImage.MSBFIRST;
-    if (xImage.xoffset == 0 && xImage.bitmap_pad == 32 && xImage.depth >= 24 && xImage.bitmap_unit == 32) {
+    if (xImage.xoffset == 0 && xImage.bitmap_pad == 32 && xImage.depth >= 24 &&
+        xImage.bitmap_unit == 32) {
       result = xImage.data.getIntArray(0, (xImage.bytes_per_line / 4) * xImage.height);
       if (invertedByteOrder) {
         for (int i = 0; i < result.length; i++) {
           final int value = result[i];
-          result[i] = (value << 24) | ((value << 8) & 0x00FF0000) | (value >>> 24) | ((value >> 8) & 0x0000FF00);
+          result[i] = (value << 24) | ((value << 8) & 0x00FF0000) | (value >>> 24) |
+              ((value >> 8) & 0x0000FF00);
         }
       }
     } else {
@@ -78,7 +110,8 @@ class X11ScreenAreaGrabber implements ScreenAreaGrabber {
             final long pixel = this.colorPoint.pixel.longValue();
             if (invertedByteOrder) {
               final int value = (int) (pixel >>> 32);
-              rgb = (value << 24) | ((value << 8) & 0x00FF0000) | (value >>> 24) | ((value >> 8) & 0x0000FF00);
+              rgb = (value << 24) | ((value << 8) & 0x00FF0000) | (value >>> 24) |
+                  ((value >> 8) & 0x0000FF00);
             } else {
               rgb = ((int) pixel & 0xFFFFFF);
             }

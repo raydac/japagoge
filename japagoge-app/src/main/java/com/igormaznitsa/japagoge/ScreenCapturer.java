@@ -76,12 +76,22 @@ public final class ScreenCapturer {
     return this.targetFile;
   }
 
+  private volatile boolean error;
+
+  public boolean isError() {
+    return this.error;
+  }
+
   public void start() {
+    this.error = false;
     final TimerTask newTimerTask = new TimerTask() {
       @Override
       public void run() {
         if (!stopped) {
-          doCapture();
+          if (!doCapture()) {
+            stopCapturingTask();
+            error = true;
+          }
         }
       }
     };
@@ -105,7 +115,7 @@ public final class ScreenCapturer {
     }
   }
 
-  private void doCapture() {
+  private boolean doCapture() {
     try {
       final BufferedImage image = this.screenAreaGrabber.grabAsRgb(this.screenArea);
 
@@ -133,8 +143,10 @@ public final class ScreenCapturer {
         }
         writer.addFrame(image, this.forceWholeFrame, this.delayBetweenFrames);
       }
+      return true;
     } catch (Exception ex) {
       LOGGER.log(Level.SEVERE, "Error during capturing", ex);
+      return false;
     }
   }
 
@@ -147,9 +159,10 @@ public final class ScreenCapturer {
                         return PaletteUtils.makeGrayscaleRgb256();
                       } else {
                         LOGGER.info("Using RGB palette: " + palette);
-                        return palette.getPalette().orElseGet(() -> this.pngStatistics.colorStatistics.makeAutoPalette());
+                        return palette.getPalette()
+                            .orElseGet(() -> this.pngStatistics.colorStatistics.makeAutoPalette());
                       }
-                    }
+                }
             );
   }
 
@@ -157,13 +170,17 @@ public final class ScreenCapturer {
     return this.timerTask.get() != null;
   }
 
+  private void stopCapturingTask() {
+    TimerTask startedTimerTask = this.timerTask.getAndSet(null);
+    if (startedTimerTask != null) {
+      stopped = true;
+      startedTimerTask.cancel();
+    }
+  }
+
   public void stop(final int loops) {
     try {
-      TimerTask startedTimerTask = this.timerTask.getAndSet(null);
-      if (startedTimerTask != null) {
-        stopped = true;
-        startedTimerTask.cancel();
-      }
+      this.stopCapturingTask();
       APngWriter apngWriter = this.apngWriter.getAndSet(null);
       if (apngWriter != null) {
         try {
