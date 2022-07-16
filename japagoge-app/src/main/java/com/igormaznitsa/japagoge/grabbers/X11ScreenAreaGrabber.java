@@ -60,8 +60,16 @@ class X11ScreenAreaGrabber implements ScreenAreaGrabber {
       throw new IllegalStateException("Already closed");
     }
     final Pointer pImage =
-        this.x11Grab.XGetImage(this.display, this.window, area.x, area.y, area.width, area.height,
-            this.allPlanes, ZPixmap);
+        this.x11Grab.XGetImage(
+            this.display,
+            this.window,
+            area.x,
+            area.y,
+            area.width,
+            area.height,
+            this.allPlanes,
+            ZPixmap
+        );
     if (pImage == Pointer.NULL) {
       throw new NullPointerException("XGetImage returns NULL");
     } else {
