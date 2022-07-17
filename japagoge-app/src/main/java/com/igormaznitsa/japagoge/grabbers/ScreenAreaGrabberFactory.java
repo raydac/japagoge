@@ -1,6 +1,7 @@
 package com.igormaznitsa.japagoge.grabbers;
 
 import java.awt.GraphicsDevice;
+import java.util.Locale;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.lang3.SystemUtils;
@@ -35,14 +36,25 @@ public final class ScreenAreaGrabberFactory {
     return new RobotScreenAreaGrabber(device);
   }
 
+  private static boolean isWayland() {
+    final String xdgSessionType = System.getenv("XDG_SESSION_TYPE");
+    return xdgSessionType != null && xdgSessionType.toLowerCase(Locale.ENGLISH).contains("wayland");
+  }
+
   public ScreenAreaGrabber makeGrabber(final GraphicsDevice device) {
     ScreenAreaGrabber result = null;
     if (Boolean.getBoolean(PROPERTY_FORCE_ROBOT)) {
       LOGGER.info("Detected " + PROPERTY_FORCE_ROBOT + " as TRUE");
     } else {
       if (SystemUtils.IS_OS_LINUX || SystemUtils.IS_OS_SOLARIS) {
-        LOGGER.info("Detected potential X11 system");
-        result = tryMakeGrabber("com.igormaznitsa.japagoge.grabbers.X11ScreenAreaGrabber", device);
+        final String xdgSessionType = System.getenv("XDG_SESSION_TYPE");
+        if (isWayland()) {
+          LOGGER.warning("Detected wayland, can't use X11 and Java robot will be forced");
+        } else {
+          LOGGER.info("Detected potential X11 system");
+          result =
+              tryMakeGrabber("com.igormaznitsa.japagoge.grabbers.X11ScreenAreaGrabber", device);
+        }
       }
     }
     return result == null ? new RobotScreenAreaGrabber(device) : result;
