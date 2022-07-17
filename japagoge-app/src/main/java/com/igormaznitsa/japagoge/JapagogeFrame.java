@@ -64,13 +64,12 @@ public class JapagogeFrame extends JFrame {
   private static final String VERSION = "v 2.1.4";
 
   private static final Logger LOGGER = Logger.getLogger("JapagogeFrame");
-
-  private final int borderSize;
-  private final int titleHeight;
-
   private static final Color COLOR_SELECT_POSITION = Color.GREEN;
   private static final Color COLOR_RECORDING = Color.CYAN;
   private static final Color COLOR_SAVING_RESULT = Color.YELLOW;
+  private static final String PROPERTY_FORCE_ROBOT = "japagoge.force.robot";
+  private final int borderSize;
+  private final int titleHeight;
   private final ComponentResizer resizer;
   private final AtomicReference<ScreenCapturer> currentScreenCapturer = new AtomicReference<>();
   private final Image imageConvert;
@@ -92,6 +91,236 @@ public class JapagogeFrame extends JFrame {
   private Point lastMousePressedTitleScreenPoint = null;
   private boolean showCapturingAreaMetrics;
   private boolean drawStopButton = true;
+
+  public JapagogeFrame(final GraphicsConfiguration gc) {
+    super("Japagoge", gc);
+
+    final boolean bigRes = isBigRes(gc);
+
+    this.borderSize = bigRes ? 10 : 5;
+    this.titleHeight = bigRes ? 72 : 36;
+
+    this.imageConvert = loadIcon("button-convert.png", bigRes);
+    this.imageClose = loadIcon("button-close.png", bigRes);
+    this.imageSettings = loadIcon("button-settings.png", bigRes);
+    this.imageRecord = loadIcon("button-record.png", bigRes);
+    this.imageStop = loadIcon("button-stop.png", bigRes);
+    this.imageHourglassIcon = loadIcon("hourglass48x48.png", bigRes);
+
+
+    this.setIconImage(loadIcon("appico.png", bigRes));
+
+    SystemUtils.setApplicationTaskbarTitle(this.getIconImage(), this.getTitle(), null);
+    Font uiManagerFont = UIManager.getFont("InternalFrame.titleFont");
+    if (uiManagerFont == null) {
+      uiManagerFont = new Font(Font.SANS_SERIF, Font.BOLD, 12);
+    }
+
+    this.setFont(bigRes ? fontX2(uiManagerFont) : uiManagerFont);
+
+    this.getRootPane().putClientProperty("Window.shadow", Boolean.FALSE);
+    this.getRootPane().getRootPane()
+        .putClientProperty("apple.awt.draggableWindowBackground", Boolean.FALSE);
+
+    final Dimension initialSize = bigRes ? new Dimension(640, 512) : new Dimension(320, 256);
+
+    this.setUndecorated(true);
+    this.setBackground(Color.ORANGE);
+    this.setAlwaysOnTop(true);
+
+    this.setFocusableWindowState(false);
+    this.setFocusable(false);
+
+    this.resizer = new ComponentResizer(new Insets(0, borderSize, borderSize, borderSize));
+    this.resizer.registerComponent(this);
+    this.resizer.setMinimumSize(new Dimension(imageRecord.getWidth(null), titleHeight * 2));
+    this.resizer.setMaximumSize(new Dimension(4096, 4096));
+    this.resizer.setSnapSize(new Dimension(1, 1));
+
+    this.addComponentListener(new ComponentAdapter() {
+      @Override
+      public void componentResized(final ComponentEvent e) {
+        updateLook();
+      }
+    });
+
+    this.setPreferredSize(initialSize);
+    this.setSize(initialSize);
+
+    this.addMouseListener(new MouseAdapter() {
+
+      @Override
+      public void mouseClicked(final MouseEvent e) {
+        if (!e.isConsumed()) {
+          lastMousePressedTitleScreenPoint = null;
+          final State currentState = state.get();
+          Point componentPoint = e.getPoint();
+          switch (currentState) {
+            case SELECT_POSITION: {
+              if (areaButtonRecordStop.contains(componentPoint)) {
+                e.consume();
+                startRecording();
+              } else if (areaButtonClose.contains(componentPoint)) {
+                e.consume();
+                onButtonClose();
+              } else if (areaButtonConvert.contains(componentPoint)) {
+                e.consume();
+                onButtonConvert();
+              } else if (areaButtonSettings.contains(componentPoint)) {
+                e.consume();
+                onButtonSettings();
+              }
+            }
+            break;
+            case RECORDING: {
+              if (e.getClickCount() > 1 && areaButtonRecordStop.contains(componentPoint)) {
+                e.consume();
+                stopRecording();
+              }
+            }
+            break;
+            default: {
+              // do noting
+            }
+            break;
+          }
+        }
+      }
+
+      @Override
+      public void mousePressed(final MouseEvent e) {
+        if (!e.isConsumed()) {
+          Point componentPoint = e.getPoint();
+          Point screenPoint = new Point(componentPoint);
+          SwingUtilities.convertPointToScreen(screenPoint, JapagogeFrame.this);
+          lastMousePressedTitleScreenPoint = screenPoint;
+          if (componentPoint.y > titleHeight) {
+            lastMousePressedTitleScreenPoint = null;
+          }
+        }
+      }
+
+      @Override
+      public void mouseReleased(final MouseEvent e) {
+        lastMousePressedTitleScreenPoint = null;
+      }
+    });
+
+    this.addMouseMotionListener(new MouseMotionAdapter() {
+      @Override
+      public void mouseDragged(final MouseEvent e) {
+        if (!e.isConsumed() && lastMousePressedTitleScreenPoint != null && resizer.isEnabled()) {
+          Point newMouseScreenPoint = new Point(e.getPoint());
+          SwingUtilities.convertPointToScreen(newMouseScreenPoint, JapagogeFrame.this);
+
+          int dx = newMouseScreenPoint.x - lastMousePressedTitleScreenPoint.x;
+          int dy = newMouseScreenPoint.y - lastMousePressedTitleScreenPoint.y;
+
+          Point windowLocation = JapagogeFrame.this.getLocation();
+          windowLocation.move(windowLocation.x + dx, windowLocation.y + dy);
+          JapagogeFrame.this.setLocation(windowLocation);
+
+          lastMousePressedTitleScreenPoint = newMouseScreenPoint;
+
+          validate();
+
+          e.consume();
+        }
+      }
+
+      @Override
+      public void mouseMoved(final MouseEvent e) {
+        if (!e.isConsumed() && resizer.isEnabled()) {
+          Point newMouseScreenPoint = new Point(e.getPoint());
+          if (newMouseScreenPoint.getY() < titleHeight) {
+            if (areaButtonClose.contains(newMouseScreenPoint)
+                || areaButtonSettings.contains(newMouseScreenPoint)
+                || areaButtonConvert.contains(newMouseScreenPoint)
+                || areaButtonRecordStop.contains(newMouseScreenPoint)) {
+              setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            } else {
+              setCursor(Cursor.getDefaultCursor());
+            }
+          }
+          e.consume();
+        }
+      }
+    });
+
+    this.statisticWindow = new JWindow(this);
+    this.statisticWindow.setFocusable(false);
+    this.statisticWindow.getRootPane().putClientProperty("Window.shadow", Boolean.FALSE);
+    this.statisticWindow.getRootPane().getRootPane()
+        .putClientProperty("apple.awt.draggableWindowBackground", Boolean.FALSE);
+
+    this.statisticWindow.setFocusableWindowState(false);
+    this.statisticWindow.getContentPane().setBackground(COLOR_SELECT_POSITION);
+    this.statisticWindow.getContentPane().setForeground(COLOR_SELECT_POSITION);
+    this.statisticWindow.getContentPane()
+        .setLayout(new BoxLayout(this.statisticWindow.getContentPane(), BoxLayout.Y_AXIS));
+
+    final Font labelFont = new Font(Font.MONOSPACED, Font.BOLD, bigRes ? 28 : 14);
+
+    this.labelStatX = new JLabel(" X= ");
+    this.labelStatX.setFont(labelFont);
+    this.labelStatX.setBackground(COLOR_SELECT_POSITION);
+
+    this.labelStatY = new JLabel(" Y= ");
+    this.labelStatY.setFont(labelFont);
+    this.labelStatY.setBackground(COLOR_SELECT_POSITION);
+
+    this.labelStatWidth = new JLabel(" W= ");
+    this.labelStatWidth.setFont(labelFont);
+    this.labelStatWidth.setBackground(COLOR_SELECT_POSITION);
+
+    this.labelStatHeight = new JLabel(" H= ");
+    this.labelStatHeight.setFont(labelFont);
+    this.labelStatHeight.setBackground(COLOR_SELECT_POSITION);
+
+    this.statisticWindow.getContentPane().add(this.labelStatX);
+    this.statisticWindow.getContentPane().add(this.labelStatY);
+    this.statisticWindow.getContentPane().add(this.labelStatWidth);
+    this.statisticWindow.getContentPane().add(this.labelStatHeight);
+
+    this.setLocationRelativeTo(null);
+
+    this.showCapturingAreaMetrics = JapagogeConfig.getInstance().isShowBoundsInfo();
+
+    this.statisticWindow.setVisible(this.showCapturingAreaMetrics);
+
+    this.setState(State.SELECT_POSITION);
+  }
+
+  private static Image loadIcon(final String resourceName, final boolean bigRes) {
+    try (final InputStream in = Objects.requireNonNull(
+        JapagogeFrame.class.getResourceAsStream("/icons/" + resourceName))) {
+      return bigRes ? imageX2(ImageIO.read(in)) : ImageIO.read(in);
+    } catch (Exception ex) {
+      throw new Error("Can't load resource image: " + resourceName, ex);
+    }
+  }
+
+  private final Timer halfSecondTimer = new Timer(500, e -> {
+    final ScreenCapturer capturer = this.currentScreenCapturer.get();
+    if (capturer == null || capturer.isError()) {
+      this.stopRecording();
+    }
+    drawStopButton = !drawStopButton;
+    repaint();
+  });
+
+  private static String extractNameWithoutExtenstion(final File file) {
+    String name = file.getName();
+    int index = name.lastIndexOf('.');
+    if (index > 0) {
+      name = name.substring(0, index);
+    }
+    return name;
+  }
+
+  private static boolean isBlank(final String str) {
+    return str == null || str.trim().isEmpty();
+  }
 
   private void stopRecording() {
     try {
@@ -239,217 +468,21 @@ public class JapagogeFrame extends JFrame {
     }
   }
 
-  private final Timer halfSecondTimer = new Timer(500, e -> {
-    final ScreenCapturer capturer = this.currentScreenCapturer.get();
-    if (capturer == null || capturer.isError()) {
-      this.stopRecording();
-    }
-    drawStopButton = !drawStopButton;
-    repaint();
-  });
+  @Override
+  public void validate() {
+    super.validate();
 
-  public JapagogeFrame(final GraphicsConfiguration gc) {
-    super("Japagoge", gc);
-
-    final boolean bigRes = isBigRes(gc);
-
-    this.borderSize = bigRes ? 10 : 5;
-    this.titleHeight = bigRes ? 72 : 36;
-
-    this.imageConvert = loadIcon("button-convert.png", bigRes);
-    this.imageClose = loadIcon("button-close.png", bigRes);
-    this.imageSettings = loadIcon("button-settings.png", bigRes);
-    this.imageRecord = loadIcon("button-record.png", bigRes);
-    this.imageStop = loadIcon("button-stop.png", bigRes);
-    this.imageHourglassIcon = loadIcon("hourglass48x48.png", bigRes);
-
-
-    this.setIconImage(loadIcon("appico.png", bigRes));
-
-    SystemUtils.setApplicationTaskbarTitle(this.getIconImage(), this.getTitle(), null);
-    Font uiManagerFont = UIManager.getFont("InternalFrame.titleFont");
-    if (uiManagerFont == null) {
-      uiManagerFont = new Font(Font.SANS_SERIF, Font.BOLD, 12);
-    }
-
-    this.setFont(bigRes ? fontX2(uiManagerFont) : uiManagerFont);
-
-    this.getRootPane().putClientProperty("Window.shadow", Boolean.FALSE);
-    this.getRootPane().getRootPane().putClientProperty("apple.awt.draggableWindowBackground", Boolean.FALSE);
-
-    final Dimension initialSize = bigRes ? new Dimension(640, 512) : new Dimension(320, 256);
-
-    this.setUndecorated(true);
-    this.setBackground(Color.ORANGE);
-    this.setAlwaysOnTop(true);
-
-    this.setFocusableWindowState(false);
-    this.setFocusable(false);
-
-    this.resizer = new ComponentResizer(new Insets(0, borderSize, borderSize, borderSize));
-    this.resizer.registerComponent(this);
-    this.resizer.setMinimumSize(new Dimension(imageRecord.getWidth(null), titleHeight * 2));
-    this.resizer.setMaximumSize(new Dimension(4096, 4096));
-    this.resizer.setSnapSize(new Dimension(1, 1));
-
-    this.addComponentListener(new ComponentAdapter() {
-      @Override
-      public void componentResized(final ComponentEvent e) {
-        updateLook();
-      }
-    });
-
-    this.setPreferredSize(initialSize);
-    this.setSize(initialSize);
-
-    this.addMouseListener(new MouseAdapter() {
-
-      @Override
-      public void mouseClicked(final MouseEvent e) {
-        if (!e.isConsumed()) {
-          lastMousePressedTitleScreenPoint = null;
-          final State currentState = state.get();
-          Point componentPoint = e.getPoint();
-          switch (currentState) {
-            case SELECT_POSITION: {
-              if (areaButtonRecordStop.contains(componentPoint)) {
-                e.consume();
-                startRecording();
-              } else if (areaButtonClose.contains(componentPoint)) {
-                e.consume();
-                onButtonClose();
-              } else if (areaButtonConvert.contains(componentPoint)) {
-                e.consume();
-                onButtonConvert();
-              } else if (areaButtonSettings.contains(componentPoint)) {
-                e.consume();
-                onButtonSettings();
-              }
-            }
-            break;
-            case RECORDING: {
-              if (e.getClickCount() > 1 && areaButtonRecordStop.contains(componentPoint)) {
-                e.consume();
-                stopRecording();
-              }
-            }
-            break;
-            default: {
-              // do noting
-            }
-            break;
-          }
-        }
-      }
-
-      @Override
-      public void mousePressed(final MouseEvent e) {
-        if (!e.isConsumed()) {
-          Point componentPoint = e.getPoint();
-          Point screenPoint = new Point(componentPoint);
-          SwingUtilities.convertPointToScreen(screenPoint, JapagogeFrame.this);
-          lastMousePressedTitleScreenPoint = screenPoint;
-          if (componentPoint.y > titleHeight) {
-            lastMousePressedTitleScreenPoint = null;
-          }
-        }
-      }
-
-      @Override
-      public void mouseReleased(final MouseEvent e) {
-        lastMousePressedTitleScreenPoint = null;
-      }
-    });
-
-    this.addMouseMotionListener(new MouseMotionAdapter() {
-      @Override
-      public void mouseDragged(final MouseEvent e) {
-        if (!e.isConsumed() && lastMousePressedTitleScreenPoint != null && resizer.isEnabled()) {
-          Point newMouseScreenPoint = new Point(e.getPoint());
-          SwingUtilities.convertPointToScreen(newMouseScreenPoint, JapagogeFrame.this);
-
-          int dx = newMouseScreenPoint.x - lastMousePressedTitleScreenPoint.x;
-          int dy = newMouseScreenPoint.y - lastMousePressedTitleScreenPoint.y;
-
-          Point windowLocation = JapagogeFrame.this.getLocation();
-          windowLocation.move(windowLocation.x + dx, windowLocation.y + dy);
-          JapagogeFrame.this.setLocation(windowLocation);
-
-          lastMousePressedTitleScreenPoint = newMouseScreenPoint;
-
-          validate();
-
-          e.consume();
-        }
-      }
-
-      @Override
-      public void mouseMoved(final MouseEvent e) {
-        if (!e.isConsumed() && resizer.isEnabled()) {
-          Point newMouseScreenPoint = new Point(e.getPoint());
-          if (newMouseScreenPoint.getY() < titleHeight) {
-            if (areaButtonClose.contains(newMouseScreenPoint)
-                || areaButtonSettings.contains(newMouseScreenPoint)
-                || areaButtonConvert.contains(newMouseScreenPoint)
-                || areaButtonRecordStop.contains(newMouseScreenPoint)) {
-              setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-            } else {
-              setCursor(Cursor.getDefaultCursor());
-            }
-          }
-          e.consume();
-        }
-      }
-    });
-
-    this.statisticWindow = new JWindow(this);
-    this.statisticWindow.setFocusable(false);
-    this.statisticWindow.getRootPane().putClientProperty("Window.shadow", Boolean.FALSE);
-    this.statisticWindow.getRootPane().getRootPane().putClientProperty("apple.awt.draggableWindowBackground", Boolean.FALSE);
-
-    this.statisticWindow.setFocusableWindowState(false);
-    this.statisticWindow.getContentPane().setBackground(COLOR_SELECT_POSITION);
-    this.statisticWindow.getContentPane().setForeground(COLOR_SELECT_POSITION);
-    this.statisticWindow.getContentPane().setLayout(new BoxLayout(this.statisticWindow.getContentPane(), BoxLayout.Y_AXIS));
-
-    final Font labelFont = new Font(Font.MONOSPACED, Font.BOLD, bigRes ? 28 : 14);
-
-    this.labelStatX = new JLabel(" X= ");
-    this.labelStatX.setFont(labelFont);
-    this.labelStatX.setBackground(COLOR_SELECT_POSITION);
-
-    this.labelStatY = new JLabel(" Y= ");
-    this.labelStatY.setFont(labelFont);
-    this.labelStatY.setBackground(COLOR_SELECT_POSITION);
-
-    this.labelStatWidth = new JLabel(" W= ");
-    this.labelStatWidth.setFont(labelFont);
-    this.labelStatWidth.setBackground(COLOR_SELECT_POSITION);
-
-    this.labelStatHeight = new JLabel(" H= ");
-    this.labelStatHeight.setFont(labelFont);
-    this.labelStatHeight.setBackground(COLOR_SELECT_POSITION);
-
-    this.statisticWindow.getContentPane().add(this.labelStatX);
-    this.statisticWindow.getContentPane().add(this.labelStatY);
-    this.statisticWindow.getContentPane().add(this.labelStatWidth);
-    this.statisticWindow.getContentPane().add(this.labelStatHeight);
-
-    this.setLocationRelativeTo(null);
-
-    this.showCapturingAreaMetrics = JapagogeConfig.getInstance().isShowBoundsInfo();
-
-    this.statisticWindow.setVisible(this.showCapturingAreaMetrics);
-
-    this.setState(State.SELECT_POSITION);
-  }
-
-  private static Image loadIcon(final String resourceName, final boolean bigRes) {
-    try (final InputStream in = Objects.requireNonNull(JapagogeFrame.class.getResourceAsStream("/icons/" + resourceName))) {
-      return bigRes ? imageX2(ImageIO.read(in)) : ImageIO.read(in);
-    } catch (Exception ex) {
-      throw new Error("Can't load resource image: " + resourceName, ex);
-    }
+    final Rectangle mainWindowBounds = JapagogeFrame.this.getBounds();
+    final Rectangle capturingArea = this.findScreeCaptureArea();
+    this.labelStatX.setText(" X=" + capturingArea.x + ' ');
+    this.labelStatY.setText(" Y=" + capturingArea.y + ' ');
+    this.labelStatWidth.setText(" W=" + capturingArea.width + ' ');
+    this.labelStatHeight.setText(" H=" + capturingArea.height + ' ');
+    this.statisticWindow.pack();
+    this.statisticWindow.setLocation(
+        mainWindowBounds.x + (mainWindowBounds.width - this.statisticWindow.getWidth()) / 2,
+        mainWindowBounds.y + titleHeight +
+            (mainWindowBounds.height - titleHeight - this.statisticWindow.getHeight()) / 2);
   }
 
   private void setState(final State newState) {
@@ -465,29 +498,6 @@ public class JapagogeFrame extends JFrame {
     this.updateLook();
   }
 
-  @Override
-  public void validate() {
-    super.validate();
-
-    final Rectangle mainWindowBounds = JapagogeFrame.this.getBounds();
-    final Rectangle capturingArea = this.findScreeCaptureArea();
-    this.labelStatX.setText(" X=" + capturingArea.x + ' ');
-    this.labelStatY.setText(" Y=" + capturingArea.y + ' ');
-    this.labelStatWidth.setText(" W=" + capturingArea.width + ' ');
-    this.labelStatHeight.setText(" H=" + capturingArea.height + ' ');
-    this.statisticWindow.pack();
-    this.statisticWindow.setLocation(mainWindowBounds.x + (mainWindowBounds.width - this.statisticWindow.getWidth()) / 2, mainWindowBounds.y + titleHeight + (mainWindowBounds.height - titleHeight - this.statisticWindow.getHeight()) / 2);
-  }
-
-  private static String extractNameWithoutExtenstion(final File file) {
-    String name = file.getName();
-    int index = name.lastIndexOf('.');
-    if (index > 0) {
-      name = name.substring(0, index);
-    }
-    return name;
-  }
-
   private void startRecording() {
     this.setState(State.RECORDING);
     final File tempFile;
@@ -496,12 +506,17 @@ public class JapagogeFrame extends JFrame {
       LOGGER.info("Temp file: " + tempFile);
     } catch (IOException ex) {
       LOGGER.log(Level.SEVERE, "Can't make temp file", ex);
-      JOptionPane.showMessageDialog(this, ex.getMessage() == null ? "Can't create temp file" : ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+      JOptionPane.showMessageDialog(this,
+          ex.getMessage() == null ? "Can't create temp file" : ex.getMessage(), "Error",
+          JOptionPane.ERROR_MESSAGE);
       this.setState(State.SELECT_POSITION);
       return;
     }
 
     this.resizer.setEnable(false);
+
+    final boolean forceJavaRobot = Boolean.getBoolean(PROPERTY_FORCE_ROBOT) ||
+        JapagogeConfig.getInstance().isForceJavaRobotGrabber();
 
     try {
       final ScreenCapturer newScreenCapturer = new ScreenCapturer(
@@ -512,7 +527,7 @@ public class JapagogeFrame extends JFrame {
               MouseInfoProviderFactory.getInstance().makeProvider() : null,
           JapagogeConfig.getInstance().getFilter(),
           JapagogeConfig.getInstance().isForceWholeFrame(),
-          JapagogeConfig.getInstance().isForceJavaRobotGrabber(),
+          forceJavaRobot,
           JapagogeConfig.getInstance().getGifPaletteForRgb(),
           Duration.ofMillis(JapagogeConfig.getInstance().getCaptureDelay()),
           Duration.ofMillis(JapagogeConfig.getInstance().getFrameDelay())
@@ -525,6 +540,44 @@ public class JapagogeFrame extends JFrame {
           "Error", JOptionPane.ERROR_MESSAGE);
       System.exit(1);
     }
+  }
+
+  private Area makeArea(final int width, final int height, final boolean cross) {
+    Area result = new Area(new Rectangle(0, 0, width, height));
+    result.subtract(new Area(new Rectangle(borderSize, borderSize, width - (borderSize * 2),
+        height - (borderSize * 2))));
+
+    final int titleHeight = this.titleHeight;
+
+    result.add(new Area(new Rectangle(0, 0, width, titleHeight)));
+
+    if (cross) {
+      result.add(new Area(new Polygon(new int[] {0, width, width - 1, 0},
+          new int[] {titleHeight, height - 1, height, titleHeight + 1}, 4)));
+      result.add(new Area(new Polygon(new int[] {0, width - 1, width, 1},
+          new int[] {height - 1, titleHeight, titleHeight + 1, height}, 4)));
+    }
+
+    final int gapBetweenButtons = 4;
+
+    int buttonStartX = width - this.imageSettings.getWidth(null) - this.imageClose.getWidth(null) -
+        this.imageConvert.getWidth(null) - gapBetweenButtons * 3;
+    this.areaButtonConvert.setBounds(buttonStartX,
+        (this.titleHeight - this.imageConvert.getHeight(null)) / 2,
+        this.imageConvert.getWidth(null), this.imageConvert.getHeight(null));
+    buttonStartX += this.areaButtonConvert.width + gapBetweenButtons;
+    this.areaButtonSettings.setBounds(buttonStartX,
+        (this.titleHeight - this.imageSettings.getHeight(null)) / 2,
+        this.imageSettings.getWidth(null), this.imageSettings.getHeight(null));
+    buttonStartX += this.areaButtonSettings.width + gapBetweenButtons;
+    this.areaButtonClose.setBounds(buttonStartX,
+        (this.titleHeight - this.imageClose.getHeight(null)) / 2, this.imageClose.getWidth(null),
+        this.imageClose.getHeight(null));
+    this.areaButtonRecordStop.setBounds(borderSize,
+        (this.titleHeight - this.imageRecord.getHeight(null)) / 2, this.imageRecord.getWidth(null),
+        this.imageRecord.getHeight(null));
+
+    return result;
   }
 
   private void updateLook() {
@@ -577,40 +630,88 @@ public class JapagogeFrame extends JFrame {
     repaint();
   }
 
+  private void onButtonConvert() {
+    if (this.state.get() == State.SELECT_POSITION) {
+      LOGGER.info("Conversion activated");
+      final JFileChooser sourceFIleChooser =
+          new JFileChooser(JapagogeConfig.getInstance().getTargetFolder());
+      sourceFIleChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+      sourceFIleChooser.setMultiSelectionEnabled(false);
+      sourceFIleChooser.setAcceptAllFileFilterUsed(false);
+      sourceFIleChooser.addChoosableFileFilter(new FileFilter() {
+        @Override
+        public boolean accept(final File f) {
+          if (f.isDirectory()) {
+            return true;
+          }
+          final String name = f.getName().toLowerCase(Locale.ENGLISH);
+          return name.endsWith(".png") || name.endsWith(".apng");
+        }
 
+        @Override
+        public String getDescription() {
+          return "PNG and APNG images (*.png, *.apng)";
+        }
+      });
 
-  private Area makeArea(final int width, final int height, final boolean cross) {
-    Area result = new Area(new Rectangle(0, 0, width, height));
-    result.subtract(new Area(new Rectangle(borderSize, borderSize, width - (borderSize * 2), height - (borderSize * 2))));
+      sourceFIleChooser.setDialogTitle("Select source PNG or APNG image");
 
-    final int titleHeight = this.titleHeight;
+      if (sourceFIleChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+        final File sourceFile = sourceFIleChooser.getSelectedFile();
 
-    result.add(new Area(new Rectangle(0, 0, width, titleHeight)));
+        LOGGER.info("Selected source file: " + sourceFile);
+        if (sourceFile.isFile()) {
+          final JFileChooser targetFileChooser =
+              new JFileChooser(JapagogeConfig.getInstance().getTargetFolder());
+          targetFileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+          targetFileChooser.setMultiSelectionEnabled(false);
+          targetFileChooser.setAcceptAllFileFilterUsed(false);
+          targetFileChooser.setDialogTitle("Target GIF file");
+          targetFileChooser.setSelectedFile(
+              new File(extractNameWithoutExtenstion(sourceFile) + ".gif"));
+          targetFileChooser.addChoosableFileFilter(new FileFilter() {
+            @Override
+            public boolean accept(final File f) {
+              if (f.isDirectory()) {
+                return true;
+              }
+              final String name = f.getName().toLowerCase(Locale.ENGLISH);
+              return name.endsWith(".gif");
+            }
 
-    if (cross) {
-      result.add(new Area(new Polygon(new int[]{0, width, width - 1, 0}, new int[]{titleHeight, height - 1, height, titleHeight + 1}, 4)));
-      result.add(new Area(new Polygon(new int[]{0, width - 1, width, 1}, new int[]{height - 1, titleHeight, titleHeight + 1, height}, 4)));
+            @Override
+            public String getDescription() {
+              return "GIF images (*.gif)";
+            }
+          });
+
+          if (targetFileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
+            final File targetFile = ensureExtension(targetFileChooser.getSelectedFile(), ".gif");
+            LOGGER.info("Selected target file: " + targetFile);
+            if (this.ensureOverwrite(targetFile)) {
+              Palette256 palette = JapagogeConfig.getInstance().getGifPaletteForRgb();
+              if (palette == Palette256.AUTO) {
+                palette = Palette256.UNIVERSAL;
+              }
+
+              LOGGER.info(
+                  "Converting " + sourceFile + " to " + targetFile + ", palette " + palette.name());
+
+              this.doVisualConversionPngToGif(sourceFile, targetFile,
+                  JapagogeConfig.getInstance().isAccurateRgb(),
+                  JapagogeConfig.getInstance().isDithering(),
+                  palette.getPalette().orElseGet(PaletteUtils::makeGrayscaleRgb256),
+                  false,
+                  JapagogeConfig.getInstance().getFilter().get()
+              );
+            }
+          }
+        } else {
+          JOptionPane.showMessageDialog(this, "Can't find file: " + sourceFile, "Error",
+              JOptionPane.ERROR_MESSAGE);
+        }
+      }
     }
-
-    final int gapBetweenButtons = 4;
-
-    int buttonStartX = width - this.imageSettings.getWidth(null) - this.imageClose.getWidth(null) - this.imageConvert.getWidth(null) - gapBetweenButtons * 3;
-    this.areaButtonConvert.setBounds(buttonStartX,
-        (this.titleHeight - this.imageConvert.getHeight(null)) / 2,
-        this.imageConvert.getWidth(null), this.imageConvert.getHeight(null));
-    buttonStartX += this.areaButtonConvert.width + gapBetweenButtons;
-    this.areaButtonSettings.setBounds(buttonStartX,
-        (this.titleHeight - this.imageSettings.getHeight(null)) / 2,
-        this.imageSettings.getWidth(null), this.imageSettings.getHeight(null));
-    buttonStartX += this.areaButtonSettings.width + gapBetweenButtons;
-    this.areaButtonClose.setBounds(buttonStartX,
-        (this.titleHeight - this.imageClose.getHeight(null)) / 2, this.imageClose.getWidth(null),
-        this.imageClose.getHeight(null));
-    this.areaButtonRecordStop.setBounds(borderSize,
-        (this.titleHeight - this.imageRecord.getHeight(null)) / 2, this.imageRecord.getWidth(null),
-        this.imageRecord.getHeight(null));
-
-    return result;
   }
 
   private File makeTargetFile(final File parentFolder, final String filter,
@@ -690,77 +791,25 @@ public class JapagogeFrame extends JFrame {
     return File.createTempFile(".japagoge-record", ".png", tempFolder);
   }
 
-  private void onButtonConvert() {
-    if (this.state.get() == State.SELECT_POSITION) {
-      LOGGER.info("Conversion activated");
-      final JFileChooser sourceFIleChooser = new JFileChooser(JapagogeConfig.getInstance().getTargetFolder());
-      sourceFIleChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
-      sourceFIleChooser.setMultiSelectionEnabled(false);
-      sourceFIleChooser.setAcceptAllFileFilterUsed(false);
-      sourceFIleChooser.addChoosableFileFilter(new FileFilter() {
-        @Override
-        public boolean accept(final File f) {
-          if (f.isDirectory()) return true;
-          final String name = f.getName().toLowerCase(Locale.ENGLISH);
-          return name.endsWith(".png") || name.endsWith(".apng");
-        }
+  @SuppressWarnings("SameParameterValue")
+  private void drawTitleText(final Graphics2D gfx, final String text) {
+    final Rectangle freeArea =
+        new Rectangle(this.areaButtonRecordStop.x + this.areaButtonRecordStop.width, 0,
+            areaButtonConvert.x - this.areaButtonRecordStop.x - this.areaButtonRecordStop.width,
+            titleHeight);
 
-        @Override
-        public String getDescription() {
-          return "PNG and APNG images (*.png, *.apng)";
-        }
-      });
+    final Font font = this.getFont();
+    final FontMetrics fontMetrics = this.getFontMetrics(font);
+    final Rectangle2D textBounds = fontMetrics.getStringBounds(text, gfx);
 
-      sourceFIleChooser.setDialogTitle("Select source PNG or APNG image");
-
-      if (sourceFIleChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
-        final File sourceFile = sourceFIleChooser.getSelectedFile();
-
-        LOGGER.info("Selected source file: " + sourceFile);
-        if (sourceFile.isFile()) {
-          final JFileChooser targetFileChooser = new JFileChooser(JapagogeConfig.getInstance().getTargetFolder());
-          targetFileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
-          targetFileChooser.setMultiSelectionEnabled(false);
-          targetFileChooser.setAcceptAllFileFilterUsed(false);
-          targetFileChooser.setDialogTitle("Target GIF file");
-          targetFileChooser.setSelectedFile(new File(extractNameWithoutExtenstion(sourceFile) + ".gif"));
-          targetFileChooser.addChoosableFileFilter(new FileFilter() {
-            @Override
-            public boolean accept(final File f) {
-              if (f.isDirectory()) return true;
-              final String name = f.getName().toLowerCase(Locale.ENGLISH);
-              return name.endsWith(".gif");
-            }
-
-            @Override
-            public String getDescription() {
-              return "GIF images (*.gif)";
-            }
-          });
-
-          if (targetFileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
-            final File targetFile = ensureExtension(targetFileChooser.getSelectedFile(), ".gif");
-            LOGGER.info("Selected target file: " + targetFile);
-            if (this.ensureOverwrite(targetFile)) {
-              Palette256 palette = JapagogeConfig.getInstance().getGifPaletteForRgb();
-              if (palette == Palette256.AUTO) palette = Palette256.UNIVERSAL;
-
-              LOGGER.info("Converting " + sourceFile + " to " + targetFile + ", palette " + palette.name());
-
-              this.doVisualConversionPngToGif(sourceFile, targetFile,
-                      JapagogeConfig.getInstance().isAccurateRgb(),
-                      JapagogeConfig.getInstance().isDithering(),
-                      palette.getPalette().orElseGet(PaletteUtils::makeGrayscaleRgb256),
-                      false,
-                      JapagogeConfig.getInstance().getFilter().get()
-              );
-            }
-          }
-        } else {
-          JOptionPane.showMessageDialog(this, "Can't find file: " + sourceFile, "Error", JOptionPane.ERROR_MESSAGE);
-        }
-      }
-    }
+    final Shape oldClip = gfx.getClip();
+    gfx.setFont(font);
+    gfx.setClip(freeArea);
+    gfx.setColor(Color.BLACK);
+    gfx.drawString(text, freeArea.x + (freeArea.width - (int) textBounds.getWidth()) / 2,
+        freeArea.y + (freeArea.height + (int) textBounds.getY()) / 2 - (int) textBounds.getY() -
+            fontMetrics.getLeading());
+    gfx.setClip(oldClip);
   }
 
   private File ensureExtension(final File file, final String extension) {
@@ -780,29 +829,6 @@ public class JapagogeFrame extends JFrame {
     return ok;
   }
 
-  private static boolean isBlank(final String str) {
-    return str == null || str.trim().isEmpty();
-  }
-
-  @SuppressWarnings("SameParameterValue")
-  private void drawTitleText(final Graphics2D gfx, final String text) {
-    final Rectangle freeArea =
-        new Rectangle(this.areaButtonRecordStop.x + this.areaButtonRecordStop.width, 0,
-            areaButtonConvert.x - this.areaButtonRecordStop.x - this.areaButtonRecordStop.width,
-            titleHeight);
-
-    final Font font = this.getFont();
-    final FontMetrics fontMetrics = this.getFontMetrics(font);
-    final Rectangle2D textBounds = fontMetrics.getStringBounds(text, gfx);
-
-    final Shape oldClip = gfx.getClip();
-    gfx.setFont(font);
-    gfx.setClip(freeArea);
-    gfx.setColor(Color.BLACK);
-    gfx.drawString(text, freeArea.x + (freeArea.width - (int) textBounds.getWidth()) / 2, freeArea.y + (freeArea.height + (int) textBounds.getY()) / 2 - (int) textBounds.getY() - fontMetrics.getLeading());
-    gfx.setClip(oldClip);
-  }
-
   @Override
   public void paint(final Graphics g) {
     final Graphics2D gfx = (Graphics2D) g;
@@ -813,16 +839,20 @@ public class JapagogeFrame extends JFrame {
       case SELECT_POSITION: {
         this.drawTitleText(gfx, "Japagoge " + VERSION);
         gfx.drawImage(this.imageConvert, this.areaButtonConvert.x, this.areaButtonConvert.y, null);
-        gfx.drawImage(this.imageSettings, this.areaButtonSettings.x, this.areaButtonSettings.y, null);
+        gfx.drawImage(this.imageSettings, this.areaButtonSettings.x, this.areaButtonSettings.y,
+            null);
         gfx.drawImage(this.imageClose, this.areaButtonClose.x, this.areaButtonClose.y, null);
-        gfx.drawImage(this.imageRecord, this.areaButtonRecordStop.x, this.areaButtonRecordStop.y, null);
+        gfx.drawImage(this.imageRecord, this.areaButtonRecordStop.x, this.areaButtonRecordStop.y,
+            null);
       }
       break;
       case RECORDING: {
         gfx.setColor(Color.BLACK);
         gfx.drawRect(0, 0, bounds.width - 1, bounds.height - 1);
-        if (this.drawStopButton)
-          gfx.drawImage(this.imageStop, this.areaButtonRecordStop.x, this.areaButtonRecordStop.y, null);
+        if (this.drawStopButton) {
+          gfx.drawImage(this.imageStop, this.areaButtonRecordStop.x, this.areaButtonRecordStop.y,
+              null);
+        }
       }
       break;
       case SAVING_RESULT: {
@@ -834,10 +864,12 @@ public class JapagogeFrame extends JFrame {
     }
   }
 
+
   private enum State {
     SELECT_POSITION,
     RECORDING,
     SAVING_RESULT
   }
+
 
 }

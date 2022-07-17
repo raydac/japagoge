@@ -59,7 +59,8 @@ public final class ScreenCapturer {
     this.forceWholeFrame = forceWholeFrame;
     this.palette = palette;
     this.screenAreaGrabber = forceJavaRobotGrabber ? ScreenAreaGrabberFactory.getInstance()
-        .makeJavaRobotGrabber(device) : ScreenAreaGrabberFactory.getInstance().makeGrabber(device);
+        .makeJavaRobotGrabber(device) :
+        ScreenAreaGrabberFactory.getInstance().findAppropriateGrabber(device);
     this.filter = filter;
     this.mouseInfoProvider = mouseInfoProvider;
     this.screenArea = Objects.requireNonNull(screenArea);
