@@ -1,3 +1,9 @@
+- 2.1.4 (SNAPSHOT)
+  - added option to force Java robot for grabbing
+  - updated embedded JDK to 17.0.4+8
+  - updated dependencies
+  - updated error processing
+
 - 2.1.3 (09-jun-2022)
   - added SH and DMG files into publishing
   - minimal JDK version 9+

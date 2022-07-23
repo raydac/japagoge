@@ -9,9 +9,15 @@
 
 ## Changelog
 
+- __2.1.4 (SNAPSHOT)__
+  - added option to force Java robot for grabbing
+  - updated embedded JDK to 17.0.4+8
+  - updated dependencies
+  - updated error processing
+
 - __2.1.3 (09-jun-2022)__
-  - added SH and DMG files into publishing 
-  - minimal JDK version 9+ 
+  - added SH and DMG files into publishing
+  - minimal JDK version 9+
   - refactoring to decrease time of start under Linux
   - added old black white LCD mobile phone filter
   - added Black and White color filter
