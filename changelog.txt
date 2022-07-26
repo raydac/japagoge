@@ -1,4 +1,4 @@
-- 2.1.4 (SNAPSHOT)
+- 2.1.4 (26-jul-2022)
   - added option to force Java robot for grabbing
   - updated embedded JDK to 17.0.4+8
   - updated dependencies

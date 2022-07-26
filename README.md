@@ -7,9 +7,18 @@
 [![PayPal donation](https://img.shields.io/badge/donation-PayPal-cyan.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=AHWJHJFBAWGL2)
 [![YooMoney donation](https://img.shields.io/badge/donation-Yoo.money-blue.svg)](https://yoomoney.ru/to/41001158080699)
 
+> **Warning**
+> In Linux. If you get black screen as grabbing result, then it is
+> bug [JDK-8269245](https://bugs.openjdk.org/browse/JDK-8269245). You can switch your session to X11 (under Ubuntu it is
+> possible through login screen) to get it properly working.
+
+> **Warning**
+> In MacOS. If you can't manipulate content under grabbing window by mouse, then it is
+> bug [JDK-8013450](https://bugs.openjdk.java.net/browse/JDK-8013450).
+
 ## Changelog
 
-- __2.1.4 (SNAPSHOT)__
+- __2.1.4 (26-jul-2022)__
   - added option to force Java robot for grabbing
   - updated embedded JDK to 17.0.4+8
   - updated dependencies
@@ -22,14 +31,6 @@
   - added old black white LCD mobile phone filter
   - added Black and White color filter
   - embedded JDK updated to 17.0.3.1+2
-
-- __2.1.2 (12-nov-2021)__
-  - improved support of 4k monitors
-  - capture logic under X11 replaced by self-written one because Robot works not well
-
-- __2.1.1 (13-okt-2021)__
-  - added way to convert already saved APNG into GIF with current options
-  - refactoring and minor bugfix
 
 [Full changelog](changelog.txt)
 
@@ -45,11 +46,11 @@ conversion and some extra features.
 
 | OS                                           | Download link                                                                                                                                     | 
 | -------------------------------------------- |---------------------------------------------------------------------------------------------------------------------------------------------------|
-| ![Windows](assets/icons/win64x64.png)        | __[Archive for Windows x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.3/japagoge-app-2.1.3-windows-jdk-amd64.zip)__ |
-| ![OSX](assets/icons/macos64x64.png)          | __[Archive for OSX x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.3/japagoge-app-2.1.3-macos-jdk-amd64.zip)__       |
-| ![OSX Arm64](assets/icons/macosarm64x64.png) | __[Archive for OSX Arm64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.3/japagoge-app-2.1.3-macos-jdk-aarch64.zip)__   |
-| ![Linux](assets/icons/linux64x64.png)        | __[Archive for Linux x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.3/japagoge-app-2.1.3-linux-jdk-amd64.tar.gz)__  |
-| ![Java](assets/icons/java64x64.png)          | __[Cross-platform JAR file](https://github.com/raydac/japagoge/releases/download/2.1.3/japagoge-app-2.1.3.jar)__                                  | 
+| ![Windows](assets/icons/win64x64.png)        | __[Archive for Windows x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.4/japagoge-app-2.1.4-windows-jdk-amd64.zip)__ |
+| ![OSX](assets/icons/macos64x64.png)          | __[Archive for OSX x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.4/japagoge-app-2.1.4-macos-jdk-amd64.zip)__       |
+| ![OSX Arm64](assets/icons/macosarm64x64.png) | __[Archive for OSX Arm64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.4/japagoge-app-2.1.4-macos-jdk-aarch64.zip)__   |
+| ![Linux](assets/icons/linux64x64.png)        | __[Archive for Linux x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.4/japagoge-app-2.1.4-linux-jdk-amd64.tar.gz)__  |
+| ![Java](assets/icons/java64x64.png)          | __[Cross-platform JAR file](https://github.com/raydac/japagoge/releases/download/2.1.4/japagoge-app-2.1.4.jar)__                                  | 
 
 ## How to use the utility?
 
@@ -103,10 +104,6 @@ record show. To do it you should click the setting button and the Settings dialo
   dithering GIF conversion if area border artifacts presented.
 
 ### Known bugs
-
-#### Window is non-transparent for mouse events under MacOS
-
-[It is a bug on Java API level, still not fixed](https://bugs.openjdk.java.net/browse/JDK-8013450)
 
 #### Under MacOS mouse pointer looks differ from system one
 
