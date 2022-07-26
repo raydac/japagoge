@@ -7,12 +7,12 @@
 [![PayPal donation](https://img.shields.io/badge/donation-PayPal-cyan.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=AHWJHJFBAWGL2)
 [![YooMoney donation](https://img.shields.io/badge/donation-Yoo.money-blue.svg)](https://yoomoney.ru/to/41001158080699)
 
-> **Warning**
+> **Warning**   
 > In Linux. If you get black screen as grabbing result, then it is
 > bug [JDK-8269245](https://bugs.openjdk.org/browse/JDK-8269245). You can switch your session to X11 (under Ubuntu it is
 > possible through login screen) to get it properly working.
 
-> **Warning**
+> **Warning**   
 > In MacOS. If you can't manipulate content under grabbing window by mouse, then it is
 > bug [JDK-8013450](https://bugs.openjdk.java.net/browse/JDK-8013450).
 
