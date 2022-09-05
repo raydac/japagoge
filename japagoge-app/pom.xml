@@ -341,11 +341,11 @@
               </singleInstance>
               <headerType>gui</headerType>
               <versionInfo>
-                <fileVersion>2.1.4.0</fileVersion>
+                <fileVersion>2.1.5.0</fileVersion>
                 <txtFileVersion>${project.version}</txtFileVersion>
                 <fileDescription>Screen capturing in APNG and GIF</fileDescription>
                 <copyright>2021-2022 Igor Maznitsa</copyright>
-                <productVersion>2.1.4.0</productVersion>
+                <productVersion>2.1.5.0</productVersion>
                 <txtProductVersion>${project.version}</txtProductVersion>
                 <productName>${project.name}</productName>
                 <companyName>igormaznitsa.com</companyName>
