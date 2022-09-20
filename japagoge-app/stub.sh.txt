@@ -1,6 +1,6 @@
 #!/bin/sh
 
-echo Japagoge 2.1.4
+echo Japagoge 2.1.5
 
 java_args="--add-opens=java.base/java.lang=ALL-UNNAMED"
 MYSELF=`which "$0" 2>/dev/null`

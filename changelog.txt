@@ -1,3 +1,8 @@
+- 2.1.5 (20-sep-2022)
+  - native windows launcher moved from i386 to amd64 to prevent antivirus false positive detection
+  - updated embedded JDK to 17.0.4.1+1
+  - updated dependencies
+
 - 2.1.4 (26-jul-2022)
   - added option to force Java robot for grabbing
   - updated embedded JDK to 17.0.4+8

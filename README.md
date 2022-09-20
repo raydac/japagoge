@@ -18,19 +18,10 @@
 
 ## Changelog
 
-- __2.1.4 (26-jul-2022)__
-  - added option to force Java robot for grabbing
-  - updated embedded JDK to 17.0.4+8
+- 2.1.5 (20-sep-2022)
+  - native windows launcher moved from i386 to amd64 to prevent antivirus false positive detection
+  - updated embedded JDK to 17.0.4.1+1
   - updated dependencies
-  - updated error processing
-
-- __2.1.3 (09-jun-2022)__
-  - added SH and DMG files into publishing
-  - minimal JDK version 9+
-  - refactoring to decrease time of start under Linux
-  - added old black white LCD mobile phone filter
-  - added Black and White color filter
-  - embedded JDK updated to 17.0.3.1+2
 
 [Full changelog](changelog.txt)
 
@@ -46,11 +37,11 @@ conversion and some extra features.
 
 | OS                                           | Download link                                                                                                                                     | 
 | -------------------------------------------- |---------------------------------------------------------------------------------------------------------------------------------------------------|
-| ![Windows](assets/icons/win64x64.png)        | __[Archive for Windows x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.4/japagoge-app-2.1.4-windows-jdk-amd64.zip)__ |
-| ![OSX](assets/icons/macos64x64.png)          | __[Archive for OSX x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.4/japagoge-app-2.1.4-macos-jdk-amd64.zip)__       |
-| ![OSX Arm64](assets/icons/macosarm64x64.png) | __[Archive for OSX Arm64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.4/japagoge-app-2.1.4-macos-jdk-aarch64.zip)__   |
-| ![Linux](assets/icons/linux64x64.png)        | __[Archive for Linux x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.4/japagoge-app-2.1.4-linux-jdk-amd64.tar.gz)__  |
-| ![Java](assets/icons/java64x64.png)          | __[Cross-platform JAR file](https://github.com/raydac/japagoge/releases/download/2.1.4/japagoge-app-2.1.4.jar)__                                  | 
+| ![Windows](assets/icons/win64x64.png)        | __[Archive for Windows x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.5/japagoge-app-2.1.4-windows-jdk-amd64.zip)__ |
+| ![OSX](assets/icons/macos64x64.png)          | __[Archive for OSX x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.5/japagoge-app-2.1.4-macos-jdk-amd64.zip)__       |
+| ![OSX Arm64](assets/icons/macosarm64x64.png) | __[Archive for OSX Arm64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.5/japagoge-app-2.1.4-macos-jdk-aarch64.zip)__   |
+| ![Linux](assets/icons/linux64x64.png)        | __[Archive for Linux x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.5/japagoge-app-2.1.4-linux-jdk-amd64.tar.gz)__  |
+| ![Java](assets/icons/java64x64.png)          | __[Cross-platform JAR file](https://github.com/raydac/japagoge/releases/download/2.1.5/japagoge-app-2.1.5.jar)__                                  | 
 
 ## How to use the utility?
 
