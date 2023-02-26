@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.1
+Type=Application
+Name=Japagoge
+GenericName=Japagoge grabber
+Icon=icon
+Comment=Screen recorder to save result as either APNG or GIF
+Categories=Utility;Video
+Keywords=japagoge;gif;png;grabber;recorder
+Terminal=false
+StartupWMClass=Japagoge
