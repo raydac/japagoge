@@ -21,7 +21,7 @@
   <properties>
     <embedded.jdk.provider>BELLSOFT</embedded.jdk.provider>
     <embedded.jdk.type>jdk</embedded.jdk.type>
-    <embedded.jdk.version>20.0.1+10</embedded.jdk.version>
+    <embedded.jdk.version>21+37</embedded.jdk.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <java.version>9</java.version>
@@ -327,7 +327,7 @@
           <plugin>
             <groupId>com.akathist.maven.plugins.launch4j</groupId>
             <artifactId>launch4j-maven-plugin</artifactId>
-            <version>2.3.2</version>
+            <version>2.4.1</version>
             <configuration>
               <downloadUrl>https://bell-sw.com/pages/downloads/#/java-11-lts</downloadUrl>
               <classPath>
@@ -510,7 +510,7 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-clean-plugin</artifactId>
-            <version>3.1.0</version>
+            <version>3.3.1</version>
             <executions>
               <execution>
                 <id>clean-temp</id>
@@ -662,7 +662,7 @@
     <dependency>
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-lang3</artifactId>
-      <version>3.12.0</version>
+      <version>3.13.0</version>
     </dependency>
   </dependencies>
 
@@ -672,7 +672,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-compiler-plugin</artifactId>
-          <version>3.8.1</version>
+          <version>3.11.0</version>
           <configuration>
             <fork>true</fork>
             <compilerArgument>-XDignore.symbol.file</compilerArgument>
@@ -684,7 +684,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-enforcer-plugin</artifactId>
-        <version>3.0.0</version>
+        <version>3.4.1</version>
         <executions>
           <execution>
             <id>no-duplicate-declared-dependencies</id>
@@ -702,7 +702,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>
-        <version>3.2.4</version>
+        <version>3.5.0</version>
         <executions>
           <execution>
             <phase>package</phase>
