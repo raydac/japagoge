@@ -1,5 +1,5 @@
 - 2.1.6 (SNAPSHOT)
-  - updated embedded JDK to 20.0.1+10
+  - updated embedded JDK to 21.0.1+12
 
 - 2.1.5 (20-sep-2022)
   - native windows launcher moved from i386 to amd64 to prevent antivirus false positive detection
