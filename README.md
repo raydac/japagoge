@@ -46,6 +46,7 @@ I also implemented the conversion to GIF.
 | ![OSX](assets/icons/macos64x64.png)          | __[Archive for OSX x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.6/japagoge-app-2.1.6-macos-jdk-amd64.zip)__       |
 | ![OSX Arm64](assets/icons/macosarm64x64.png) | __[Archive for OSX Arm64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.6/japagoge-app-2.1.6-macos-jdk-aarch64.zip)__   |
 | ![Linux](assets/icons/linux64x64.png)        | __[Archive for Linux x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.6/japagoge-app-2.1.6-linux-jdk-amd64.tar.gz)__  |
+| ![Linux](assets/icons/appimage64x64.png)     | __[Archive for Linux x64 (AppImage)](https://github.com/raydac/japagoge/releases/download/2.1.6/japagoge-app-2.1.6-x86_64.AppImage)__             |
 | ![Java](assets/icons/java64x64.png)          | __[Cross-platform JAR file](https://github.com/raydac/japagoge/releases/download/2.1.5/japagoge-app-2.1.6.jar)__                                  | 
 
 ## How to use the utility?
