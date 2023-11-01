@@ -18,8 +18,8 @@
 
 ## Changelog
 
-- 2.1.6 (SNAPSHOT)
-    - updated embedded JDK to 21.0.1+12
+- 2.1.6 (01-nov-2023)
+  - updated embedded JDK to 21.0.1+12
 
 - 2.1.5 (20-sep-2022)
   - native windows launcher moved from i386 to amd64 to prevent antivirus false positive detection
@@ -30,21 +30,23 @@
 
 ## Pre-word
 
-During writing [an article](https://habr.com/ru/post/576012/) for some online IT resource, I had needs to make GIF
-animations. I was going to use well known [Peek](https://github.com/phw/peek) but the utility could not start in a
-multi-monitor environment. So that I had to write quickly my own pure cross-platform Java solution to make similar
-business. In the beginning I wrote simple utility which saved only animated PNG files, but then I added support of GIF
-conversion and some extra features.
+While working on [an article](https://habr.com/ru/post/576012/) for a well-known web resource, I needed to create
+animated GIFs, and I had planned to use
+the popular [Peek](https://github.com/phw/peek) utility for this purpose. However, to my surprise, I discovered that
+this utility does not support
+multi-display environments. I had to quickly devise a Java-based solution that could capture animations and save them
+to a file. Initially, I opted to record animations as animated PNG files since it was simpler, but later,
+I also implemented the conversion to GIF.
 
 ## Pre-built
 
 | OS                                           | Download link                                                                                                                                     | 
-| -------------------------------------------- |---------------------------------------------------------------------------------------------------------------------------------------------------|
-| ![Windows](assets/icons/win64x64.png)        | __[Archive for Windows x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.5/japagoge-app-2.1.5-windows-jdk-amd64.zip)__ |
-| ![OSX](assets/icons/macos64x64.png)          | __[Archive for OSX x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.5/japagoge-app-2.1.5-macos-jdk-amd64.zip)__       |
-| ![OSX Arm64](assets/icons/macosarm64x64.png) | __[Archive for OSX Arm64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.5/japagoge-app-2.1.5-macos-jdk-aarch64.zip)__   |
-| ![Linux](assets/icons/linux64x64.png)        | __[Archive for Linux x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.5/japagoge-app-2.1.5-linux-jdk-amd64.tar.gz)__  |
-| ![Java](assets/icons/java64x64.png)          | __[Cross-platform JAR file](https://github.com/raydac/japagoge/releases/download/2.1.5/japagoge-app-2.1.5.jar)__                                  | 
+|----------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------|
+| ![Windows](assets/icons/win64x64.png)        | __[Archive for Windows x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.6/japagoge-app-2.1.6-windows-jdk-amd64.zip)__ |
+| ![OSX](assets/icons/macos64x64.png)          | __[Archive for OSX x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.6/japagoge-app-2.1.6-macos-jdk-amd64.zip)__       |
+| ![OSX Arm64](assets/icons/macosarm64x64.png) | __[Archive for OSX Arm64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.6/japagoge-app-2.1.6-macos-jdk-aarch64.zip)__   |
+| ![Linux](assets/icons/linux64x64.png)        | __[Archive for Linux x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.6/japagoge-app-2.1.6-linux-jdk-amd64.tar.gz)__  |
+| ![Java](assets/icons/java64x64.png)          | __[Cross-platform JAR file](https://github.com/raydac/japagoge/releases/download/2.1.5/japagoge-app-2.1.6.jar)__                                  | 
 
 ## How to use the utility?
 

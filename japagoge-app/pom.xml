@@ -6,7 +6,7 @@
   <parent>
     <groupId>com.igormaznitsa</groupId>
     <artifactId>japagoge-pom</artifactId>
-    <version>2.1.6-SNAPSHOT</version>
+    <version>2.1.6</version>
   </parent>
 
   <artifactId>japagoge-app</artifactId>
