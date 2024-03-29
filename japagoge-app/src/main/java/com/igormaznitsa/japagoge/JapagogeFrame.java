@@ -61,7 +61,7 @@ import javax.swing.filechooser.FileFilter;
 @SuppressWarnings("unused")
 public class JapagogeFrame extends JFrame {
 
-  private static final String VERSION = "v 2.1.6";
+  private static final String VERSION = "v 2.1.7";
 
   private static final Logger LOGGER = Logger.getLogger("JapagogeFrame");
   private static final Color COLOR_SELECT_POSITION = Color.GREEN;
