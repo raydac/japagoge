@@ -19,7 +19,7 @@
 ## Changelog
 
 - 2.1.7 (SNAPSHOT)
-  - updated embedded JDK to 22+37
+  - updated embedded JDK to 23+38
 
 - 2.1.6 (01-nov-2023)
   - updated embedded JDK to 21.0.1+12
