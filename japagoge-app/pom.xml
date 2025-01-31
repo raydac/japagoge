@@ -21,13 +21,13 @@
   <properties>
     <embedded.jdk.provider>BELLSOFT</embedded.jdk.provider>
     <embedded.jdk.type>jdk</embedded.jdk.type>
-    <embedded.jdk.version>23+38</embedded.jdk.version>
+    <embedded.jdk.version>23.0.2+9</embedded.jdk.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <java.version>9</java.version>
     <app.name>${project.build.finalName}</app.name>
     <executable.jar>false</executable.jar>
-    <jna.version>5.15.0</jna.version>
+    <jna.version>5.16.0</jna.version>
     <maven.compiler.source>9</maven.compiler.source>
     <maven.compiler.target>9</maven.compiler.target>
   </properties>
@@ -69,7 +69,7 @@
           <plugin>
             <groupId>org.codehaus.mojo</groupId>
             <artifactId>exec-maven-plugin</artifactId>
-            <version>3.1.1</version>
+            <version>3.5.0</version>
             <executions>
               <execution>
                 <id>make-sh</id>
@@ -115,7 +115,7 @@
           <plugin>
             <groupId>de.perdian.maven.plugins</groupId>
             <artifactId>macosappbundler-maven-plugin</artifactId>
-            <version>1.21.0</version>
+            <version>1.21.1</version>
             <configuration>
               <plist>
                 <CFBundleIconFile>appico.icns</CFBundleIconFile>
@@ -327,7 +327,7 @@
           <plugin>
             <groupId>com.akathist.maven.plugins.launch4j</groupId>
             <artifactId>launch4j-maven-plugin</artifactId>
-            <version>2.5.1</version>
+            <version>2.5.2</version>
             <configuration>
               <downloadUrl>https://bell-sw.com/pages/downloads/#/java-11-lts</downloadUrl>
               <classPath>
@@ -344,7 +344,7 @@
                 <fileVersion>2.1.7.0</fileVersion>
                 <txtFileVersion>${project.version}</txtFileVersion>
                 <fileDescription>Screen capturing in APNG and GIF</fileDescription>
-                <copyright>2021-2024 Igor Maznitsa</copyright>
+                <copyright>2021-2025 Igor Maznitsa</copyright>
                 <productVersion>2.1.7.0</productVersion>
                 <txtProductVersion>${project.version}</txtProductVersion>
                 <productName>${project.name}</productName>
@@ -662,7 +662,7 @@
     <dependency>
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-lang3</artifactId>
-      <version>3.13.0</version>
+      <version>3.17.0</version>
     </dependency>
   </dependencies>
 
@@ -672,7 +672,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-compiler-plugin</artifactId>
-          <version>3.11.0</version>
+          <version>3.13.0</version>
           <configuration>
             <fork>true</fork>
             <compilerArgument>-XDignore.symbol.file</compilerArgument>
@@ -684,7 +684,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-enforcer-plugin</artifactId>
-        <version>3.4.1</version>
+        <version>3.5.0</version>
         <executions>
           <execution>
             <id>no-duplicate-declared-dependencies</id>
@@ -693,11 +693,21 @@
             </goals>
             <configuration>
               <rules>
+                <dependencyConvergence/>
+                <banCircularDependencies/>
+                <reactorModuleConvergence/>
                 <banDuplicatePomDependencyVersions/>
               </rules>
             </configuration>
           </execution>
         </executions>
+        <dependencies>
+          <dependency>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>extra-enforcer-rules</artifactId>
+            <version>1.9.0</version>
+          </dependency>
+        </dependencies>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
