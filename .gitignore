@@ -6,3 +6,4 @@ resource.syso
 versioninfo.go
 dependency-reduced-pom.xml
 /japagoge-app/target/classes/
+.build

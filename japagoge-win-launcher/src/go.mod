@@ -1,4 +1,4 @@
-module github.com/raydac/japagoge
+module github.com/raydac/ravikoodi-server
 
         go 1.20
 

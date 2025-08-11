@@ -19,17 +19,17 @@
     "FileSubType": "00"
   },
   "StringFileInfo": {
-    "Comments": "Japagoge screen recorder.",
+    "Comments": "Japagoge GIF and APNG grabber launcher.",
     "CompanyName": "Igor Maznitsa",
-    "FileDescription": "Japagoge screen recorder",
+    "FileDescription": "Japagoge GIF and APNG grabber",
     "FileVersion": "v2.1.7.0",
-    "InternalName": "japagoge.exe",
+    "InternalName": "battleships-resurrection.exe",
     "LegalCopyright": "Copyright (c) 2021-2025 Igor Maznitsa",
     "LegalTrademarks": "",
-    "OriginalFilename": "japagoge.exe",
+    "OriginalFilename": "battleships-resurrection.exe",
     "PrivateBuild": "",
-    "ProductName": "Japagoge screen recorder",
-    "ProductVersion": "v2.1.7.0",
+    "ProductName": "Battleships-resurrection PC client launcher",
+    "ProductVersion": "v1.1.3.0",
     "SpecialBuild": ""
   },
   "VarFileInfo": {

@@ -16,7 +16,7 @@ const (
 	ERROR_ALREADY_EXISTS = 183
 	JDK_PATH             = "\\jre\\bin\\javaw.exe"
 	JAR_FILE             = "\\japagoge.jar"
-	MUTEX                = "japagoge-recorder"
+	MUTEX                = "japagoge-app"
 )
 
 var (
@@ -57,7 +57,8 @@ func main() {
 	path, err := os.Executable()
 	if err == nil {
 		base_folder := filepath.Dir(path)
-		cmd := exec.Command(base_folder+JDK_PATH, "-jar", base_folder+JAR_FILE)
+		cmd := exec.Command(base_folder+JDK_PATH,
+			"-jar", base_folder+JAR_FILE)
 		fmt.Printf("Application starting...\n")
 		err = cmd.Start()
 		if err != nil {
