@@ -3,9 +3,9 @@
 # Japagoge (PNG and GIF screen recorder)
 
 [![License Apache 2.0](https://img.shields.io/badge/license-Apache%20License%202.0-green.svg)](http://www.apache.org/licenses/LICENSE-2.0)
-[![Java 9+](https://img.shields.io/badge/java-9%2b-green.svg)](https://bell-sw.com/pages/downloads/#/java-11-lts)
-[![PayPal donation](https://img.shields.io/badge/donation-PayPal-cyan.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=AHWJHJFBAWGL2)
-[![YooMoney donation](https://img.shields.io/badge/donation-Yoo.money-blue.svg)](https://yoomoney.ru/to/41001158080699)
+[![Java 9+](https://img.shields.io/badge/java-9%2b-green.svg)](https://bell-sw.com/pages/downloads/#/java-11-lts)   
+[![Arthur's acres sanctuary donation](assets/arthur_sanctuary_banner.png)](https://www.arthursacresanimalsanctuary.org/donate)
+
 
 > **Warning**   
 > In Linux. If you get black screen as grabbing result, then it is
@@ -19,7 +19,7 @@
 ## Changelog
 
 - 2.1.7 (SNAPSHOT)
-  - updated embedded JDK to 23+38
+  - updated embedded JDK to 24.0.2+12
 
 - 2.1.6 (01-nov-2023)
   - updated embedded JDK to 21.0.1+12
