@@ -21,13 +21,13 @@
   <properties>
     <embedded.jdk.provider>BELLSOFT</embedded.jdk.provider>
     <embedded.jdk.type>jdk</embedded.jdk.type>
-    <embedded.jdk.version>24.0.2+12</embedded.jdk.version>
+      <embedded.jdk.version>25.0.1+13</embedded.jdk.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <java.version>9</java.version>
     <app.name>${project.build.finalName}</app.name>
     <executable.jar>false</executable.jar>
-    <jna.version>5.17.0</jna.version>
+      <jna.version>5.18.1</jna.version>
     <maven.compiler.source>9</maven.compiler.source>
     <maven.compiler.target>9</maven.compiler.target>
   </properties>
@@ -145,7 +145,7 @@
           <plugin>
             <groupId>com.igormaznitsa</groupId>
             <artifactId>mvn-jlink-wrapper</artifactId>
-            <version>1.2.4</version>
+              <version>1.2.5</version>
             <executions>
               <execution>
                 <id>cache-work-jdk</id>
