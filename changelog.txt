@@ -1,4 +1,4 @@
-- 2.1.7 (SNAPSHOT)
+- 2.1.7 (04-oct-2026)
   - updated embedded JDK to 27+36
   - updated dependencies
 

@@ -3,7 +3,7 @@
 # Japagoge (PNG and GIF screen recorder)
 
 [![License Apache 2.0](https://img.shields.io/badge/license-Apache%20License%202.0-green.svg)](http://www.apache.org/licenses/LICENSE-2.0)
-[![Java 9+](https://img.shields.io/badge/java-9%2b-green.svg)](https://bell-sw.com/pages/downloads/#/java-11-lts)   
+[![Java 11+](https://img.shields.io/badge/java-11%2b-green.svg)](https://bell-sw.com/pages/downloads/#/java-21-lts)   
 [![Arthur's acres sanctuary donation](assets/arthur_sanctuary_banner.png)](https://www.arthursacresanimalsanctuary.org/donate)
 
 
@@ -18,8 +18,9 @@
 
 ## Changelog
 
-- 2.1.7 (SNAPSHOT)
-  - updated embedded JDK to 25.0.2+12
+- 2.1.7 (04-oct-2026)
+  - updated embedded JDK to 27+36
+  - updated dependencies
 
 - 2.1.6 (01-nov-2023)
   - updated embedded JDK to 21.0.1+12
@@ -45,12 +46,12 @@ I also implemented the conversion to GIF.
 
 | OS                                           | Download link                                                                                                                                     | 
 |----------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------|
-| ![Windows](assets/icons/win64x64.png)        | __[Archive for Windows x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.6/japagoge-app-2.1.6-windows-jdk-amd64.zip)__ |
-| ![OSX](assets/icons/macos64x64.png)          | __[Archive for OSX x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.6/japagoge-app-2.1.6-macos-jdk-amd64.zip)__       |
-| ![OSX Arm64](assets/icons/macosarm64x64.png) | __[Archive for OSX Arm64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.6/japagoge-app-2.1.6-macos-jdk-aarch64.zip)__   |
-| ![Linux](assets/icons/linux64x64.png)        | __[Archive for Linux x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.6/japagoge-app-2.1.6-linux-jdk-amd64.tar.gz)__  |
-| ![Linux](assets/icons/appimage64x64.png)     | __[Archive for Linux x64 (AppImage)](https://github.com/raydac/japagoge/releases/download/2.1.6/japagoge-app-2.1.6-x86_64.AppImage)__             |
-| ![Java](assets/icons/java64x64.png)          | __[Cross-platform JAR file](https://github.com/raydac/japagoge/releases/download/2.1.5/japagoge-app-2.1.6.jar)__                                  | 
+| ![Windows](assets/icons/win64x64.png)        | __[Archive for Windows x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.7/japagoge-app-2.1.7-windows-jdk-amd64.zip)__ |
+| ![OSX](assets/icons/macos64x64.png)          | __[Archive for OSX x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.7/japagoge-app-2.1.7-macos-jdk-amd64.zip)__       |
+| ![OSX Arm64](assets/icons/macosarm64x64.png) | __[Archive for OSX Arm64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.7/japagoge-app-2.1.7-macos-jdk-aarch64.zip)__   |
+| ![Linux](assets/icons/linux64x64.png)        | __[Archive for Linux x64 (JRE included)](https://github.com/raydac/japagoge/releases/download/2.1.7/japagoge-app-2.1.7-linux-jdk-amd64.tar.gz)__  |
+| ![Linux](assets/icons/appimage64x64.png)     | __[Archive for Linux x64 (AppImage)](https://github.com/raydac/japagoge/releases/download/2.1.7/japagoge-app-2.1.7-x86_64.AppImage)__             |
+| ![Java](assets/icons/java64x64.png)          | __[Cross-platform JAR file](https://github.com/raydac/japagoge/releases/download/2.1.7/japagoge-app-2.1.7.jar)__                                  | 
 
 ## How to use the utility?
 
