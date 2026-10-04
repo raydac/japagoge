@@ -21,16 +21,16 @@
     <properties>
         <embedded.jdk.provider>BELLSOFT</embedded.jdk.provider>
         <embedded.jdk.type>jdk</embedded.jdk.type>
-        <embedded.jdk.version>25.0.2+12</embedded.jdk.version>
+        <embedded.jdk.version>27+36</embedded.jdk.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <java.version>9</java.version>
+        <java.version>11</java.version>
         <app.name>${project.build.finalName}</app.name>
         <executable.jar>false</executable.jar>
-        <jna.version>5.18.1</jna.version>
-        <maven.compiler.release>9</maven.compiler.release>
-        <maven.compiler.source>9</maven.compiler.source>
-        <maven.compiler.target>9</maven.compiler.target>
+        <jna.version>5.19.1</jna.version>
+        <maven.compiler.release>11</maven.compiler.release>
+        <maven.compiler.source>11</maven.compiler.source>
+        <maven.compiler.target>11</maven.compiler.target>
     </properties>
 
     <issueManagement>
@@ -46,13 +46,13 @@
 
     <organization>
         <name>Igor Maznitsa</name>
-        <url>http://www.igormaznitsa.com</url>
+        <url>https://www.igormaznitsa.com</url>
     </organization>
 
     <licenses>
         <license>
             <name>The Apache Software License, Version 2.0</name>
-            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
             <distribution>repo</distribution>
         </license>
     </licenses>
@@ -70,7 +70,7 @@
                     <plugin>
                         <groupId>org.codehaus.mojo</groupId>
                         <artifactId>exec-maven-plugin</artifactId>
-                        <version>3.5.0</version>
+                        <version>3.6.4</version>
                         <executions>
                             <execution>
                                 <id>make-sh</id>
@@ -119,7 +119,7 @@
                     <plugin>
                         <groupId>de.perdian.maven.plugins</groupId>
                         <artifactId>macosappbundler-maven-plugin</artifactId>
-                        <version>1.21.1</version>
+                        <version>1.21.2</version>
                         <configuration>
                             <plist>
                                 <CFBundleIconFile>appico.icns</CFBundleIconFile>
@@ -149,7 +149,7 @@
                     <plugin>
                         <groupId>com.igormaznitsa</groupId>
                         <artifactId>mvn-jlink-wrapper</artifactId>
-                        <version>1.2.5</version>
+                        <version>1.2.6</version>
                         <executions>
                             <execution>
                                 <id>cache-work-jdk</id>
@@ -678,7 +678,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
-                    <version>3.14.1</version>
+                    <version>3.15.0</version>
                     <configuration>
                         <fork>true</fork>
                         <compilerArgument>-XDignore.symbol.file</compilerArgument>
@@ -690,7 +690,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-enforcer-plugin</artifactId>
-                <version>3.6.2</version>
+                <version>3.6.3</version>
                 <executions>
                     <execution>
                         <id>no-duplicate-declared-dependencies</id>
@@ -733,14 +733,14 @@
                     <dependency>
                         <groupId>org.codehaus.mojo</groupId>
                         <artifactId>extra-enforcer-rules</artifactId>
-                        <version>1.11.0</version>
+                        <version>1.12.0</version>
                     </dependency>
                 </dependencies>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-                <version>3.6.1</version>
+                <version>3.6.2</version>
                 <executions>
                     <execution>
                         <phase>package</phase>
